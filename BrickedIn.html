@@ -1,0 +1,367 @@
+< !DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Spiral Block Assault — Annihilator Core (Mobile)</title>
+<style>
+  html,body{margin:0;height:100%;background:#000;overflow:hidden;touch-action:none}
+  canvas{display:block;width:100%;height:100%;background:#000}
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<script>
+const canvas=document.getElementById("game");
+const ctx=canvas.getContext("2d");
+function resize(){canvas.width=innerWidth;canvas.height=innerHeight;}
+addEventListener("resize",resize,{passive:true});resize();
+
+const W=()=>canvas.width,H=()=>canvas.height;
+
+/* ==== MOBILE CONTROLS ==== */
+let lastTapTime=0;
+canvas.addEventListener("touchstart",e=>{
+  e.preventDefault();
+  const t=e.touches[0]; aimShip(t.clientX,t.clientY);
+  const now=Date.now(); if(now-lastTapTime<350) fire(); lastTapTime=now;
+});
+canvas.addEventListener("touchmove",e=>{
+  e.preventDefault();
+  const t=e.touches[0]; aimShip(t.clientX,t.clientY);
+});
+function aimShip(x,y){ ship.angle=Math.atan2(y-ship.y,x-ship.x); }
+
+/* ==== CONSTANTS ==== */
+const BLOCK_W=40,BLOCK_H=20,SHARD_W=6,SHARD_H=3;
+const START_DELAY_MS=25,MIN_DELAY_MS=5,ACCEL=0.983;
+const SHOT_SPEED=8,ROT_STEP=0.08;
+const WOBBLE_FRAMES=16,WOBBLE_SCALE=0.6;
+const SHARD_LIFE=70,SHARD_SPEED=8.5,SHARD_CHAIN_RADIUS=18; // bigger & chainy
+const FREEZE_SECONDS=1;
+const ANNIHILATOR_FREEZE=2; // 2s freeze on hit
+const POWER_SPAWN_MIN=10,POWER_SPAWN_MAX=25;
+const HEX_SPAWN_TIME=5000;
+const ANNIHILATOR_MIN=10000,ANNIHILATOR_MAX=20000;
+
+/* ==== GLOBALS ==== */
+let dir=0,xCell=0,yCell=0,minX=0,minY=0,maxX=0,maxY=0;
+let lastPlace=0,delay=START_DELAY_MS;
+let pausedGrowth=false,freezeFrames=0,gameOver=false,centerCollapsed=false;
+let hueShift=0,baseHueShift=0,reverseMode=false;
+let OUT_MINX=0,OUT_MINY=0,OUT_MAXX=0,OUT_MAXY=0;
+let CENTER_X=0,CENTER_Y=0;
+let wipeMsgTimer=0;
+
+const blocks=[],bullets=[],shards=[];
+const ship={x:W()/2,y:H()/2,angle:0,rotSpeed:0};
+let hexBox=null,lastHexSpawn=0,reverseBox=null;
+let annihilator=null,annihilatorTimer=randRange(ANNIHILATOR_MIN,ANNIHILATOR_MAX);
+
+function resetSpiral(){
+  const cols=Math.floor(W()/BLOCK_W),rows=Math.floor(H()/BLOCK_H);
+  minX=0;minY=0;maxX=cols-1;maxY=rows-1;
+  OUT_MINX=minX;OUT_MINY=minY;OUT_MAXX=maxX;OUT_MAXY=maxY;
+  xCell=0;yCell=0;dir=0;
+  CENTER_X=Math.floor(cols/2);CENTER_Y=Math.floor(rows/2);
+  ship.x = (CENTER_X+0.5)*BLOCK_W; ship.y = (CENTER_Y+0.5)*BLOCK_H; // keep ship centered
+  lastPlace=performance.now();delay=START_DELAY_MS;
+}
+resetSpiral();
+
+/* ==== KEYBOARD ==== */
+addEventListener("keydown",e=>{
+  if(e.code==="ArrowLeft")ship.rotSpeed=-ROT_STEP;
+  if(e.code==="ArrowRight")ship.rotSpeed=ROT_STEP;
+  if(e.code==="Space")fire();
+  if(e.code==="KeyR")reverseToggle();
+});
+addEventListener("keyup",e=>{
+  if(e.code==="ArrowLeft"&&ship.rotSpeed<0)ship.rotSpeed=0;
+  if(e.code==="ArrowRight"&&ship.rotSpeed>0)ship.rotSpeed=0;
+});
+
+function fire(){ bullets.push({x:ship.x,y:ship.y,dx:Math.cos(ship.angle)*SHOT_SPEED,dy:Math.sin(ship.angle)*SHOT_SPEED}); }
+function randRange(a,b){return a+Math.random()*(b-a);}
+let powerTimer=randRange(POWER_SPAWN_MIN,POWER_SPAWN_MAX);
+function easeOutBack(t){const c1=1.70158,c3=c1+1;return 1+c3*Math.pow(t-1,3)+c1*Math.pow(t-1,2);}
+function hsl(h,s,l){return`hsl(${h},${s}%,${l}%)`;}
+function reverseToggle(){reverseMode=!reverseMode;baseHueShift=(baseHueShift+120)%360;}
+
+/* ==== SPIRAL ==== */
+function placeNextBlock(now){
+  const bx=xCell*BLOCK_W,by=yCell*BLOCK_H;
+  blocks.push({x:bx,y:by,colorHue:(baseHueShift+hueShift)%360,hit:false,frames:0});
+  moveSpiral();
+
+  // End only by center collapse:
+  if(!reverseMode && minX>=CENTER_X && maxX<=CENTER_X && minY>=CENTER_Y && maxY<=CENTER_Y){
+    centerCollapsed=true; triggerCenterExplosion(ship.x,ship.y); gameOver=true;
+  }
+  // When reversed & back at outer ring → flip forward & shift palette
+  if(reverseMode && minX<=OUT_MINX && minY<=OUT_MINY && maxX>=OUT_MAXX && maxY>=OUT_MAXY){
+    minX=OUT_MINX;minY=OUT_MINY;maxX=OUT_MAXX;maxY=OUT_MAXY;
+    reverseToggle();
+  }
+
+  delay=Math.max(MIN_DELAY_MS,delay*ACCEL);
+  lastPlace=now;
+}
+function moveSpiral(){
+  const step=reverseMode?-1:1;
+  switch(dir){
+    case 0:xCell+=step;if(step>0&&xCell>maxX){xCell=maxX;dir=1;minY++;}if(step<0&&xCell<minX){xCell=minX;dir=3;maxY--;}break;
+    case 1:yCell+=step;if(step>0&&yCell>maxY){yCell=maxY;dir=2;maxX--;}if(step<0&&yCell<minY){yCell=minY;dir=0;minX++;}break;
+    case 2:xCell-=step;if(step>0&&xCell<minX){xCell=minX;dir=3;maxY--;}if(step<0&&xCell>maxX){xCell=maxX;dir=1;minY++;}break;
+    case 3:yCell-=step;if(step>0&&yCell<minY){yCell=minY;dir=0;minX++;}if(step<0&&yCell>maxY){yCell=maxY;dir=2;maxX--;}break;
+  }
+}
+
+/* ==== SPAWNS ==== */
+function maybeSpawnPower(){ if(blocks.length){blocks[Math.floor(Math.random()*blocks.length)].special=true;} }
+function spawnHexBox(){ hexBox={x:randRange(100,W()-100),y:randRange(100,H()-100),size:30}; }
+function spawnReverseBox(){ if(blocks.length){const b=blocks[blocks.length-1];reverseBox={x:b.x+BLOCK_W/2,y:b.y+BLOCK_H/2,size:30};} }
+function spawnAnnihilator(){
+  const cx=W()/2, cy=H()/2;
+  // start somewhere around edges
+  const side = Math.floor(Math.random()*4);
+  let x=randRange(50,W()-50), y=randRange(50,H()-50);
+  if(side===0) y=50; else if(side===1) x=W()-50; else if(side===2) y=H()-50; else x=50;
+  // initial velocity roughly toward center (faster)
+  const ang=Math.atan2(cy-y,cx-x);
+  const sp=randRange(2.0,4.0);
+  annihilator={x,y,dx:Math.cos(ang)*sp,dy:Math.sin(ang)*sp,size:44};
+}
+
+/* ==== REACTIONS ==== */
+function hitBlock(i,big=false){ const b=blocks[i]; if(b&&!b.hit){ b.hit=true; b.frames=WOBBLE_FRAMES; b._big=big; } }
+function explodeBlock(b,force=1){
+  const cx=b.x+BLOCK_W/2, cy=b.y+BLOCK_H/2;
+  const count = Math.floor((b._big?240:120)*force);         // bigger bursts
+  const spMul = (b._big?1.5:1.1)*force;                     // faster shards
+  const hueBase = b._big?330:(200+(b.colorHue||0)%120);
+  for(let i=0;i<count;i++){
+    const a=Math.random()*Math.PI*2, sp=(Math.random()*0.7+0.5)*SHARD_SPEED*spMul;
+    shards.push({
+      x:cx+(Math.random()-0.5)*BLOCK_W*0.6,
+      y:cy+(Math.random()-0.5)*BLOCK_H*0.6,
+      dx:Math.cos(a)*sp, dy:Math.sin(a)*sp,
+      life:SHARD_LIFE+Math.random()*30,
+      w:SHARD_W, h:SHARD_H, hue:hueBase+Math.random()*40
+    });
+  }
+}
+function triggerCenterExplosion(x,y){
+  for(let i=0;i<1000;i++){
+    const a=Math.random()*Math.PI*2, sp=(1+Math.random()*3.2)*SHARD_SPEED;
+    shards.push({x,y,dx:Math.cos(a)*sp,dy:Math.sin(a)*sp,life:SHARD_LIFE+80,w:SHARD_W,h:SHARD_H,hue:(baseHueShift+Math.random()*360)%360});
+  }
+}
+
+/* ==== ANNIHILATOR EFFECT ==== */
+function triggerAnnihilatorHit(){
+  // Freeze world 2s (growth only; visuals continue)
+  pausedGrowth=true; freezeFrames=ANNIHILATOR_FREEZE*60;
+  wipeMsgTimer=120;
+
+  // Select 50% of blocks for chain detonation — stagger with small jitter
+  const idxs=[...Array(blocks.length).keys()].sort(()=>Math.random()-0.5);
+  const n=Math.floor(blocks.length/2);
+  const now=performance.now();
+  for(let k=0;k<n;k++){
+    const i=idxs[k]; const b=blocks[i]; if(!b) continue;
+    // Schedule wobble → explode with jitter (10–30 ms)
+    const jitter=10+Math.random()*20;
+    b._chainAt = now + jitter;
+    b._big = true;            // big pops for annihilator wave
+    b.hit = true;             // start wobble
+    b.frames = WOBBLE_FRAMES*0.6;
+  }
+  annihilator=null;
+}
+
+/* ==== UPDATE ==== */
+function update(dt,now){
+  ship.angle+=ship.rotSpeed;
+
+  if(!pausedGrowth&&!gameOver&&now-lastHexSpawn>HEX_SPAWN_TIME&&!hexBox){ spawnHexBox(); lastHexSpawn=now; }
+
+  annihilatorTimer-=dt;
+  if(annihilatorTimer<=0&&!annihilator){ spawnAnnihilator(); annihilatorTimer=randRange(ANNIHILATOR_MIN,ANNIHILATOR_MAX); }
+
+  /* === Bullets === */
+  for(let i=bullets.length-1;i>=0;i--){
+    const b=bullets[i]; b.x+=b.dx; b.y+=b.dy;
+    if(b.x<0||b.x>W()||b.y<0||b.y>H()){ bullets.splice(i,1); continue; }
+
+    if(hexBox && Math.hypot(b.x-hexBox.x,b.y-hexBox.y) < hexBox.size){
+      pausedGrowth=true; freezeFrames=FREEZE_SECONDS*60; spawnReverseBox(); hexBox=null; bullets.splice(i,1); continue;
+    }
+    if(reverseBox && Math.hypot(b.x-reverseBox.x,b.y-reverseBox.y) < reverseBox.size){
+      reverseToggle(); reverseBox=null; bullets.splice(i,1); continue;
+    }
+    if(annihilator && Math.hypot(b.x-annihilator.x,b.y-annihilator.y) < annihilator.size){
+      triggerAnnihilatorHit(); bullets.splice(i,1); continue;
+    }
+
+    for(let j=blocks.length-1;j>=0;j--){
+      const bl=blocks[j];
+      if(b.x>bl.x&&b.x<bl.x+BLOCK_W&&b.y>bl.y&&b.y<bl.y+BLOCK_H){
+        hitBlock(j,false); bullets.splice(i,1); break;
+      }
+    }
+  }
+
+  /* === Blocks wobble / explode (with optional scheduled chain) === */
+  for(let j=blocks.length-1;j>=0;j--){
+    const b=blocks[j];
+    if(!b) continue;
+    if(b.hit){
+      if(b._chainAt && performance.now() >= b._chainAt){ b.frames=0; }
+      b.frames--;
+      if(b.frames<=0){ explodeBlock(b, b._big?1.25:1); blocks.splice(j,1); }
+    }
+  }
+
+  /* === Shards: move, chain-hit nearby bricks === */
+  for(let s=shards.length-1;s>=0;s--){
+    const p=shards[s];
+    p.x+=p.dx; p.y+=p.dy; p.life--;
+    // drag and slight outward bias
+    p.dx*=0.984; p.dy*=0.984;
+
+    // chain: proximity AABB hits trigger wobble
+    for(let j=blocks.length-1;j>=0;j--){
+      const b=blocks[j]; if(!b || b.hit) continue;
+      if(p.x>b.x-SHARD_CHAIN_RADIUS && p.x<b.x+BLOCK_W+SHARD_CHAIN_RADIUS &&
+         p.y>b.y-SHARD_CHAIN_RADIUS && p.y<b.y+BLOCK_H+SHARD_CHAIN_RADIUS){
+        hitBlock(j,false);
+      }
+    }
+    if(p.life<=0 || p.x<-80 || p.x>W()+80 || p.y<-80 || p.y>H()+80) shards.splice(s,1);
+  }
+
+  /* === Annihilator homing toward center (faster, pulse-accelerates near center) === */
+  if(annihilator){
+    const cx=W()/2, cy=H()/2;
+    const vx = cx - annihilator.x, vy = cy - annihilator.y;
+    const dist = Math.hypot(vx,vy) || 1;
+    const accel = 0.06 + Math.min(0.25, 120/dist)*0.01; // stronger pull near center
+    annihilator.dx += (vx/dist)*accel;
+    annihilator.dy += (vy/dist)*accel;
+
+    // clamp speed to keep it zippy but not insane
+    const sp = Math.hypot(annihilator.dx,annihilator.dy);
+    const maxSp = 5.2; // ~2x+ previous
+    if(sp>maxSp){ annihilator.dx = (annihilator.dx/sp)*maxSp; annihilator.dy = (annihilator.dy/sp)*maxSp; }
+
+    annihilator.x += annihilator.dx;
+    annihilator.y += annihilator.dy;
+  }
+
+  /* === Growth === */
+  if(!gameOver){
+    if(pausedGrowth){ if(freezeFrames>0){ freezeFrames--; if(freezeFrames<=0) pausedGrowth=false; } }
+    else if(now-lastPlace>delay) placeNextBlock(now);
+  }
+
+  // power brick (optional)
+  powerTimer-=dt/1000; if(powerTimer<=0){ maybeSpawnPower(); powerTimer=randRange(POWER_SPAWN_MIN,POWER_SPAWN_MAX); }
+
+  hueShift+=0.4;
+  if(wipeMsgTimer>0) wipeMsgTimer--;
+}
+
+/* ==== DRAW ==== */
+function draw(){
+  ctx.clearRect(0,0,W(),H());
+
+  // blocks
+  for(const b of blocks){
+    const hue=(b.colorHue+hueShift)%360;
+    ctx.strokeStyle=hsl(hue,100,60);
+    ctx.strokeRect(b.x,b.y,BLOCK_W,BLOCK_H);
+  }
+
+  // shards (tiny block bits)
+  for(const p of shards){
+    ctx.globalAlpha=Math.max(0,p.life/(SHARD_LIFE+60));
+    ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(Math.atan2(p.dy,p.dx));
+    ctx.fillStyle=hsl(p.hue%360,100,60);
+    ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h);
+    ctx.restore(); ctx.globalAlpha=1;
+  }
+
+  // bullets
+  ctx.strokeStyle="#fff";
+  for(const b of bullets){ ctx.beginPath(); ctx.moveTo(b.x,b.y); ctx.lineTo(b.x-b.dx*0.4,b.y-b.dy*0.4); ctx.stroke(); }
+
+  // ship
+  ctx.save(); ctx.translate(ship.x,ship.y); ctx.rotate(ship.angle);
+  ctx.strokeStyle="#fff"; ctx.beginPath(); ctx.moveTo(15,0); ctx.lineTo(-12,8); ctx.lineTo(-12,-8); ctx.closePath(); ctx.stroke(); ctx.restore();
+
+  // hex power
+  if(hexBox){ drawHexLike(hexBox.x,hexBox.y,hexBox.size); }
+  // reverse box
+  if(reverseBox){ drawHexLike(reverseBox.x,reverseBox.y,reverseBox.size,"hotpink"); }
+  // annihilator (octagon) — stronger glow near center
+  if(annihilator){
+    const d = Math.hypot(annihilator.x-W()/2, annihilator.y-H()/2);
+    const glowScale = Math.max(0.8, Math.min(2.2, 2.2 - d/300)); // more glow near middle
+    drawOctagon(annihilator.x, annihilator.y, annihilator.size*glowScale);
+  }
+
+  // freeze tags
+  if(pausedGrowth && freezeFrames>0){
+    const s=Math.ceil(freezeFrames/60);
+    ctx.fillStyle="#fff"; ctx.font="bold 24px monospace";
+    const msg=`FREEZE ${s}s`; ctx.fillText(msg, W()/2-ctx.measureText(msg).width/2, 40);
+  }
+  if(wipeMsgTimer>0){
+    ctx.fillStyle="red"; ctx.font="bold 36px monospace";
+    const msg="50% WIPED"; ctx.fillText(msg, W()/2-ctx.measureText(msg).width/2, 80);
+  }
+  if(gameOver){
+    const flash=Math.floor(performance.now()/120)%2;
+    if(flash){ ctx.fillStyle="rgba(255,255,255,0.1)"; ctx.fillRect(0,0,W(),H()); }
+    ctx.fillStyle="#fff"; ctx.font="bold 42px monospace";
+    const t="CENTER COLLAPSE"; ctx.fillText(t, W()/2-ctx.measureText(t).width/2, H()/2);
+  }
+}
+
+/* ==== SHAPES ==== */
+function drawHexLike(x,y,r,color){
+  const glow=(Math.sin(performance.now()/200)+1)/2;
+  ctx.save(); ctx.translate(x,y);
+  ctx.strokeStyle=color||`hsl(${Math.floor(glow*360)},100%,70%)`;
+  ctx.lineWidth=3; ctx.shadowColor=ctx.strokeStyle; ctx.shadowBlur=15;
+  drawHex(0,0,r*(1+glow*0.15)); ctx.stroke(); ctx.restore();
+}
+function drawHex(x,y,r){
+  ctx.beginPath();
+  for(let i=0;i<6;i++){ const a=(Math.PI/3)*i; const px=x+Math.cos(a)*r, py=y+Math.sin(a)*r;
+    if(i===0)ctx.moveTo(px,py); else ctx.lineTo(px,py); }
+  ctx.closePath();
+}
+function drawOctagon(x,y,r){
+  const time=performance.now();
+  const glow=(Math.sin(time/140)+1)/2;
+  const hue=(time/8)%360;
+  ctx.save(); ctx.translate(x,y);
+  ctx.strokeStyle=`hsl(${hue},100%,60%)`;
+  ctx.lineWidth=3; ctx.shadowColor=ctx.strokeStyle; ctx.shadowBlur=24;
+  ctx.beginPath();
+  for(let i=0;i<8;i++){
+    const a=(Math.PI/4)*i;
+    const px=Math.cos(a)*r*(1+0.12*glow), py=Math.sin(a)*r*(1+0.12*glow);
+    if(i===0)ctx.moveTo(px,py); else ctx.lineTo(px,py);
+  }
+  ctx.closePath(); ctx.stroke(); ctx.restore();
+}
+
+/* ==== LOOP ==== */
+let last=performance.now();
+function loop(now){ const dt=now-last; last=now; update(dt,now); draw(); requestAnimationFrame(loop); }
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
