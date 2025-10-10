@@ -3,14 +3,14 @@ name: Deploy to Firebase Hosting (Keyless WIF)
 on:
   push:
     branches:
-      - main # deploys every time you push to main
+      - main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     permissions:
       contents: 'read'
-      id-token: 'write' # needed for Workload Identity Federation
+      id-token: 'write'
 
     steps:
       - name: Checkout repository
