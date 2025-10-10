@@ -21,6 +21,13 @@ jobs:
         with:
           workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.SERVICE_ACCOUNT_EMAIL }}
+          
+      - name: Debug secrets
+        run: |
+          echo "PROJECT_ID=${{ secrets.PROJECT_ID }}"
+          echo "SERVICE_ACCOUNT_EMAIL=${{ secrets.SERVICE_ACCOUNT_EMAIL }}"
+          echo "WORKLOAD_IDENTITY_PROVIDER=${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}"
+
 
       - name: Install Firebase CLI
         run: npm install -g firebase-tools
@@ -28,8 +35,3 @@ jobs:
       - name: Deploy to Firebase Hosting
         run: firebase deploy --only hosting --project ${{ secrets.PROJECT_ID }}
 
-      - name: Debug secrets
-        run: |
-          echo "PROJECT_ID=${{ secrets.PROJECT_ID }}"
-          echo "SERVICE_ACCOUNT_EMAIL=${{ secrets.SERVICE_ACCOUNT_EMAIL }}"
-          echo "WORKLOAD_IDENTITY_PROVIDER=${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}"
