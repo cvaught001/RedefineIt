@@ -1,58 +1,37 @@
-name: Deploy to Firebase Hosting (Keyless + Debug)
+name: Deploy to Firebase Hosting (Prod)
 
 on:
   push:
     branches:
-      - main  # Deploy when pushing to main
+      - main
 
 jobs:
   deploy:
+    environment: Prod           # 👈 this links to your GitHub “Prod” environment
     runs-on: ubuntu-latest
     permissions:
       contents: 'read'
-      id-token: 'write'   # Required for Workload Identity Federation
+      id-token: 'write'
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 🧩 Debug Step — verify that secrets are being injected
-      - name: Debug Secrets
+      # Optional debug — verify env-level secrets are accessible
+      - name: Debug secrets
         run: |
-          echo "Checking for secrets..."
-          if [ -z "${{ secrets.PROJECT_ID }}" ]; then echo "::error ::Missing PROJECT_ID secret"; else echo "✅ PROJECT_ID found"; fi
-          if [ -z "${{ secrets.SERVICE_ACCOUNT_EMAIL }}" ]; then echo "::error ::Missing SERVICE_ACCOUNT_EMAIL secret"; else echo "✅ SERVICE_ACCOUNT_EMAIL found"; fi
-          if [ -z "${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}" ]; then echo "::error ::Missing WORKLOAD_IDENTITY_PROVIDER secret"; else echo "✅ WORKLOAD_IDENTITY_PROVIDER found"; fi
-          echo ""
-          echo "Environment (sanitized):"
           echo "PROJECT_ID=${{ secrets.PROJECT_ID }}"
           echo "SERVICE_ACCOUNT_EMAIL=${{ secrets.SERVICE_ACCOUNT_EMAIL }}"
           echo "WORKLOAD_IDENTITY_PROVIDER=${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}"
-        shell: bash
 
-      # 🧩 Authenticate to Google Cloud (Workload Identity Federation)
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.SERVICE_ACCOUNT_EMAIL }}
 
-      # 🧩 Debug authentication status
-      - name: Verify gcloud access
-        run: |
-          gcloud info
-          echo "Listing active account..."
-          gcloud auth list
-        shell: bash
-
-      # 🧩 Install Firebase CLI
       - name: Install Firebase CLI
         run: npm install -g firebase-tools
 
-      # 🧩 Verify Firebase CLI setup
-      - name: Firebase Version Check
-        run: firebase --version
-
-      # 🧩 Deploy to Firebase Hosting
       - name: Deploy to Firebase Hosting
         run: firebase deploy --only hosting --project ${{ secrets.PROJECT_ID }}
