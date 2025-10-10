@@ -27,3 +27,9 @@ jobs:
 
       - name: Deploy to Firebase Hosting
         run: firebase deploy --only hosting --project ${{ secrets.PROJECT_ID }}
+
+      - name: Debug secrets
+        run: |
+          echo "PROJECT_ID=${{ secrets.PROJECT_ID }}"
+          echo "SERVICE_ACCOUNT_EMAIL=${{ secrets.SERVICE_ACCOUNT_EMAIL }}"
+          echo "WORKLOAD_IDENTITY_PROVIDER=${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}"
