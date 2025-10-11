@@ -46,8 +46,10 @@ https://redefineit.net/winamp-waves/v7.html
 https://redefineit.net/winamp-waves/v8.html  
 https://redefineit.net/winamp-waves/v9.html  
 https://redefineit.net/winamp-waves/v10.html  
+https://redefineit.net/winamp-waves/v11.html  
+https://redefineit.net/winamp-waves/v12.html
 
-https://redefineit.net/winamp-waves/v12.html  
+https://redefineit.net/winamp-waves/13thfoor.html  
 
 
 

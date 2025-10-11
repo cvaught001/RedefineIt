@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Fractal Polygon Universe — Vibrating Trailers</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #0b0f13;
+        overflow: hidden;
+      }
+      canvas {
+        display: block;
+        width: 100vw;
+        height: 100vh;
+      }
+
+      .ui {
+        position: fixed;
+        left: 12px;
+        top: 12px;
+        z-index: 10;
+        font: 14px/1.2 system-ui, sans-serif;
+        color: #d9e7ff;
+        background: rgba(10, 15, 24, 0.65);
+        backdrop-filter: blur(6px);
+        border: 1px solid rgba(120, 160, 220, 0.25);
+        border-radius: 10px;
+        padding: 10px 12px;
+        width: 260px;
+        max-height: 90vh; /* scrollable window height */
+        overflow-y: auto; /* add scrollbars */
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+        transition: opacity 0.35s ease, transform 0.35s ease;
+        transform-origin: top left;
+      }
+      .ui.hidden {
+        opacity: 0;
+        transform: scale(0.9);
+        pointer-events: none;
+      }
+
+      #toggleUI {
+        position: fixed;
+        right: 12px;
+        top: 12px;
+        z-index: 15;
+        font-size: 20px;
+        line-height: 1;
+        background: rgba(10, 15, 24, 0.45);
+        border: 1px solid rgba(120, 160, 220, 0.25);
+        color: #d9e7ff;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        cursor: pointer;
+        backdrop-filter: blur(6px);
+        transition: background 0.2s, transform 0.2s, opacity 0.3s;
+      }
+      #toggleUI:hover {
+        background: rgba(30, 45, 70, 0.6);
+        transform: scale(1.1);
+      }
+
+      .row {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        margin: 3px 0;
+      }
+      .row > label {
+        flex: 1;
+      }
+      .row > input,
+      .row > select {
+        flex: 1;
+      }
+      .hint {
+        opacity: 0.75;
+        font-size: 12px;
+        margin-top: 6px;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="c"></canvas>
+    <button id="toggleUI" title="Toggle Controls">👁️</button>
+
+    <div class="ui">
+      <button id="micBtn">Start Mic</button>
+      <div class="row">
+        <label for="rays">Rays</label>
+        <input id="rays" type="range" min="1" max="10" value="1" />
+      </div>
+      <div class="row">
+        <label for="sens">Sensitivity</label>
+        <input id="sens" type="range" min="50" max="300" value="94" />
+      </div>
+      <div class="row">
+        <label for="trail">Trail</label>
+        <input id="trail" type="range" min="4" max="60" value="24" />
+      </div>
+      <div class="row">
+        <label for="hue">Hue Shift</label>
+        <input id="hue" type="range" min="0" max="360" value="36" />
+      </div>
+
+      <div class="row">
+        <label for="presetSelect">Presets</label>
+        <select id="presetSelect">
+          <option value="default">Default</option>
+          <option value="triple">3-Ray Neon</option>
+        </select>
+      </div>
+
+      <button id="defaultPreset">⭐ Load Default Preset</button>
+      <button id="randomize">🎲 Randomize</button>
+      <button id="save">💾 Save Preset</button>
+      <button id="load">📂 Load Preset</button>
+      <div class="hint">Soft neon warp • starts with your saved preset</div>
+
+      <!-- Grid / layers -->
+      <div class="row">
+        <label for="polySides">Polygon Sides</label
+        ><input id="polySides" type="range" min="3" max="12" value="6" />
+      </div>
+      <div class="row">
+        <label for="gridSize">Grid Density</label
+        ><input id="gridSize" type="range" min="3" max="20" value="8" />
+      </div>
+      <div class="row">
+        <label for="polyScale">Polygon Size</label
+        ><input id="polyScale" type="range" min="10" max="150" value="60" />
+      </div>
+      <div class="row">
+        <label for="layer1x">Layer1 X</label
+        ><input id="layer1x" type="range" min="-200" max="200" value="-40" />
+      </div>
+      <div class="row">
+        <label for="layer1y">Layer1 Y</label
+        ><input id="layer1y" type="range" min="-200" max="200" value="-30" />
+      </div>
+      <div class="row">
+        <label for="layer2x">Layer2 X</label
+        ><input id="layer2x" type="range" min="-200" max="200" value="30" />
+      </div>
+      <div class="row">
+        <label for="layer2y">Layer2 Y</label
+        ><input id="layer2y" type="range" min="-200" max="200" value="25" />
+      </div>
+      <div class="row">
+        <label for="layer3x">Layer3 X</label
+        ><input id="layer3x" type="range" min="-200" max="200" value="0" />
+      </div>
+      <div class="row">
+        <label for="layer3y">Layer3 Y</label
+        ><input id="layer3y" type="range" min="-200" max="200" value="0" />
+      </div>
+      <div class="row">
+        <label for="layerDepth">Layer Opacity</label
+        ><input id="layerDepth" type="range" min="1" max="10" value="4" />
+      </div>
+
+      <!-- New: thin lines + trailers -->
+      <div class="row">
+        <label for="lineWidth">Line Width</label
+        ><input
+          id="lineWidth"
+          type="range"
+          min="0.2"
+          max="3"
+          step="0.1"
+          value="1.0"
+        />
+      </div>
+      <div class="row">
+        <label for="trailers">Shape Trailers</label
+        ><input id="trailers" type="range" min="0" max="3" value="3" />
+      </div>
+
+      <div class="row">
+        <label>Fractal Mode</label><input id="fractalMode" type="checkbox" />
+      </div>
+    </div>
+
+    <div
+      id="jsonModal"
+      style="
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(6px);
+        align-items: center;
+        justify-content: center;
+        z-index: 20;
+      "
+    >
+      <div
+        id="jsonBox"
+        style="
+          background: #0e1520;
+          color: #cde3ff;
+          border: 1px solid #4a70b8;
+          border-radius: 12px;
+          padding: 20px;
+          width: 80%;
+          max-width: 600px;
+        "
+      >
+        <textarea
+          id="jsonText"
+          style="
+            width: 100%;
+            height: 200px;
+            background: #0b1018;
+            color: #aee;
+            border: 1px solid #335;
+            border-radius: 8px;
+            padding: 8px;
+          "
+        ></textarea
+        ><br />
+        <button id="applyJson">Apply</button>
+        <button id="closeJson">Close</button>
+      </div>
+    </div>
+
+    <script>
+      ;(() => {
+        const canvas = document.getElementById('c')
+        const ctx = canvas.getContext('2d', { alpha: false })
+        const buf = document.createElement('canvas')
+        const bctx = buf.getContext('2d')
+
+        // Core UI
+        const micBtn = document.getElementById('micBtn')
+        const rays = document.getElementById('rays')
+        const sens = document.getElementById('sens')
+        const trail = document.getElementById('trail')
+        const hue = document.getElementById('hue')
+        const randomBtn = document.getElementById('randomize')
+        const saveBtn = document.getElementById('save')
+        const loadBtn = document.getElementById('load')
+        const modal = document.getElementById('jsonModal')
+        const jsonText = document.getElementById('jsonText')
+        const applyJson = document.getElementById('applyJson')
+        const closeJson = document.getElementById('closeJson')
+        const defaultBtn = document.getElementById('defaultPreset')
+        const presetSelect = document.getElementById('presetSelect')
+
+        // Injected controls already exist in this full version
+        const ui = document.querySelector('.ui')
+        const controls = Array.from(
+          ui.querySelectorAll('input, select')
+        ).reduce((a, el) => ((a[el.id] = el), a), {})
+
+        // Canvas perf
+        const SCALE = 0.66,
+          FPS_TARGET = 45
+        let DPR = Math.min(2, devicePixelRatio || 1),
+          W = 0,
+          H = 0,
+          BW = 0,
+          BH = 0,
+          lastFrame = 0
+
+        function resize() {
+          W = canvas.width = innerWidth * DPR
+          H = canvas.height = innerHeight * DPR
+          BW = buf.width = W * SCALE
+          BH = buf.height = H * SCALE
+          ctx.fillStyle = '#0b0f13'
+          ctx.fillRect(0, 0, W, H)
+        }
+        addEventListener('resize', resize, { passive: true })
+        resize()
+
+        // Mic
+        let audioCtx = null,
+          analyser = null,
+          stream = null
+        const FFT = 512
+        let wave = new Uint8Array(FFT)
+        async function startMic() {
+          if (analyser) {
+            stopMic(false)
+            return
+          }
+          try {
+            stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)()
+            const src = audioCtx.createMediaStreamSource(stream)
+            analyser = audioCtx.createAnalyser()
+            analyser.fftSize = FFT
+            analyser.smoothingTimeConstant = 0.85
+            src.connect(analyser)
+            micBtn.textContent = 'Stop Mic'
+          } catch {
+            micBtn.textContent = 'Mic blocked'
+            setTimeout(() => (micBtn.textContent = 'Start Mic'), 1500)
+          }
+        }
+        function stopMic(update = true) {
+          if (stream) stream.getTracks().forEach(t => t.stop())
+          if (audioCtx) audioCtx.close()
+          analyser = audioCtx = stream = null
+          if (update) micBtn.textContent = 'Start Mic'
+        }
+        micBtn.onclick = startMic
+
+        // Polygon trig cache
+        let cachedSides = 0,
+          basePoly = []
+        function buildPolygon(sides) {
+          basePoly = []
+          for (let i = 0; i <= sides; i++) {
+            const a = (i / sides) * Math.PI * 2
+            basePoly.push([Math.cos(a), Math.sin(a)])
+          }
+          cachedSides = sides
+        }
+
+        // Draw: polygon with vibrating trailers (thin-line capable)
+        function drawPolygon(ctx, cx, cy, r, rot, hue, amp) {
+          ctx.save()
+          ctx.translate(cx, cy)
+          ctx.rotate(rot)
+
+          const baseLineWidth = +controls.lineWidth?.value || 1.0
+          const trailerCount = +controls.trailers?.value || 0
+          const hueBase = hue
+          const tnow = performance.now() * 0.002
+
+          for (let t = 0; t <= trailerCount; t++) {
+            const jitterX = Math.sin(t + tnow + cx * 0.001) * 1.5 * DPR
+            const jitterY = Math.cos(t + tnow + cy * 0.001) * 1.5 * DPR
+            const scale = 1 - t * 0.03
+            const alpha = Math.max(0, 1 - t * 0.3)
+            const hueShift = hueBase + t * 8
+
+            ctx.beginPath()
+            for (const [cosA, sinA] of basePoly) {
+              const distort =
+                Math.sin((cosA + sinA) * r * 0.01 + amp * 3) * r * 0.25
+              ctx.lineTo(
+                cosA * (r + distort) * scale + jitterX,
+                sinA * (r + distort) * scale + jitterY
+              )
+            }
+            ctx.closePath()
+            ctx.globalAlpha = 0.15 * alpha
+            ctx.lineWidth = baseLineWidth * DPR * (1 - t * 0.2)
+            ctx.strokeStyle = `hsla(${hueShift},100%,70%,${0.9 * alpha})`
+            ctx.stroke()
+          }
+
+          ctx.restore()
+          ctx.globalAlpha = 1
+        }
+
+        function drawFractalPolygon(ctx, x, y, r, rot, hue, amp, depth = 0) {
+          drawPolygon(ctx, x, y, r, rot, hue, amp)
+          if (depth < 2) {
+            const next = r * 0.5,
+              offset = r * 0.35
+            drawFractalPolygon(
+              ctx,
+              x + offset,
+              y + offset,
+              next,
+              rot + 0.5,
+              hue + 10,
+              amp,
+              depth + 1
+            )
+            drawFractalPolygon(
+              ctx,
+              x - offset,
+              y - offset,
+              next,
+              rot - 0.5,
+              hue - 10,
+              amp,
+              depth + 1
+            )
+          }
+        }
+
+        function drawFrame(t) {
+          // fade / feedback
+          if (controls.fractalMode.checked) {
+            bctx.save()
+            bctx.globalAlpha = 0.08
+            bctx.translate(BW / 2, BH / 2)
+            bctx.rotate(0.002)
+            bctx.scale(1.01, 1.01)
+            bctx.drawImage(buf, -BW / 2, -BH / 2)
+            bctx.restore()
+          } else {
+            bctx.fillStyle = `rgba(11,15,19,${trail.value / 220})`
+            bctx.fillRect(0, 0, BW, BH)
+          }
+
+          // audio or synthetic
+          if (analyser) analyser.getByteTimeDomainData(wave)
+          else
+            for (let i = 0; i < wave.length; i++)
+              wave[i] =
+                128 +
+                60 * Math.sin(i * 0.04 + t * 2) +
+                30 * Math.sin(i * 0.013 - t * 1.3)
+
+          // amplitude
+          let sum = 0
+          for (let i = 0; i < wave.length; i++) {
+            const d = wave[i] - 128
+            sum += d * d
+          }
+          const rms = Math.sqrt(sum / wave.length) / 128
+          const amp = rms * (+sens.value / 200)
+
+          // geometry
+          const sides = +controls.polySides.value
+          if (sides !== cachedSides) buildPolygon(sides)
+
+          const density = +controls.gridSize.value
+          const baseHue = +hue.value
+          const size = +controls.polyScale.value * DPR * SCALE
+          const cols = density,
+            rows = Math.ceil((BH / BW) * density)
+          const spacingX = BW / cols,
+            spacingY = BH / rows
+
+          // layers
+          const layers = [
+            {
+              xOff: +controls.layer1x.value * DPR * SCALE,
+              yOff: +controls.layer1y.value * DPR * SCALE,
+              rotSpeed: 0.5,
+              scale: 1.0,
+              alpha: 0.8
+            },
+            {
+              xOff: +controls.layer2x.value * DPR * SCALE,
+              yOff: +controls.layer2y.value * DPR * SCALE,
+              rotSpeed: 0.7,
+              scale: 1.1,
+              alpha: 0.55
+            },
+            {
+              xOff: +controls.layer3x.value * DPR * SCALE,
+              yOff: +controls.layer3y.value * DPR * SCALE,
+              rotSpeed: 0.9,
+              scale: 0.9,
+              alpha: 0.4
+            }
+          ]
+
+          // grid centers
+          const centers = []
+          for (let y = 0; y < rows; y++)
+            for (let x = 0; x < cols; x++)
+              centers.push([
+                x * spacingX + spacingX / 2,
+                y * spacingY + spacingY / 2
+              ])
+
+          const layerAlphaMul = +controls.layerDepth.value / 10
+          for (const L of layers) {
+            bctx.globalAlpha = L.alpha * layerAlphaMul
+            const rot = t * L.rotSpeed
+            for (const [cx, cy] of centers) {
+              const r = size * (0.4 + amp * 2) * L.scale
+              if (controls.fractalMode.checked)
+                drawFractalPolygon(
+                  bctx,
+                  cx + L.xOff,
+                  cy + L.yOff,
+                  r,
+                  rot,
+                  baseHue,
+                  amp
+                )
+              else
+                drawPolygon(
+                  bctx,
+                  cx + L.xOff,
+                  cy + L.yOff,
+                  r,
+                  rot,
+                  baseHue,
+                  amp
+                )
+            }
+          }
+
+          bctx.globalAlpha = 1
+          ctx.drawImage(buf, 0, 0, W, H)
+        }
+
+        function loop(ms) {
+          if (ms - lastFrame > 1000 / FPS_TARGET) {
+            drawFrame(ms * 0.001)
+            lastFrame = ms
+          }
+          requestAnimationFrame(loop)
+        }
+        requestAnimationFrame(loop)
+
+        // Presets (include rays so applySettings doesn't miss it)
+        const presets = {
+          default: {
+            rays: 1,
+            sens: 120,
+            trail: 24,
+            hue: 200,
+            polySides: 6,
+            gridSize: 8,
+            polyScale: 60,
+            layer1x: -40,
+            layer1y: -30,
+            layer2x: 30,
+            layer2y: 25,
+            layer3x: 0,
+            layer3y: 0,
+            layerDepth: 4,
+            lineWidth: 1.0,
+            trailers: 2,
+            fractalMode: false
+          },
+          triple: {
+            rays: 3,
+            sens: 200,
+            trail: 18,
+            hue: 210,
+            polySides: 6,
+            gridSize: 9,
+            polyScale: 70,
+            layer1x: -60,
+            layer1y: -10,
+            layer2x: 40,
+            layer2y: 35,
+            layer3x: 10,
+            layer3y: -20,
+            layerDepth: 5,
+            lineWidth: 0.9,
+            trailers: 3,
+            fractalMode: false
+          },
+          triwave_cyan: {
+            rays: 3,
+            sens: 231,
+            trail: 10,
+            hue: 186,
+            polySides: 7,
+            gridSize: 7,
+            polyScale: 104,
+            layer1x: -131,
+            layer1y: 177,
+            layer2x: 21,
+            layer2y: -92,
+            layer3x: -35,
+            layer3y: -177,
+            layerDepth: 5,
+            lineWidth: 0.8,
+            trailers: 3,
+            fractalMode: true
+          }
+        }
+
+        function rebuildPresetDropdown() {
+          presetSelect.innerHTML = Object.keys(presets)
+            .map(k => `<option value="${k}">${k.replace(/_/g, ' ')}</option>`)
+            .join('')
+        }
+        rebuildPresetDropdown()
+
+        const applySettings = o => {
+          for (const [k, v] of Object.entries(o)) {
+            const el = document.getElementById(k)
+            if (!el) continue
+            if (el.tagName === 'SELECT') el.value = v
+            else if (el.type === 'checkbox') el.checked = !!v
+            else el.value = v
+          }
+        }
+
+        const getSettings = () => ({
+          // include all inputs + selects
+          ...Object.fromEntries(
+            Array.from(ui.querySelectorAll('input, select')).map(el => [
+              el.id,
+              el.tagName === 'SELECT'
+                ? el.value
+                : el.type === 'checkbox'
+                ? el.checked
+                : +el.value
+            ])
+          )
+        })
+
+        presetSelect.onchange = () => {
+          const p = presets[presetSelect.value]
+          if (p) applySettings(p)
+        }
+        defaultBtn.onclick = () => applySettings(presets.default)
+
+        randomBtn.onclick = () => {
+          Array.from(ui.querySelectorAll('input, select')).forEach(el => {
+            if (el.tagName === 'SELECT') {
+              const opts = Array.from(el.options).map(o => o.value)
+              el.value = opts[(Math.random() * opts.length) | 0]
+            } else if (el.type === 'checkbox') {
+              el.checked = Math.random() > 0.5
+            } else {
+              const min = el.min !== '' ? +el.min : 0
+              const max = el.max !== '' ? +el.max : 100
+              el.value = (min + Math.random() * (max - min)) | 0
+            }
+          })
+        }
+
+        saveBtn.onclick = () => {
+          jsonText.value = JSON.stringify(getSettings(), null, 2)
+          modal.style.display = 'flex'
+        }
+        loadBtn.onclick = () => {
+          jsonText.value = ''
+          modal.style.display = 'flex'
+        }
+        applyJson.onclick = () => {
+          try {
+            applySettings(JSON.parse(jsonText.value))
+          } catch {
+            alert('Invalid JSON')
+          }
+          modal.style.display = 'none'
+        }
+        closeJson.onclick = () => (modal.style.display = 'none')
+      })()
+
+      // 👁️ UI Toggle
+      const uiPanel = document.querySelector('.ui')
+      const toggleUIBtn = document.getElementById('toggleUI')
+      let uiVisible = true
+      toggleUIBtn.onclick = () => {
+        uiVisible = !uiVisible
+        uiPanel.classList.toggle('hidden', !uiVisible)
+        toggleUIBtn.textContent = uiVisible ? '👁️' : '🙈'
+        toggleUIBtn.title = uiVisible
+          ? 'Hide Controls (H)'
+          : 'Show Controls (H)'
+      }
+      document.addEventListener('keydown', e => {
+        if (e.key.toLowerCase() === 'h') toggleUIBtn.click()
+      })
+    </script>
+  </body>
+</html>
