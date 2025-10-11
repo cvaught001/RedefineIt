@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Warp Waves — Sound Reactive (Preset)</title>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #0b0f13;
+        overflow: hidden;
+      }
+      canvas {
+        display: block;
+        width: 100vw;
+        height: 100vh;
+      }
+      .ui {
+        position: fixed;
+        left: 12px;
+        top: 12px;
+        z-index: 10;
+        font: 14px/1.2 system-ui, sans-serif;
+        color: #d9e7ff;
+        background: rgba(10, 15, 24, 0.45);
+        backdrop-filter: blur(6px);
+        border: 1px solid rgba(120, 160, 220, 0.25);
+        border-radius: 10px;
+        padding: 10px 12px;
+      }
+      .ui button,
+      .ui input[type='range'],
+      .ui select {
+        width: 220px;
+        margin: 6px 0;
+        padding: 10px 12px;
+        background: #1a2330;
+        border: 0;
+        border-radius: 8px;
+        color: #e6f0ff;
+      }
+      .row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .ui label {
+        opacity: 0.9;
+      }
+      .hint {
+        opacity: 0.7;
+        font-size: 12px;
+        margin-top: 6px;
+      }
+      #jsonModal {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.8);
+        backdrop-filter: blur(6px);
+        z-index: 20;
+        align-items: center;
+        justify-content: center;
+      }
+      #jsonBox {
+        background: #0e1520;
+        color: #cde3ff;
+        border: 1px solid #4a70b8;
+        border-radius: 12px;
+        padding: 20px;
+        width: 80%;
+        max-width: 600px;
+      }
+      #jsonBox textarea {
+        width: 100%;
+        height: 200px;
+        background: #0b1018;
+        color: #aee;
+        border: 1px solid #335;
+        border-radius: 8px;
+        padding: 8px;
+      }
+      #jsonBox button {
+        margin-top: 10px;
+        padding: 8px 14px;
+        border: 0;
+        border-radius: 6px;
+        background: #1a2330;
+        color: #def;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="c"></canvas>
+
+    <div class="ui">
+      <button id="micBtn">Start Mic</button>
+      <div class="row">
+        <label for="rays">Rays</label
+        ><input id="rays" type="range" min="1" max="10" value="1" />
+      </div>
+      <div class="row">
+        <label for="sens">Sensitivity</label
+        ><input id="sens" type="range" min="50" max="300" value="94" />
+      </div>
+      <div class="row">
+        <label for="trail">Trail</label
+        ><input id="trail" type="range" min="4" max="60" value="24" />
+      </div>
+      <div class="row">
+        <label for="hue">Hue Shift</label
+        ><input id="hue" type="range" min="0" max="360" value="36" />
+      </div>
+
+      <!-- 🔽 New preset dropdown -->
+      <div class="row">
+        <label for="presetSelect">Presets</label>
+        <select id="presetSelect">
+          <option value="default">Default</option>
+          <option value="triple">3-Ray Neon</option>
+        </select>
+      </div>
+
+      <button id="defaultPreset">⭐ Load Default Preset</button>
+      <button id="randomize">🎲 Randomize</button>
+      <button id="save">💾 Save Preset</button>
+      <button id="load">📂 Load Preset</button>
+      <div class="hint">Soft neon warp • starts with your saved preset</div>
+    </div>
+
+    <div id="jsonModal">
+      <div id="jsonBox">
+        <textarea id="jsonText"></textarea><br />
+        <button id="applyJson">Apply</button>
+        <button id="closeJson">Close</button>
+      </div>
+    </div>
+    <script>
+      ;(() => {
+        const canvas = document.getElementById('c')
+        const ctx = canvas.getContext('2d', { alpha: false })
+        const buf = document.createElement('canvas')
+        const bctx = buf.getContext('2d')
+        const micBtn = document.getElementById('micBtn')
+        const rays = document.getElementById('rays')
+        const sens = document.getElementById('sens')
+        const trail = document.getElementById('trail')
+        const hue = document.getElementById('hue')
+        const randomBtn = document.getElementById('randomize')
+        const saveBtn = document.getElementById('save')
+        const loadBtn = document.getElementById('load')
+        const modal = document.getElementById('jsonModal')
+        const jsonText = document.getElementById('jsonText')
+        const applyJson = document.getElementById('applyJson')
+        const closeJson = document.getElementById('closeJson')
+        const defaultBtn = document.getElementById('defaultPreset')
+        const presetSelect = document.getElementById('presetSelect')
+
+        const presets = {
+          default: { rays: 1, sens: 94, trail: 24, hue: 36 },
+          triple: { rays: 3, sens: 292, trail: 47, hue: 24 }
+        }
+
+        let DPR = Math.min(2, devicePixelRatio || 1),
+          W = 0,
+          H = 0,
+          CX = 0,
+          CY = 0
+        const resize = () => {
+          W = canvas.width = innerWidth * DPR
+          H = canvas.height = innerHeight * DPR
+          buf.width = W
+          buf.height = H
+          CX = W / 2
+          CY = H / 2
+          ctx.fillStyle = '#0b0f13'
+          ctx.fillRect(0, 0, W, H)
+        }
+        addEventListener('resize', resize, { passive: true })
+        resize()
+
+        let audioCtx = null,
+          analyser = null,
+          stream = null
+        const FFT = 1024
+        let wave = new Uint8Array(FFT)
+        async function startMic() {
+          if (analyser) {
+            stopMic(false)
+            return
+          }
+          try {
+            stream = await navigator.mediaDevices.getUserMedia({
+              audio: true,
+              video: false
+            })
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)()
+            const src = audioCtx.createMediaStreamSource(stream)
+            analyser = audioCtx.createAnalyser()
+            analyser.fftSize = FFT * 2
+            analyser.smoothingTimeConstant = 0.85
+            src.connect(analyser)
+            micBtn.textContent = 'Stop Mic'
+          } catch (e) {
+            micBtn.textContent = 'Mic blocked'
+            setTimeout(() => (micBtn.textContent = 'Start Mic'), 1500)
+          }
+        }
+        function stopMic(update = true) {
+          if (stream) stream.getTracks().forEach(t => t.stop())
+          if (audioCtx) audioCtx.close()
+          analyser = null
+          audioCtx = null
+          stream = null
+          if (update) micBtn.textContent = 'Start Mic'
+        }
+        micBtn.onclick = startMic
+
+        function gradientAt(y, a = 1) {
+          const g = bctx.createLinearGradient(0, y - 40 * DPR, 0, y + 40 * DPR)
+          const baseHue = +hue.value % 360
+          g.addColorStop(0, `hsla(${baseHue + 30},100%,70%,0)`)
+          g.addColorStop(0.5, `hsla(${baseHue},100%,65%,${0.8 * a})`)
+          g.addColorStop(1, `hsla(${baseHue - 30},100%,70%,0)`)
+          return g
+        }
+
+        function drawFrame(t) {
+          ctx.fillStyle = `rgba(11,15,19,${trail.value / 220})`
+          ctx.fillRect(0, 0, W, H)
+          if (analyser) analyser.getByteTimeDomainData(wave)
+          else
+            for (let i = 0; i < wave.length; i++) {
+              const v =
+                128 +
+                60 * Math.sin(i * 0.04 + t * 2.2) +
+                20 * Math.sin(i * 0.017 - t * 1.2)
+              wave[i] = Math.max(0, Math.min(255, v))
+            }
+
+          let sum = 0
+          for (let i = 0; i < wave.length; i++) {
+            const d = wave[i] - 128
+            sum += d * d
+          }
+          const rms = Math.sqrt(sum / wave.length) / 128
+          const amp = (H * 0.08 + H * 0.3 * rms) * (+sens.value / 200)
+          const midTop = CY - H * 0.12,
+            midBot = CY + H * 0.12,
+            drift = Math.sin(t * 0.9) * 8 * DPR
+          bctx.clearRect(0, 0, W, H)
+          const step = Math.max(1, Math.floor(wave.length / (W / (2 * DPR))))
+
+          function stroke(yBase, flip = 1, widthMul = 1, opacity = 1) {
+            bctx.beginPath()
+            for (let i = 0, x = 0; i < wave.length; i += step) {
+              const v = (wave[i] - 128) / 128
+              const wiggle =
+                v * amp * 0.8 +
+                Math.sin(i * 0.012 + t * 2.0) * amp * 0.05 +
+                Math.sin(i * 0.031 - t * 1.6) * amp * 0.04
+              const y = yBase + flip * (wiggle + drift)
+              if (x === 0) bctx.moveTo(0, y)
+              else bctx.lineTo(x, y)
+              x += step * (W / wave.length)
+            }
+            bctx.strokeStyle = gradientAt(yBase, opacity)
+            bctx.lineWidth = Math.max(1.2, 1.8 * DPR * widthMul)
+            bctx.shadowBlur = 0 // ✨ no glow
+            bctx.stroke()
+          }
+
+          // draw 10 radiating lines above and below
+          const bands = 10
+          const gap = 10 * DPR
+          for (let i = 0; i < bands; i++) {
+            const offset = i * gap
+            const fade = 1 - i / bands
+            stroke(midTop - offset, +1, 1, fade * 0.7)
+            stroke(midBot + offset, -1, 1, fade * 0.7)
+          }
+          // center main strokes
+          stroke(CY, +1, 1, 1)
+          stroke(CY, -1, 1, 1)
+
+          ctx.globalCompositeOperation = 'source-over'
+          ctx.drawImage(buf, 0, 0)
+        }
+
+        function getSettings() {
+          return {
+            rays: +rays.value,
+            sens: +sens.value,
+            trail: +trail.value,
+            hue: +hue.value
+          }
+        }
+        function applySettings(obj) {
+          for (const k in obj) {
+            const el = document.getElementById(k)
+            if (el) el.value = obj[k]
+          }
+        }
+
+        saveBtn.onclick = () => {
+          jsonText.value = JSON.stringify(getSettings(), null, 2)
+          modal.style.display = 'flex'
+        }
+        loadBtn.onclick = () => {
+          jsonText.value = ''
+          modal.style.display = 'flex'
+        }
+        applyJson.onclick = () => {
+          try {
+            applySettings(JSON.parse(jsonText.value))
+          } catch (e) {
+            alert('Invalid JSON')
+          }
+          modal.style.display = 'none'
+        }
+        closeJson.onclick = () => (modal.style.display = 'none')
+
+        randomBtn.onclick = () => {
+          rays.value = (1 + Math.random() * 8).toFixed(0)
+          sens.value = (80 + Math.random() * 220).toFixed(0)
+          trail.value = (8 + Math.random() * 40).toFixed(0)
+          hue.value = (Math.random() * 360).toFixed(0)
+        }
+
+        defaultBtn.onclick = () => applySettings(presets.default)
+        presetSelect.onchange = () => {
+          const p = presets[presetSelect.value]
+          if (p) applySettings(p)
+        }
+
+        function loop(ms) {
+          drawFrame(ms * 0.001)
+          requestAnimationFrame(loop)
+        }
+        requestAnimationFrame(loop)
+      })()
+    </script>
+  </body>
+</html>
