@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Warp Waves — Sound Reactive (Preset)</title>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #0b0f13;
+        overflow: hidden;
+      }
+      canvas {
+        display: block;
+        width: 100vw;
+        height: 100vh;
+      }
+      .ui {
+        position: fixed;
+        left: 12px;
+        top: 12px;
+        z-index: 10;
+        font: 14px/1.2 system-ui, sans-serif;
+        color: #d9e7ff;
+        background: rgba(10, 15, 24, 0.45);
+        backdrop-filter: blur(6px);
+        border: 1px solid rgba(120, 160, 220, 0.25);
+        border-radius: 10px;
+        padding: 10px 12px;
+      }
+      .ui button,
+      .ui input[type='range'],
+      .ui select {
+        width: 220px;
+        margin: 6px 0;
+        padding: 10px 12px;
+        background: #1a2330;
+        border: 0;
+        border-radius: 8px;
+        color: #e6f0ff;
+      }
+      .row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .ui label {
+        opacity: 0.9;
+      }
+      .hint {
+        opacity: 0.7;
+        font-size: 12px;
+        margin-top: 6px;
+      }
+      #jsonModal {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.8);
+        backdrop-filter: blur(6px);
+        z-index: 20;
+        align-items: center;
+        justify-content: center;
+      }
+      #jsonBox {
+        background: #0e1520;
+        color: #cde3ff;
+        border: 1px solid #4a70b8;
+        border-radius: 12px;
+        padding: 20px;
+        width: 80%;
+        max-width: 600px;
+      }
+      #jsonBox textarea {
+        width: 100%;
+        height: 200px;
+        background: #0b1018;
+        color: #aee;
+        border: 1px solid #335;
+        border-radius: 8px;
+        padding: 8px;
+      }
+      #jsonBox button {
+        margin-top: 10px;
+        padding: 8px 14px;
+        border: 0;
+        border-radius: 6px;
+        background: #1a2330;
+        color: #def;
+      }
+      #toggleUI {
+        position: fixed;
+        right: 12px;
+        top: 12px;
+        z-index: 15;
+        font-size: 20px;
+        line-height: 1;
+        background: rgba(10, 15, 24, 0.45);
+        border: 1px solid rgba(120, 160, 220, 0.25);
+        color: #d9e7ff;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        cursor: pointer;
+        backdrop-filter: blur(6px);
+        transition: background 0.2s, transform 0.2s, opacity 0.3s;
+      }
+      #toggleUI:hover {
+        background: rgba(30, 45, 70, 0.6);
+        transform: scale(1.1);
+      }
+
+      .ui {
+        transition: opacity 0.35s ease, transform 0.35s ease;
+        transform-origin: top left;
+      }
+      .ui.hidden {
+        opacity: 0;
+        transform: scale(0.9);
+        pointer-events: none;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="c"></canvas>
+    <button id="toggleUI" title="Toggle Controls">👁️</button>
+
+    <div class="ui">
+      <button id="micBtn">Start Mic</button>
+      <div class="row">
+        <label for="rays">Rays</label
+        ><input id="rays" type="range" min="1" max="10" value="1" />
+      </div>
+      <div class="row">
+        <label for="sens">Sensitivity</label
+        ><input id="sens" type="range" min="50" max="300" value="94" />
+      </div>
+      <div class="row">
+        <label for="trail">Trail</label
+        ><input id="trail" type="range" min="4" max="60" value="24" />
+      </div>
+      <div class="row">
+        <label for="hue">Hue Shift</label
+        ><input id="hue" type="range" min="0" max="360" value="36" />
+      </div>
+
+      <!-- 🔽 New preset dropdown -->
+      <div class="row">
+        <label for="presetSelect">Presets</label>
+        <select id="presetSelect">
+          <option value="default">Default</option>
+          <option value="triple">3-Ray Neon</option>
+        </select>
+      </div>
+
+      <button id="defaultPreset">⭐ Load Default Preset</button>
+      <button id="randomize">🎲 Randomize</button>
+      <button id="save">💾 Save Preset</button>
+      <button id="load">📂 Load Preset</button>
+      <div class="hint">Soft neon warp • starts with your saved preset</div>
+    </div>
+
+    <div id="jsonModal">
+      <div id="jsonBox">
+        <textarea id="jsonText"></textarea><br />
+        <button id="applyJson">Apply</button>
+        <button id="closeJson">Close</button>
+      </div>
+    </div>
+    <script>
+      ;(() => {
+        const canvas = document.getElementById('c')
+        const ctx = canvas.getContext('2d', { alpha: false })
+        const buf = document.createElement('canvas')
+        const bctx = buf.getContext('2d')
+
+        // Existing UI elements
+        const micBtn = document.getElementById('micBtn')
+        const rays = document.getElementById('rays')
+        const sens = document.getElementById('sens')
+        const trail = document.getElementById('trail')
+        const hue = document.getElementById('hue')
+        const randomBtn = document.getElementById('randomize')
+        const saveBtn = document.getElementById('save')
+        const loadBtn = document.getElementById('load')
+        const modal = document.getElementById('jsonModal')
+        const jsonText = document.getElementById('jsonText')
+        const applyJson = document.getElementById('applyJson')
+        const closeJson = document.getElementById('closeJson')
+        const defaultBtn = document.getElementById('defaultPreset')
+        const presetSelect = document.getElementById('presetSelect')
+
+        const ui = document.querySelector('.ui')
+        // ➕ Add polygon + spread controls
+        ui.insertAdjacentHTML(
+          'beforeend',
+          `
+    <div class="row"><label for="polySides">Polygon Sides</label><input id="polySides" type="range" min="3" max="16" value="6"></div>
+    <div class="row"><label for="xspread">X Axis Spread</label><input id="xspread" type="range" min="20" max="200" value="80"></div>
+  `
+        )
+
+        const polySides = document.getElementById('polySides')
+        const xspread = document.getElementById('xspread')
+
+        let DPR = Math.min(2, devicePixelRatio || 1),
+          W = 0,
+          H = 0,
+          CX = 0,
+          CY = 0
+        const resize = () => {
+          W = canvas.width = innerWidth * DPR
+          H = canvas.height = innerHeight * DPR
+          buf.width = W
+          buf.height = H
+          CX = W / 2
+          CY = H / 2
+          ctx.fillStyle = '#0b0f13'
+          ctx.fillRect(0, 0, W, H)
+        }
+        addEventListener('resize', resize, { passive: true })
+        resize()
+
+        // 🎤 microphone input
+        let audioCtx = null,
+          analyser = null,
+          stream = null
+        const FFT = 1024
+        let wave = new Uint8Array(FFT)
+        async function startMic() {
+          if (analyser) {
+            stopMic(false)
+            return
+          }
+          try {
+            stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)()
+            const src = audioCtx.createMediaStreamSource(stream)
+            analyser = audioCtx.createAnalyser()
+            analyser.fftSize = FFT * 2
+            analyser.smoothingTimeConstant = 0.85
+            src.connect(analyser)
+            micBtn.textContent = 'Stop Mic'
+          } catch {
+            micBtn.textContent = 'Mic blocked'
+            setTimeout(() => (micBtn.textContent = 'Start Mic'), 1500)
+          }
+        }
+        function stopMic(update = true) {
+          if (stream) stream.getTracks().forEach(t => t.stop())
+          if (audioCtx) audioCtx.close()
+          analyser = null
+          audioCtx = null
+          stream = null
+          if (update) micBtn.textContent = 'Start Mic'
+        }
+        micBtn.onclick = startMic
+
+        function gradientAt(y, a = 1) {
+          const g = bctx.createLinearGradient(0, y - 80 * DPR, 0, y + 80 * DPR)
+          const baseHue = +hue.value % 360
+          g.addColorStop(0, `hsla(${baseHue + 60},100%,65%,0)`)
+          g.addColorStop(0.5, `hsla(${baseHue},100%,70%,${a})`)
+          g.addColorStop(1, `hsla(${baseHue - 60},100%,65%,0)`)
+          return g
+        }
+
+        function drawFrame(t) {
+          ctx.fillStyle = `rgba(11,15,19,${trail.value / 220})`
+          ctx.fillRect(0, 0, W, H)
+
+          if (analyser) analyser.getByteTimeDomainData(wave)
+          else {
+            for (let i = 0; i < wave.length; i++) {
+              const v =
+                128 +
+                64 * Math.sin(i * 0.04 + t * 2.0) +
+                22 * Math.sin(i * 0.015 - t * 1.4)
+              wave[i] = Math.max(0, Math.min(255, v))
+            }
+          }
+
+          // amplitude from wave RMS
+          let sum = 0
+          for (let i = 0; i < wave.length; i++) {
+            const d = wave[i] - 128
+            sum += d * d
+          }
+          const rms = Math.sqrt(sum / wave.length) / 128
+          const amp = (H * 0.08 + H * 0.3 * rms) * (+sens.value / 200)
+
+          bctx.clearRect(0, 0, W, H)
+          const sides = +polySides.value
+          const spread = +xspread.value
+          const radiusBase = Math.min(W, H) * 0.25 + amp * 0.5
+          const baseHue = +hue.value % 360
+
+          const centerOffset = Math.sin(t * 0.3) * 60 * DPR
+          const cx = CX + centerOffset
+          const cy = CY
+
+          // draw multiple polygons based on rays
+          const count = +rays.value
+          for (let i = 0; i < count; i++) {
+            const offset = (i - count / 2) * spread * DPR
+            const radius = radiusBase + Math.sin(t * 2 + i) * amp * 0.5
+            const rotation = t * 0.4 + i * (Math.PI / sides)
+
+            bctx.beginPath()
+            for (let j = 0; j <= sides; j++) {
+              const angle = (j / sides) * Math.PI * 2 + rotation
+              const distort =
+                ((wave[((j * wave.length) / sides) | 0] - 128) / 128) *
+                amp *
+                0.1
+              const x = cx + Math.cos(angle) * (radius + distort + offset)
+              const y = cy + Math.sin(angle) * (radius + distort)
+              if (j === 0) bctx.moveTo(x, y)
+              else bctx.lineTo(x, y)
+            }
+            bctx.closePath()
+            bctx.strokeStyle = `hsla(${baseHue + i * 20},100%,70%,0.9)`
+            bctx.lineWidth = 1.4 * DPR
+            bctx.shadowBlur = 12 * DPR * (0.5 + rms)
+            bctx.shadowColor = `hsla(${baseHue + i * 20},100%,70%,0.7)`
+            bctx.stroke()
+          }
+
+          ctx.drawImage(buf, 0, 0)
+        }
+
+        function loop(ms) {
+          drawFrame(ms * 0.001)
+          requestAnimationFrame(loop)
+        }
+        requestAnimationFrame(loop)
+
+        // 👁️ UI Toggle
+        const uiPanel = document.querySelector('.ui')
+        const toggleUIBtn = document.getElementById('toggleUI')
+        let uiVisible = true
+        toggleUIBtn.onclick = () => {
+          uiVisible = !uiVisible
+          uiPanel.classList.toggle('hidden', !uiVisible)
+          toggleUIBtn.textContent = uiVisible ? '👁️' : '🙈'
+        }
+        document.addEventListener('keydown', e => {
+          if (e.key.toLowerCase() === 'h') toggleUIBtn.click()
+        })
+      })()
+    </script>
+  </body>
+</html>

@@ -1,0 +1,810 @@
+<script>
+  ;(() => {
+    const canvas = document.getElementById('c')
+    const ctx = canvas.getContext('2d', { alpha: false })
+    const buf = document.createElement('canvas')
+    const bctx = buf.getContext('2d')
+
+    // Core UI elements
+    const micBtn = document.getElementById('micBtn')
+    const rays = document.getElementById('rays')
+    const sens = document.getElementById('sens')
+    const trail = document.getElementById('trail')
+    const hue = document.getElementById('hue')
+
+    // Add polygon grid controls
+    const ui = document.querySelector('.ui')
+    ui.insertAdjacentHTML(
+      'beforeend',
+      `
+      <div class="row"><label for="polySides">Polygon Sides</label><input id="polySides" type="range" min="3" max="12" value="6"></div>
+      <div class="row"><label for="gridSize">Grid Density</label><input id="gridSize" type="range" min="3" max="20" value="8"></div>
+      <div class="row"><label for="polyScale">Polygon Size</label><input id="polyScale" type="range" min="10" max="150" value="60"></div>
+    `
+    )
+    const polySides = document.getElementById('polySides')
+    const gridSize = document.getElementById('gridSize')
+    const polyScale = document.getElementById('polyScale')
+
+    // Canvas setup
+    let DPR = Math.min(2, devicePixelRatio || 1),
+      W = 0,
+      H = 0
+    const resize = () => {
+      W = canvas.width = innerWidth * DPR
+      H = canvas.height = innerHeight * DPR
+      buf.width = W
+      buf.height = H
+      ctx.fillStyle = '#0b0f13'
+      ctx.fillRect(0, 0, W, H)
+    }
+    addEventListener('resize', resize, { passive: true })
+    resize()
+
+    // 🎤 microphone input
+    let audioCtx = null,
+      analyser = null,
+      stream = null
+    const FFT = 1024
+    let wave = new Uint8Array(FFT)
+    async function startMic() {
+      if (analyser) {
+        stopMic(false)
+        return
+      }
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)()
+        const src = audioCtx.createMediaStreamSource(stream)
+        analyser = audioCtx.createAnalyser()
+        analyser.fftSize = FFT * 2
+        analyser.smoothingTimeConstant = 0.85
+        src.connect(analyser)
+        micBtn.textContent = 'Stop Mic'
+      } catch {
+        micBtn.textContent = 'Mic blocked'
+        setTimeout(() => (micBtn.textContent = 'Start Mic'), 1500)
+      }
+    }
+    function stopMic(update = true) {
+      if (stream) stream.getTracks().forEach(t => t.stop())
+      if (audioCtx) audioCtx.close()
+      analyser = null
+      audioCtx = null
+      stream = null
+      if (update) micBtn.textContent = 'Start Mic'
+    }
+    micBtn.onclick = startMic
+
+    function drawPolygon(ctx, x, y, r, sides, rot, hueShift, amp) {
+      ctx.beginPath()
+      for (let i = 0; i <= sides; i++) {
+        const angle = (i / sides) * Math.PI * 2 + rot
+        const distort = Math.sin(angle * sides * 0.5 + amp * 3) * r * 0.25
+        const px = x + Math.cos(angle) * (r + distort)
+        const py = y + Math.sin(angle) * (r + distort)
+        if (i === 0) ctx.moveTo(px, py)
+        else ctx.lineTo(px, py)
+      }
+      ctx.closePath()
+      ctx.strokeStyle = `hsla(${hueShift},100%,70%,0.9)`
+      ctx.lineWidth = 1.2 * DPR
+      ctx.shadowBlur = 8 * DPR
+      ctx.shadowColor = `hsla(${hueShift},100%,70%,0.6)`
+      ctx.stroke()
+    }
+
+    function drawFrame(t) {
+      ctx.fillStyle = `rgba(11,15,19,${trail.value / 220})`
+      ctx.fillRect(0, 0, W, H)
+
+      if (analyser) analyser.getByteTimeDomainData(wave)
+      else {
+        for (let i = 0; i < wave.length; i++) {
+          const v =
+            128 +
+            60 * Math.sin(i * 0.04 + t * 2.0) +
+            30 * Math.sin(i * 0.013 - t * 1.3)
+          wave[i] = Math.max(0, Math.min(255, v))
+        }
+      }
+
+      let sum = 0
+      for (let i = 0; i < wave.length; i++) {
+        const d = wave[i] - 128
+        sum += d * d
+      }
+      const rms = Math.sqrt(sum / wave.length) / 128
+      const amp = rms * (+sens.value / 200)
+
+      bctx.clearRect(0, 0, W, H)
+      const sides = +polySides.value
+      const density = +gridSize.value
+      const baseHue = +hue.value
+      const size = +polyScale.value * DPR
+      const cols = density
+      const rows = Math.ceil((H / W) * density)
+
+      const spacingX = W / cols
+      const spacingY = H / rows
+
+      for (let y = 0; y < rows; y++) {
+        for (let x = 0; x < cols; x++) {
+          const cx = x * spacingX + spacingX / 2
+          const cy = y * spacingY + spacingY / 2
+          const hueShift = baseHue + (x + y) * 8
+          const rotation = t + ((x * y) % 10) * 0.1
+          drawPolygon(
+            bctx,
+            cx,
+            cy,
+            size * (0.4 + amp * 2),
+            sides,
+            rotation,
+            hueShift,
+            amp
+          )
+        }
+      }
+
+      ctx.drawImage(buf, 0, 0)
+    }
+
+    function loop(ms) {
+      drawFrame(ms * 0.001)
+      requestAnimationFrame(loop)
+    }
+    requestAnimationFrame(loop)
+
+    // 👁️ UI toggle
+    const uiPanel = document.querySelector('.ui')
+    const toggleUIBtn = document.getElementById('toggleUI')
+    let uiVisible = true
+    toggleUIBtn.onclick = () => {
+      uiVisible = !uiVisible
+      uiPanel.classList.toggle('hidden', !uiVisible)
+      toggleUIBtn.textContent = uiVisible ? '👁️' : '🙈'
+    }
+    document.addEventListener('keydown', e => {
+      if (e.key.toLowerCase() === 'h') toggleUIBtn.click()
+    })
+  })()
+</script>
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Warp Waves — Sound Reactive (Preset)</title>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #0b0f13;
+        overflow: hidden;
+      }
+      canvas {
+        display: block;
+        width: 100vw;
+        height: 100vh;
+      }
+      .ui {
+        position: fixed;
+        left: 12px;
+        top: 12px;
+        z-index: 10;
+        font: 14px/1.2 system-ui, sans-serif;
+        color: #d9e7ff;
+        background: rgba(10, 15, 24, 0.45);
+        backdrop-filter: blur(6px);
+        border: 1px solid rgba(120, 160, 220, 0.25);
+        border-radius: 10px;
+        padding: 10px 12px;
+      }
+      .ui button,
+      .ui input[type='range'],
+      .ui select {
+        width: 220px;
+        margin: 6px 0;
+        padding: 10px 12px;
+        background: #1a2330;
+        border: 0;
+        border-radius: 8px;
+        color: #e6f0ff;
+      }
+      .row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .ui label {
+        opacity: 0.9;
+      }
+      .hint {
+        opacity: 0.7;
+        font-size: 12px;
+        margin-top: 6px;
+      }
+      #jsonModal {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.8);
+        backdrop-filter: blur(6px);
+        z-index: 20;
+        align-items: center;
+        justify-content: center;
+      }
+      #jsonBox {
+        background: #0e1520;
+        color: #cde3ff;
+        border: 1px solid #4a70b8;
+        border-radius: 12px;
+        padding: 20px;
+        width: 80%;
+        max-width: 600px;
+      }
+      #jsonBox textarea {
+        width: 100%;
+        height: 200px;
+        background: #0b1018;
+        color: #aee;
+        border: 1px solid #335;
+        border-radius: 8px;
+        padding: 8px;
+      }
+      #jsonBox button {
+        margin-top: 10px;
+        padding: 8px 14px;
+        border: 0;
+        border-radius: 6px;
+        background: #1a2330;
+        color: #def;
+      }
+      #toggleUI {
+        position: fixed;
+        right: 12px;
+        top: 12px;
+        z-index: 15;
+        font-size: 20px;
+        line-height: 1;
+        background: rgba(10, 15, 24, 0.45);
+        border: 1px solid rgba(120, 160, 220, 0.25);
+        color: #d9e7ff;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        cursor: pointer;
+        backdrop-filter: blur(6px);
+        transition: background 0.2s, transform 0.2s, opacity 0.3s;
+      }
+      #toggleUI:hover {
+        background: rgba(30, 45, 70, 0.6);
+        transform: scale(1.1);
+      }
+
+      .ui {
+        transition: opacity 0.35s ease, transform 0.35s ease;
+        transform-origin: top left;
+      }
+      .ui.hidden {
+        opacity: 0;
+        transform: scale(0.9);
+        pointer-events: none;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="c"></canvas>
+    <button id="toggleUI" title="Toggle Controls">👁️</button>
+
+    <div class="ui">
+      <button id="micBtn">Start Mic</button>
+      <div class="row">
+        <label for="rays">Rays</label
+        ><input id="rays" type="range" min="1" max="10" value="1" />
+      </div>
+      <div class="row">
+        <label for="sens">Sensitivity</label
+        ><input id="sens" type="range" min="50" max="300" value="94" />
+      </div>
+      <div class="row">
+        <label for="trail">Trail</label
+        ><input id="trail" type="range" min="4" max="60" value="24" />
+      </div>
+      <div class="row">
+        <label for="hue">Hue Shift</label
+        ><input id="hue" type="range" min="0" max="360" value="36" />
+      </div>
+
+      <!-- 🔽 New preset dropdown -->
+      <div class="row">
+        <label for="presetSelect">Presets</label>
+        <select id="presetSelect">
+          <option value="default">Default</option>
+          <option value="triple">3-Ray Neon</option>
+        </select>
+      </div>
+
+      <button id="defaultPreset">⭐ Load Default Preset</button>
+      <button id="randomize">🎲 Randomize</button>
+      <button id="save">💾 Save Preset</button>
+      <button id="load">📂 Load Preset</button>
+      <div class="hint">Soft neon warp • starts with your saved preset</div>
+    </div>
+
+    <div id="jsonModal">
+      <div id="jsonBox">
+        <textarea id="jsonText"></textarea><br />
+        <button id="applyJson">Apply</button>
+        <button id="closeJson">Close</button>
+      </div>
+    </div>
+    <script>
+      ;(() => {
+        const canvas = document.getElementById('c')
+        const ctx = canvas.getContext('2d', { alpha: false })
+        const buf = document.createElement('canvas')
+        const bctx = buf.getContext('2d')
+
+        // Core UI
+        const micBtn = document.getElementById('micBtn')
+        const rays = document.getElementById('rays')
+        const sens = document.getElementById('sens')
+        const trail = document.getElementById('trail')
+        const hue = document.getElementById('hue')
+
+        const randomBtn = document.getElementById('randomize')
+        const saveBtn = document.getElementById('save')
+        const loadBtn = document.getElementById('load')
+        const modal = document.getElementById('jsonModal')
+        const jsonText = document.getElementById('jsonText')
+        const applyJson = document.getElementById('applyJson')
+        const closeJson = document.getElementById('closeJson')
+        const defaultBtn = document.getElementById('defaultPreset')
+        const presetSelect = document.getElementById('presetSelect')
+
+        // Inject extra controls (if not already injected)
+        const ui = document.querySelector('.ui')
+        if (!document.getElementById('polySides')) {
+          ui.insertAdjacentHTML(
+            'beforeend',
+            `
+      <div class="row"><label for="polySides">Polygon Sides</label><input id="polySides" type="range" min="3" max="12" value="6"></div>
+      <div class="row"><label for="gridSize">Grid Density</label><input id="gridSize" type="range" min="3" max="20" value="8"></div>
+      <div class="row"><label for="polyScale">Polygon Size</label><input id="polyScale" type="range" min="10" max="150" value="60"></div>
+
+      <div class="row"><label for="layer1x">Layer1 X</label><input id="layer1x" type="range" min="-200" max="200" value="-40"></div>
+      <div class="row"><label for="layer1y">Layer1 Y</label><input id="layer1y" type="range" min="-200" max="200" value="-30"></div>
+      <div class="row"><label for="layer2x">Layer2 X</label><input id="layer2x" type="range" min="-200" max="200" value="30"></div>
+      <div class="row"><label for="layer2y">Layer2 Y</label><input id="layer2y" type="range" min="-200" max="200" value="25"></div>
+      <div class="row"><label for="layer3x">Layer3 X</label><input id="layer3x" type="range" min="-200" max="200" value="0"></div>
+      <div class="row"><label for="layer3y">Layer3 Y</label><input id="layer3y" type="range" min="-200" max="200" value="0"></div>
+      <div class="row"><label for="layerDepth">Layer Opacity</label><input id="layerDepth" type="range" min="1" max="10" value="4"></div>
+    `
+          )
+        }
+
+        // Grab extra controls
+        const controls = [
+          'polySides',
+          'gridSize',
+          'polyScale',
+          'layer1x',
+          'layer1y',
+          'layer2x',
+          'layer2y',
+          'layer3x',
+          'layer3y',
+          'layerDepth'
+        ].reduce((a, id) => ((a[id] = document.getElementById(id)), a), {})
+
+        // Canvas
+        let DPR = Math.min(2, devicePixelRatio || 1),
+          W = 0,
+          H = 0
+        const resize = () => {
+          W = canvas.width = innerWidth * DPR
+          H = canvas.height = innerHeight * DPR
+          buf.width = W
+          buf.height = H
+          ctx.fillStyle = '#0b0f13'
+          ctx.fillRect(0, 0, W, H)
+        }
+        addEventListener('resize', resize, { passive: true })
+        resize()
+
+        // Mic
+        let audioCtx = null,
+          analyser = null,
+          stream = null
+        const FFT = 1024
+        let wave = new Uint8Array(FFT)
+        async function startMic() {
+          if (analyser) {
+            stopMic(false)
+            return
+          }
+          try {
+            stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)()
+            const src = audioCtx.createMediaStreamSource(stream)
+            analyser = audioCtx.createAnalyser()
+            analyser.fftSize = FFT * 2
+            analyser.smoothingTimeConstant = 0.85
+            src.connect(analyser)
+            micBtn.textContent = 'Stop Mic'
+          } catch {
+            micBtn.textContent = 'Mic blocked'
+            setTimeout(() => (micBtn.textContent = 'Start Mic'), 1500)
+          }
+        }
+        function stopMic(update = true) {
+          if (stream) stream.getTracks().forEach(t => t.stop())
+          if (audioCtx) audioCtx.close()
+          analyser = null
+          audioCtx = null
+          stream = null
+          if (update) micBtn.textContent = 'Start Mic'
+        }
+        micBtn.onclick = startMic
+
+        // Draw a polygon (monochrome)
+        function drawPolygon(ctx, x, y, r, sides, rot, hueShift, amp) {
+          ctx.beginPath()
+          for (let i = 0; i <= sides; i++) {
+            const angle = (i / sides) * Math.PI * 2 + rot
+            const distort =
+              Math.sin(angle * sides * 0.5 + amp * 3) *
+              r *
+              (0.2 + +rays.value * 0.025) // rays has subtle influence
+            const px = x + Math.cos(angle) * (r + distort)
+            const py = y + Math.sin(angle) * (r + distort)
+            i ? ctx.lineTo(px, py) : ctx.moveTo(px, py)
+          }
+          ctx.closePath()
+          ctx.strokeStyle = `hsla(${hueShift},100%,70%,0.8)`
+          ctx.lineWidth = 1.2 * DPR
+          ctx.shadowBlur = 6 * DPR
+          ctx.shadowColor = `hsla(${hueShift},100%,70%,0.5)`
+          ctx.stroke()
+        }
+
+        function drawFrame(t) {
+          ctx.fillStyle = `rgba(11,15,19,${trail.value / 220})`
+          ctx.fillRect(0, 0, W, H)
+
+          if (analyser) analyser.getByteTimeDomainData((wedge = wave))
+          else {
+            for (let i = 0; i < wave.length; i++) {
+              const v =
+                128 +
+                60 * Math.sin(i * 0.04 + t * 2.0) +
+                30 * Math.sin(i * 0.013 - t * 1.3)
+              wave[i] = Math.max(0, Math.min(255, v))
+            }
+          }
+
+          let sum = 0
+          for (let i = 0; i < wave.length; i++) {
+            const d = wave[i] - 128
+            sum += d * d
+          }
+          const rms = Math.sqrt(sum / wave.length) / 128
+          const amp = rms * (+sens.value / 200)
+
+          bctx.clearRect(0, 0, W, H)
+
+          const sides = +controls.polySides.value
+          const density = +controls.gridSize.value
+          const baseHue = +hue.value
+          const size = +controls.polyScale.value * DPR
+          const cols = density
+          const rows = Math.ceil((H / W) * density)
+          const spacingX = W / cols
+          const spacingY = H / rows
+
+          const layers = [
+            {
+              xOff: +controls.layer1x.value * DPR,
+              yOff: +controls.layer1y.value * DPR,
+              rotSpeed: 0.5,
+              scale: 1.0,
+              alpha: 0.8
+            },
+            {
+              xOff: +controls.layer2x.value * DPR,
+              yOff: +controls.layer2y.value * DPR,
+              rotSpeed: 0.7,
+              scale: 1.1,
+              alpha: 0.55
+            },
+            {
+              xOff: +controls.layer3x.value * DPR,
+              yOff: +controls.layer3y.value * DPR,
+              rotSpeed: 0.9,
+              scale: 0.9,
+              alpha: 0.4
+            }
+          ]
+
+          layers.forEach(L => {
+            bctx.globalAlpha = (L.alpha * +controls.layerDepth.value) / 10
+            const rotOffset = t * L.rotSpeed
+            for (let y = 0; y < rows; y++) {
+              for (let x = 0; x < cols; x++) {
+                const cx = x * spacingX + spacingX / 2 + L.xOff
+                const cy = y * spacingY + spacingY / 2 + L.yOff
+                const rotation = rotOffset + ((x * y) % 10) * 0.15
+                drawPolygon(
+                  bctx,
+                  cx,
+                  cy,
+                  size * (0.4 + amp * 2) * L.scale,
+                  sides,
+                  rotation,
+                  baseHue,
+                  amp
+                )
+              }
+            }
+          })
+
+          bctx.globalAlpha = 1
+          ctx.drawImage(buf, 0, 0)
+        }
+
+        ;(function loop(ms) {
+          drawFrame(ms * 0.001)
+          requestAnimationFrame(loop)
+        })()
+
+        // ---------- PRESETS (robust & compatible) ----------
+        // keep "default" and a "triple" option for continuity, plus your triwave set
+        const presets = {
+          default: {
+            rays: 1,
+            sens: 120,
+            trail: 24,
+            hue: 200,
+            polySides: 6,
+            gridSize: 8,
+            polyScale: 60,
+            layer1x: -40,
+            layer1y: -30,
+            layer2x: 30,
+            layer2y: 25,
+            layer3x: 0,
+            layer3y: 0,
+            layerDepth: 4
+          },
+          // legacy-friendly: name matches old dropdown's "3-Ray Neon" semantics
+          triple: {
+            rays: 3,
+            sens: 200,
+            trail: 18,
+            hue: 210,
+            polySides: 6,
+            gridSize: 9,
+            polyScale: 70,
+            layer1x: -60,
+            layer1y: -10,
+            layer2x: 40,
+            layer2y: 35,
+            layer3x: 10,
+            layer3y: -20,
+            layerDepth: 5
+          },
+          // your prototype
+          triwave_cyan: {
+            rays: 3,
+            sens: 231,
+            trail: 10,
+            hue: 186,
+            polySides: 7,
+            gridSize: 7,
+            polyScale: 104,
+            layer1x: -131,
+            layer1y: 177,
+            layer2x: 21,
+            layer2y: -92,
+            layer3x: -35,
+            layer3y: -177,
+            layerDepth: 5
+          },
+          triwave_amber: {
+            rays: 3,
+            sens: 245,
+            trail: 14,
+            hue: 38,
+            polySides: 7,
+            gridSize: 7,
+            polyScale: 108,
+            layer1x: -120,
+            layer1y: 160,
+            layer2x: 24,
+            layer2y: -80,
+            layer3x: -40,
+            layer3y: -150,
+            layerDepth: 6
+          },
+          triwave_deepblue: {
+            rays: 3,
+            sens: 210,
+            trail: 12,
+            hue: 220,
+            polySides: 8,
+            gridSize: 9,
+            polyScale: 95,
+            layer1x: -120,
+            layer1y: 190,
+            layer2x: 15,
+            layer2y: -110,
+            layer3x: -50,
+            layer3y: -190,
+            layerDepth: 5
+          },
+          triwave_mint: {
+            rays: 3,
+            sens: 250,
+            trail: 9,
+            hue: 160,
+            polySides: 6,
+            gridSize: 6,
+            polyScale: 110,
+            layer1x: -130,
+            layer1y: 170,
+            layer2x: 18,
+            layer2y: -85,
+            layer3x: -32,
+            layer3y: -160,
+            layerDepth: 4
+          },
+          triwave_dark: {
+            rays: 2,
+            sens: 180,
+            trail: 20,
+            hue: 210,
+            polySides: 6,
+            gridSize: 8,
+            polyScale: 70,
+            layer1x: -90,
+            layer1y: 120,
+            layer2x: 10,
+            layer2y: -70,
+            layer3x: -20,
+            layer3y: -120,
+            layerDepth: 3
+          }
+        }
+
+        const friendlyName = k =>
+          ({
+            default: 'Default',
+            triple: '3-Ray Neon',
+            triwave_cyan: 'Triwave Cyan',
+            triwave_amber: 'Triwave Amber',
+            triwave_deepblue: 'Triwave Deep Blue',
+            triwave_mint: 'Triwave Mint',
+            triwave_dark: 'Triwave Dark'
+          }[k] || k)
+
+        function rebuildPresetDropdown() {
+          // Build options from our presets object (keeps stable keys)
+          const opts = Object.keys(presets)
+            .map(k => `<option value="${k}">${friendlyName(k)}</option>`)
+            .join('')
+          presetSelect.innerHTML = opts
+          // if something was selected before, try to keep it
+          const current =
+            localStorage.getItem('polypreset_current') || 'default'
+          if (presets[current]) presetSelect.value = current
+        }
+
+        const getSettings = () => ({
+          rays: +rays.value,
+          sens: +sens.value,
+          trail: +trail.value,
+          hue: +hue.value,
+          ...Object.fromEntries(
+            Object.entries(controls).map(([k, v]) => [k, +v.value])
+          )
+        })
+
+        const applySettings = o => {
+          // only set if element exists (robust to UI changes)
+          for (const [k, v] of Object.entries(o)) {
+            const el = document.getElementById(k)
+            if (!el) continue
+            el.value = v
+          }
+        }
+
+        // Wire presets
+        rebuildPresetDropdown()
+        presetSelect.onchange = () => {
+          const key = presetSelect.value
+          const p = presets[key]
+          if (p) {
+            applySettings(p)
+            localStorage.setItem('polypreset_current', key)
+          }
+        }
+        defaultBtn.onclick = () => {
+          applySettings(presets.default)
+          presetSelect.value = 'default'
+          localStorage.setItem('polypreset_current', 'default')
+        }
+
+        // Randomize (covers all controls)
+        randomBtn.onclick = () => {
+          rays.value = ((1 + Math.random() * 5) | 0).toString()
+          sens.value = ((80 + Math.random() * 220) | 0).toString()
+          trail.value = ((8 + Math.random() * 40) | 0).toString()
+          hue.value = ((Math.random() * 360) | 0).toString()
+
+          controls.polySides.value = ((3 + Math.random() * 9) | 0).toString()
+          controls.gridSize.value = ((4 + Math.random() * 16) | 0).toString()
+          controls.polyScale.value = ((20 + Math.random() * 100) | 0).toString()
+          controls.layerDepth.value = ((1 + Math.random() * 10) | 0).toString()
+
+          const r200 = () => ((Math.random() * 400 - 200) | 0).toString()
+          controls.layer1x.value = r200()
+          controls.layer1y.value = r200()
+          controls.layer2x.value = r200()
+          controls.layer2y.value = r200()
+          controls.layer3x.value = r200()
+          controls.layer3y.value = r200()
+        }
+
+        // Save / Load JSON
+        saveBtn.onclick = () => {
+          jsonText.value = JSON.stringify(getSettings(), null, 2)
+          modal.style.display = 'flex'
+        }
+        loadBtn.onclick = () => {
+          jsonText.value = ''
+          modal.style.display = 'flex'
+        }
+        applyJson.onclick = () => {
+          try {
+            const o = JSON.parse(jsonText.value)
+            applySettings(o)
+          } catch (e) {
+            alert('Invalid JSON')
+          }
+          modal.style.display = 'none'
+        }
+        closeJson.onclick = () => (modal.style.display = 'none')
+
+        // UI toggle (unchanged)
+        const uiPanel = document.querySelector('.ui')
+        const toggleUIBtn = document.getElementById('toggleUI')
+        let uiVisible = true
+        toggleUIBtn.onclick = () => {
+          uiVisible = !uiVisible
+          uiPanel.classList.toggle('hidden', !uiVisible)
+          toggleUIBtn.textContent = uiVisible ? '👁️' : '🙈'
+          toggleUIBtn.title = uiVisible
+            ? 'Hide Controls (H)'
+            : 'Show Controls (H)'
+        }
+        document.addEventListener('keydown', e => {
+          if (e.key.toLowerCase() === 'h') toggleUIBtn.click()
+        })
+
+        // On first load, apply whichever preset was last used, else default
+        ;(() => {
+          const key = localStorage.getItem('polypreset_current') || 'default'
+          const p = presets[key] || presets.default
+          applySettings(p)
+          presetSelect.value = key in presets ? key : 'default'
+        })()
+      })()
+    </script>
+  </body>
+</html>
