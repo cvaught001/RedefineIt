@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Warp Waves — Sound Reactive (Save Preset)</title>
+    <title>Warp Waves — Sound Reactive (Preset)</title>
     <style>
       :root {
         color-scheme: dark;
@@ -34,7 +34,8 @@
         padding: 10px 12px;
       }
       .ui button,
-      .ui input[type='range'] {
+      .ui input[type='range'],
+      .ui select {
         width: 220px;
         margin: 6px 0;
         padding: 10px 12px;
@@ -101,26 +102,35 @@
       <button id="micBtn">Start Mic</button>
       <div class="row">
         <label for="rays">Rays</label
-        ><input id="rays" type="range" min="1" max="10" value="4" />
+        ><input id="rays" type="range" min="1" max="10" value="1" />
       </div>
       <div class="row">
         <label for="sens">Sensitivity</label
-        ><input id="sens" type="range" min="50" max="300" value="150" />
+        ><input id="sens" type="range" min="50" max="300" value="94" />
       </div>
       <div class="row">
         <label for="trail">Trail</label
-        ><input id="trail" type="range" min="4" max="60" value="16" />
+        ><input id="trail" type="range" min="4" max="60" value="24" />
       </div>
       <div class="row">
         <label for="hue">Hue Shift</label
-        ><input id="hue" type="range" min="0" max="360" value="220" />
+        ><input id="hue" type="range" min="0" max="360" value="36" />
       </div>
+
+      <!-- 🔽 New preset dropdown -->
+      <div class="row">
+        <label for="presetSelect">Presets</label>
+        <select id="presetSelect">
+          <option value="default">Default</option>
+          <option value="triple">3-Ray Neon</option>
+        </select>
+      </div>
+
+      <button id="defaultPreset">⭐ Load Default Preset</button>
       <button id="randomize">🎲 Randomize</button>
       <button id="save">💾 Save Preset</button>
       <button id="load">📂 Load Preset</button>
-      <div class="hint">
-        Soft neon warp • click “Start Mic” or randomize visuals
-      </div>
+      <div class="hint">Soft neon warp • starts with your saved preset</div>
     </div>
 
     <div id="jsonModal">
@@ -149,6 +159,13 @@
         const jsonText = document.getElementById('jsonText')
         const applyJson = document.getElementById('applyJson')
         const closeJson = document.getElementById('closeJson')
+        const defaultBtn = document.getElementById('defaultPreset')
+        const presetSelect = document.getElementById('presetSelect')
+
+        const presets = {
+          default: { rays: 1, sens: 94, trail: 24, hue: 36 },
+          triple: { rays: 3, sens: 292, trail: 47, hue: 24 }
+        }
 
         let DPR = Math.min(2, devicePixelRatio || 1),
           W = 0,
@@ -222,7 +239,7 @@
           for (let i = 0; i < iter; i++) {
             const w = W * scale,
               h = H * scale
-            ctx.globalAlpha = 0.04 // subtle rays
+            ctx.globalAlpha = 0.04
             ctx.drawImage(buf, 0, 0, W, H, CX - w / 2, CY - h / 2, w, h)
             bctx.clearRect(0, 0, W, H)
             bctx.drawImage(canvas, 0, 0)
@@ -285,7 +302,6 @@
           drawZoomBlur(Math.min(+rays.value + Math.floor(rms * 6), 5))
         }
 
-        // Save/Load presets
         function getSettings() {
           return {
             rays: +rays.value,
@@ -300,6 +316,7 @@
             if (el) el.value = obj[k]
           }
         }
+
         saveBtn.onclick = () => {
           jsonText.value = JSON.stringify(getSettings(), null, 2)
           modal.style.display = 'flex'
@@ -310,8 +327,7 @@
         }
         applyJson.onclick = () => {
           try {
-            const obj = JSON.parse(jsonText.value)
-            applySettings(obj)
+            applySettings(JSON.parse(jsonText.value))
           } catch (e) {
             alert('Invalid JSON')
           }
@@ -319,7 +335,6 @@
         }
         closeJson.onclick = () => (modal.style.display = 'none')
 
-        // Randomizer
         randomBtn.onclick = () => {
           rays.value = (1 + Math.random() * 8).toFixed(0)
           sens.value = (80 + Math.random() * 220).toFixed(0)
@@ -327,7 +342,12 @@
           hue.value = (Math.random() * 360).toFixed(0)
         }
 
-        // Loop
+        defaultBtn.onclick = () => applySettings(presets.default)
+        presetSelect.onchange = () => {
+          const p = presets[presetSelect.value]
+          if (p) applySettings(p)
+        }
+
         function loop(ms) {
           drawFrame(ms * 0.001)
           requestAnimationFrame(loop)
