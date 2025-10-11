@@ -5,21 +5,6 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Warp Waves — Sound Reactive (Preset)</title>
     <style>
-      :root {
-        color-scheme: dark;
-      }
-      html,
-      body {
-        margin: 0;
-        height: 100%;
-        background: #0b0f13;
-        overflow: hidden;
-      }
-      canvas {
-        display: block;
-        width: 100vw;
-        height: 100vh;
-      }
       .ui {
         position: fixed;
         left: 12px;
@@ -27,72 +12,24 @@
         z-index: 10;
         font: 14px/1.2 system-ui, sans-serif;
         color: #d9e7ff;
-        background: rgba(10, 15, 24, 0.45);
+        background: rgba(10, 15, 24, 0.65);
         backdrop-filter: blur(6px);
         border: 1px solid rgba(120, 160, 220, 0.25);
         border-radius: 10px;
         padding: 10px 12px;
+        width: 260px;
+        max-height: 90vh; /* 🌟 scrollable window height */
+        overflow-y: auto; /* 🌟 add scrollbars */
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+        transition: opacity 0.35s ease, transform 0.35s ease;
+        transform-origin: top left;
       }
-      .ui button,
-      .ui input[type='range'],
-      .ui select {
-        width: 220px;
-        margin: 6px 0;
-        padding: 10px 12px;
-        background: #1a2330;
-        border: 0;
-        border-radius: 8px;
-        color: #e6f0ff;
+      .ui.hidden {
+        opacity: 0;
+        transform: scale(0.9);
+        pointer-events: none;
       }
-      .row {
-        display: flex;
-        gap: 8px;
-        align-items: center;
-      }
-      .ui label {
-        opacity: 0.9;
-      }
-      .hint {
-        opacity: 0.7;
-        font-size: 12px;
-        margin-top: 6px;
-      }
-      #jsonModal {
-        display: none;
-        position: fixed;
-        inset: 0;
-        background: rgba(0, 0, 0, 0.8);
-        backdrop-filter: blur(6px);
-        z-index: 20;
-        align-items: center;
-        justify-content: center;
-      }
-      #jsonBox {
-        background: #0e1520;
-        color: #cde3ff;
-        border: 1px solid #4a70b8;
-        border-radius: 12px;
-        padding: 20px;
-        width: 80%;
-        max-width: 600px;
-      }
-      #jsonBox textarea {
-        width: 100%;
-        height: 200px;
-        background: #0b1018;
-        color: #aee;
-        border: 1px solid #335;
-        border-radius: 8px;
-        padding: 8px;
-      }
-      #jsonBox button {
-        margin-top: 10px;
-        padding: 8px 14px;
-        border: 0;
-        border-radius: 6px;
-        background: #1a2330;
-        color: #def;
-      }
+
       #toggleUI {
         position: fixed;
         right: 12px;
@@ -113,16 +50,6 @@
       #toggleUI:hover {
         background: rgba(30, 45, 70, 0.6);
         transform: scale(1.1);
-      }
-
-      .ui {
-        transition: opacity 0.35s ease, transform 0.35s ease;
-        transform-origin: top left;
-      }
-      .ui.hidden {
-        opacity: 0;
-        transform: scale(0.9);
-        pointer-events: none;
       }
     </style>
   </head>
@@ -185,7 +112,6 @@
         const sens = document.getElementById('sens')
         const trail = document.getElementById('trail')
         const hue = document.getElementById('hue')
-
         const randomBtn = document.getElementById('randomize')
         const saveBtn = document.getElementById('save')
         const loadBtn = document.getElementById('load')
@@ -196,7 +122,7 @@
         const defaultBtn = document.getElementById('defaultPreset')
         const presetSelect = document.getElementById('presetSelect')
 
-        // Inject extra controls (if not already injected)
+        // Inject controls if missing
         const ui = document.querySelector('.ui')
         if (!document.getElementById('polySides')) {
           ui.insertAdjacentHTML(
@@ -205,7 +131,6 @@
       <div class="row"><label for="polySides">Polygon Sides</label><input id="polySides" type="range" min="3" max="12" value="6"></div>
       <div class="row"><label for="gridSize">Grid Density</label><input id="gridSize" type="range" min="3" max="20" value="8"></div>
       <div class="row"><label for="polyScale">Polygon Size</label><input id="polyScale" type="range" min="10" max="150" value="60"></div>
-
       <div class="row"><label for="layer1x">Layer1 X</label><input id="layer1x" type="range" min="-200" max="200" value="-40"></div>
       <div class="row"><label for="layer1y">Layer1 Y</label><input id="layer1y" type="range" min="-200" max="200" value="-30"></div>
       <div class="row"><label for="layer2x">Layer2 X</label><input id="layer2x" type="range" min="-200" max="200" value="30"></div>
@@ -213,44 +138,52 @@
       <div class="row"><label for="layer3x">Layer3 X</label><input id="layer3x" type="range" min="-200" max="200" value="0"></div>
       <div class="row"><label for="layer3y">Layer3 Y</label><input id="layer3y" type="range" min="-200" max="200" value="0"></div>
       <div class="row"><label for="layerDepth">Layer Opacity</label><input id="layerDepth" type="range" min="1" max="10" value="4"></div>
+
+      <div class="row"><label for="midGap">Mid Gap</label><input id="midGap" type="range" min="0" max="200" value="60"></div>
+      <div class="row"><label for="edgy">Edginess</label><input id="edgy" type="range" min="1" max="10" value="3"></div>
+      <div class="row"><label for="topBias">Top Bias</label><input id="topBias" type="range" min="-5" max="10" value="0"></div>
+      <div class="row"><label for="angle">Angle°</label><input id="angle" type="range" min="0" max="45" value="0"></div>
+      <div class="row"><label>Symmetry</label><input id="symmetry" type="checkbox" checked></div>
+      <div class="row"><label>Glow Pulse</label><input id="glowPulse" type="checkbox" checked></div>
+      <div class="row"><label>Drift Motion</label><input id="driftMotion" type="checkbox" checked></div>
+      <div class="row"><label>Fractal Mode</label><input id="fractalMode" type="checkbox"></div>
     `
           )
         }
 
-        // Grab extra controls
-        const controls = [
-          'polySides',
-          'gridSize',
-          'polyScale',
-          'layer1x',
-          'layer1y',
-          'layer2x',
-          'layer2y',
-          'layer3x',
-          'layer3y',
-          'layerDepth'
-        ].reduce((a, id) => ((a[id] = document.getElementById(id)), a), {})
+        const controls = Array.from(ui.querySelectorAll('input')).reduce(
+          (a, el) => {
+            a[el.id] = el
+            return a
+          },
+          {}
+        )
 
-        // Canvas
+        // Canvas scaling & performance
+        const SCALE = 0.66,
+          FPS_TARGET = 45
         let DPR = Math.min(2, devicePixelRatio || 1),
           W = 0,
-          H = 0
-        const resize = () => {
+          H = 0,
+          BW = 0,
+          BH = 0,
+          lastFrame = 0
+        function resize() {
           W = canvas.width = innerWidth * DPR
           H = canvas.height = innerHeight * DPR
-          buf.width = W
-          buf.height = H
+          BW = buf.width = W * SCALE
+          BH = buf.height = H * SCALE
           ctx.fillStyle = '#0b0f13'
           ctx.fillRect(0, 0, W, H)
         }
         addEventListener('resize', resize, { passive: true })
         resize()
 
-        // Mic
+        // Mic setup
         let audioCtx = null,
           analyser = null,
           stream = null
-        const FFT = 1024
+        const FFT = 512
         let wave = new Uint8Array(FFT)
         async function startMic() {
           if (analyser) {
@@ -262,7 +195,7 @@
             audioCtx = new (window.AudioContext || window.webkitAudioContext)()
             const src = audioCtx.createMediaStreamSource(stream)
             analyser = audioCtx.createAnalyser()
-            analyser.fftSize = FFT * 2
+            analyser.fftSize = FFT
             analyser.smoothingTimeConstant = 0.85
             src.connect(analyser)
             micBtn.textContent = 'Stop Mic'
@@ -274,48 +207,94 @@
         function stopMic(update = true) {
           if (stream) stream.getTracks().forEach(t => t.stop())
           if (audioCtx) audioCtx.close()
-          analyser = null
-          audioCtx = null
-          stream = null
+          analyser = audioCtx = stream = null
           if (update) micBtn.textContent = 'Start Mic'
         }
         micBtn.onclick = startMic
 
-        // Draw a polygon (monochrome)
-        function drawPolygon(ctx, x, y, r, sides, rot, hueShift, amp) {
-          ctx.beginPath()
+        // Polygon trig cache
+        let cachedSides = 0,
+          basePoly = []
+        function buildPolygon(sides) {
+          basePoly = []
           for (let i = 0; i <= sides; i++) {
-            const angle = (i / sides) * Math.PI * 2 + rot
-            const distort =
-              Math.sin(angle * sides * 0.5 + amp * 3) *
-              r *
-              (0.2 + +rays.value * 0.025) // rays has subtle influence
-            const px = x + Math.cos(angle) * (r + distort)
-            const py = y + Math.sin(angle) * (r + distort)
-            i ? ctx.lineTo(px, py) : ctx.moveTo(px, py)
+            const a = (i / sides) * Math.PI * 2
+            basePoly.push([Math.cos(a), Math.sin(a)])
           }
-          ctx.closePath()
-          ctx.strokeStyle = `hsla(${hueShift},100%,70%,0.8)`
-          ctx.lineWidth = 1.2 * DPR
-          ctx.shadowBlur = 6 * DPR
-          ctx.shadowColor = `hsla(${hueShift},100%,70%,0.5)`
-          ctx.stroke()
+          cachedSides = sides
+        }
+
+        // Draw helpers
+        function drawPolygon(ctx, cx, cy, r, rot, hue, amp) {
+          ctx.save()
+          ctx.translate(cx, cy)
+          ctx.rotate(rot)
+          for (let pass = 3; pass > 0; pass--) {
+            ctx.beginPath()
+            for (const [cosA, sinA] of basePoly) {
+              const distort =
+                Math.sin((cosA + sinA) * r * 0.01 + amp * 3) * r * 0.25
+              ctx.lineTo(cosA * (r + distort), sinA * (r + distort))
+            }
+            ctx.closePath()
+            ctx.globalAlpha = 0.18 / pass
+            ctx.lineWidth = pass * DPR
+            ctx.strokeStyle = `hsla(${hue},100%,70%,0.9)`
+            ctx.stroke()
+          }
+          ctx.restore()
+          ctx.globalAlpha = 1
+        }
+
+        function drawFractalPolygon(ctx, x, y, r, rot, hue, amp, depth = 0) {
+          drawPolygon(ctx, x, y, r, rot, hue, amp)
+          if (depth < 2) {
+            const next = r * 0.5,
+              offset = r * 0.35
+            drawFractalPolygon(
+              ctx,
+              x + offset,
+              y + offset,
+              next,
+              rot + 0.5,
+              hue + 10,
+              amp,
+              depth + 1
+            )
+            drawFractalPolygon(
+              ctx,
+              x - offset,
+              y - offset,
+              next,
+              rot - 0.5,
+              hue - 10,
+              amp,
+              depth + 1
+            )
+          }
         }
 
         function drawFrame(t) {
-          ctx.fillStyle = `rgba(11,15,19,${trail.value / 220})`
-          ctx.fillRect(0, 0, W, H)
-
-          if (analyser) analyser.getByteTimeDomainData((wedge = wave))
-          else {
-            for (let i = 0; i < wave.length; i++) {
-              const v =
-                128 +
-                60 * Math.sin(i * 0.04 + t * 2.0) +
-                30 * Math.sin(i * 0.013 - t * 1.3)
-              wave[i] = Math.max(0, Math.min(255, v))
-            }
+          if (controls.fractalMode.checked) {
+            bctx.save()
+            bctx.globalAlpha = 0.08
+            bctx.translate(BW / 2, BH / 2)
+            bctx.rotate(0.002)
+            bctx.scale(1.01, 1.01)
+            bctx.drawImage(buf, -BW / 2, -BH / 2)
+            bctx.restore()
+          } else {
+            bctx.fillStyle = `rgba(11,15,19,${trail.value / 220})`
+            bctx.fillRect(0, 0, BW, BH)
           }
+
+          if (analyser) analyser.getByteTimeDomainData(wave)
+          else
+            for (let i = 0; i < wave.length; i++)
+              wave[i] =
+                128 +
+                60 * Math.sin(i * 0.04 + t * 2) +
+                30 * Math.sin(i * 0.013 - t * 1.3)
 
           let sum = 0
           for (let i = 0; i < wave.length; i++) {
@@ -325,74 +304,91 @@
           const rms = Math.sqrt(sum / wave.length) / 128
           const amp = rms * (+sens.value / 200)
 
-          bctx.clearRect(0, 0, W, H)
-
           const sides = +controls.polySides.value
+          if (sides !== cachedSides) buildPolygon(sides)
+
           const density = +controls.gridSize.value
           const baseHue = +hue.value
-          const size = +controls.polyScale.value * DPR
-          const cols = density
-          const rows = Math.ceil((H / W) * density)
-          const spacingX = W / cols
-          const spacingY = H / rows
+          const size = +controls.polyScale.value * DPR * SCALE
+          const cols = density,
+            rows = Math.ceil((BH / BW) * density)
+          const spacingX = BW / cols,
+            spacingY = BH / rows
 
           const layers = [
             {
-              xOff: +controls.layer1x.value * DPR,
-              yOff: +controls.layer1y.value * DPR,
+              xOff: +controls.layer1x.value * DPR * SCALE,
+              yOff: +controls.layer1y.value * DPR * SCALE,
               rotSpeed: 0.5,
               scale: 1.0,
               alpha: 0.8
             },
             {
-              xOff: +controls.layer2x.value * DPR,
-              yOff: +controls.layer2y.value * DPR,
+              xOff: +controls.layer2x.value * DPR * SCALE,
+              yOff: +controls.layer2y.value * DPR * SCALE,
               rotSpeed: 0.7,
               scale: 1.1,
               alpha: 0.55
             },
             {
-              xOff: +controls.layer3x.value * DPR,
-              yOff: +controls.layer3y.value * DPR,
+              xOff: +controls.layer3x.value * DPR * SCALE,
+              yOff: +controls.layer3y.value * DPR * SCALE,
               rotSpeed: 0.9,
               scale: 0.9,
               alpha: 0.4
             }
           ]
 
-          layers.forEach(L => {
-            bctx.globalAlpha = (L.alpha * +controls.layerDepth.value) / 10
-            const rotOffset = t * L.rotSpeed
-            for (let y = 0; y < rows; y++) {
-              for (let x = 0; x < cols; x++) {
-                const cx = x * spacingX + spacingX / 2 + L.xOff
-                const cy = y * spacingY + spacingY / 2 + L.yOff
-                const rotation = rotOffset + ((x * y) % 10) * 0.15
-                drawPolygon(
+          const centers = []
+          for (let y = 0; y < rows; y++)
+            for (let x = 0; x < cols; x++)
+              centers.push([
+                x * spacingX + spacingX / 2,
+                y * spacingY + spacingY / 2
+              ])
+
+          const layerAlphaMul = +controls.layerDepth.value / 10
+          for (const L of layers) {
+            bctx.globalAlpha = L.alpha * layerAlphaMul
+            const rot = t * L.rotSpeed
+            for (const [cx, cy] of centers) {
+              const r = size * (0.4 + amp * 2) * L.scale
+              if (controls.fractalMode.checked)
+                drawFractalPolygon(
                   bctx,
-                  cx,
-                  cy,
-                  size * (0.4 + amp * 2) * L.scale,
-                  sides,
-                  rotation,
+                  cx + L.xOff,
+                  cy + L.yOff,
+                  r,
+                  rot,
                   baseHue,
                   amp
                 )
-              }
+              else
+                drawPolygon(
+                  bctx,
+                  cx + L.xOff,
+                  cy + L.yOff,
+                  r,
+                  rot,
+                  baseHue,
+                  amp
+                )
             }
-          })
-
+          }
           bctx.globalAlpha = 1
-          ctx.drawImage(buf, 0, 0)
+          ctx.drawImage(buf, 0, 0, W, H)
         }
 
-        ;(function loop(ms) {
-          drawFrame(ms * 0.001)
+        function loop(ms) {
+          if (ms - lastFrame > 1000 / FPS_TARGET) {
+            drawFrame(ms * 0.001)
+            lastFrame = ms
+          }
           requestAnimationFrame(loop)
-        })()
+        }
+        requestAnimationFrame(loop)
 
-        // ---------- PRESETS (robust & compatible) ----------
-        // keep "default" and a "triple" option for continuity, plus your triwave set
+        // Presets
         const presets = {
           default: {
             rays: 1,
@@ -408,9 +404,16 @@
             layer2y: 25,
             layer3x: 0,
             layer3y: 0,
-            layerDepth: 4
+            layerDepth: 4,
+            midGap: 60,
+            edgy: 3,
+            topBias: 0,
+            angle: 0,
+            symmetry: true,
+            glowPulse: true,
+            driftMotion: true,
+            fractalMode: false
           },
-          // legacy-friendly: name matches old dropdown's "3-Ray Neon" semantics
           triple: {
             rays: 3,
             sens: 200,
@@ -425,9 +428,16 @@
             layer2y: 35,
             layer3x: 10,
             layer3y: -20,
-            layerDepth: 5
+            layerDepth: 5,
+            midGap: 50,
+            edgy: 4,
+            topBias: 2,
+            angle: 10,
+            symmetry: true,
+            glowPulse: true,
+            driftMotion: true,
+            fractalMode: false
           },
-          // your prototype
           triwave_cyan: {
             rays: 3,
             sens: 231,
@@ -442,7 +452,15 @@
             layer2y: -92,
             layer3x: -35,
             layer3y: -177,
-            layerDepth: 5
+            layerDepth: 5,
+            midGap: 60,
+            edgy: 3,
+            topBias: 0,
+            angle: 0,
+            symmetry: true,
+            glowPulse: true,
+            driftMotion: true,
+            fractalMode: true
           },
           triwave_amber: {
             rays: 3,
@@ -458,7 +476,15 @@
             layer2y: -80,
             layer3x: -40,
             layer3y: -150,
-            layerDepth: 6
+            layerDepth: 6,
+            midGap: 60,
+            edgy: 3,
+            topBias: 0,
+            angle: 0,
+            symmetry: true,
+            glowPulse: true,
+            driftMotion: true,
+            fractalMode: true
           },
           triwave_deepblue: {
             rays: 3,
@@ -474,64 +500,24 @@
             layer2y: -110,
             layer3x: -50,
             layer3y: -190,
-            layerDepth: 5
-          },
-          triwave_mint: {
-            rays: 3,
-            sens: 250,
-            trail: 9,
-            hue: 160,
-            polySides: 6,
-            gridSize: 6,
-            polyScale: 110,
-            layer1x: -130,
-            layer1y: 170,
-            layer2x: 18,
-            layer2y: -85,
-            layer3x: -32,
-            layer3y: -160,
-            layerDepth: 4
-          },
-          triwave_dark: {
-            rays: 2,
-            sens: 180,
-            trail: 20,
-            hue: 210,
-            polySides: 6,
-            gridSize: 8,
-            polyScale: 70,
-            layer1x: -90,
-            layer1y: 120,
-            layer2x: 10,
-            layer2y: -70,
-            layer3x: -20,
-            layer3y: -120,
-            layerDepth: 3
+            layerDepth: 5,
+            midGap: 60,
+            edgy: 3,
+            topBias: 0,
+            angle: 0,
+            symmetry: true,
+            glowPulse: true,
+            driftMotion: true,
+            fractalMode: false
           }
         }
 
-        const friendlyName = k =>
-          ({
-            default: 'Default',
-            triple: '3-Ray Neon',
-            triwave_cyan: 'Triwave Cyan',
-            triwave_amber: 'Triwave Amber',
-            triwave_deepblue: 'Triwave Deep Blue',
-            triwave_mint: 'Triwave Mint',
-            triwave_dark: 'Triwave Dark'
-          }[k] || k)
-
         function rebuildPresetDropdown() {
-          // Build options from our presets object (keeps stable keys)
-          const opts = Object.keys(presets)
-            .map(k => `<option value="${k}">${friendlyName(k)}</option>`)
+          presetSelect.innerHTML = Object.keys(presets)
+            .map(k => `<option value="${k}">${k.replace(/_/g, ' ')}</option>`)
             .join('')
-          presetSelect.innerHTML = opts
-          // if something was selected before, try to keep it
-          const current =
-            localStorage.getItem('polypreset_current') || 'default'
-          if (presets[current]) presetSelect.value = current
         }
+        rebuildPresetDropdown()
 
         const getSettings = () => ({
           rays: +rays.value,
@@ -539,57 +525,40 @@
           trail: +trail.value,
           hue: +hue.value,
           ...Object.fromEntries(
-            Object.entries(controls).map(([k, v]) => [k, +v.value])
+            Object.entries(controls).map(([k, v]) => [
+              k,
+              v.type === 'checkbox' ? v.checked : +v.value
+            ])
           )
         })
 
         const applySettings = o => {
-          // only set if element exists (robust to UI changes)
           for (const [k, v] of Object.entries(o)) {
             const el = document.getElementById(k)
             if (!el) continue
-            el.value = v
+            if (el.type === 'checkbox') el.checked = !!v
+            else el.value = v
           }
         }
 
-        // Wire presets
-        rebuildPresetDropdown()
         presetSelect.onchange = () => {
-          const key = presetSelect.value
-          const p = presets[key]
-          if (p) {
-            applySettings(p)
-            localStorage.setItem('polypreset_current', key)
-          }
+          const p = presets[presetSelect.value]
+          if (p) applySettings(p)
         }
-        defaultBtn.onclick = () => {
-          applySettings(presets.default)
-          presetSelect.value = 'default'
-          localStorage.setItem('polypreset_current', 'default')
-        }
+        defaultBtn.onclick = () => applySettings(presets.default)
 
-        // Randomize (covers all controls)
         randomBtn.onclick = () => {
-          rays.value = ((1 + Math.random() * 5) | 0).toString()
-          sens.value = ((80 + Math.random() * 220) | 0).toString()
-          trail.value = ((8 + Math.random() * 40) | 0).toString()
-          hue.value = ((Math.random() * 360) | 0).toString()
-
-          controls.polySides.value = ((3 + Math.random() * 9) | 0).toString()
-          controls.gridSize.value = ((4 + Math.random() * 16) | 0).toString()
-          controls.polyScale.value = ((20 + Math.random() * 100) | 0).toString()
-          controls.layerDepth.value = ((1 + Math.random() * 10) | 0).toString()
-
-          const r200 = () => ((Math.random() * 400 - 200) | 0).toString()
-          controls.layer1x.value = r200()
-          controls.layer1y.value = r200()
-          controls.layer2x.value = r200()
-          controls.layer2y.value = r200()
-          controls.layer3x.value = r200()
-          controls.layer3y.value = r200()
+          rays.value = (1 + Math.random() * 5) | 0
+          sens.value = (80 + Math.random() * 220) | 0
+          trail.value = (8 + Math.random() * 40) | 0
+          hue.value = (Math.random() * 360) | 0
+          Object.keys(controls).forEach(k => {
+            const c = controls[k]
+            if (c.type === 'checkbox') c.checked = Math.random() > 0.5
+            else c.value = (Math.random() * 100) | 0
+          })
         }
 
-        // Save / Load JSON
         saveBtn.onclick = () => {
           jsonText.value = JSON.stringify(getSettings(), null, 2)
           modal.style.display = 'flex'
@@ -600,39 +569,32 @@
         }
         applyJson.onclick = () => {
           try {
-            const o = JSON.parse(jsonText.value)
-            applySettings(o)
-          } catch (e) {
+            applySettings(JSON.parse(jsonText.value))
+          } catch {
             alert('Invalid JSON')
           }
           modal.style.display = 'none'
         }
         closeJson.onclick = () => (modal.style.display = 'none')
-
-        // UI toggle (unchanged)
-        const uiPanel = document.querySelector('.ui')
-        const toggleUIBtn = document.getElementById('toggleUI')
-        let uiVisible = true
-        toggleUIBtn.onclick = () => {
-          uiVisible = !uiVisible
-          uiPanel.classList.toggle('hidden', !uiVisible)
-          toggleUIBtn.textContent = uiVisible ? '👁️' : '🙈'
-          toggleUIBtn.title = uiVisible
-            ? 'Hide Controls (H)'
-            : 'Show Controls (H)'
-        }
-        document.addEventListener('keydown', e => {
-          if (e.key.toLowerCase() === 'h') toggleUIBtn.click()
-        })
-
-        // On first load, apply whichever preset was last used, else default
-        ;(() => {
-          const key = localStorage.getItem('polypreset_current') || 'default'
-          const p = presets[key] || presets.default
-          applySettings(p)
-          presetSelect.value = key in presets ? key : 'default'
-        })()
       })()
+      // 👁️ UI Toggle (restored)
+      const uiPanel = document.querySelector('.ui')
+      const toggleUIBtn = document.getElementById('toggleUI')
+      let uiVisible = true
+
+      toggleUIBtn.onclick = () => {
+        uiVisible = !uiVisible
+        uiPanel.classList.toggle('hidden', !uiVisible)
+        toggleUIBtn.textContent = uiVisible ? '👁️' : '🙈'
+        toggleUIBtn.title = uiVisible
+          ? 'Hide Controls (H)'
+          : 'Show Controls (H)'
+      }
+
+      // Keyboard shortcut: press “H” to toggle UI
+      document.addEventListener('keydown', e => {
+        if (e.key.toLowerCase() === 'h') toggleUIBtn.click()
+      })
     </script>
   </body>
 </html>
