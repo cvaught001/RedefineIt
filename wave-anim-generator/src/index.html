@@ -1,0 +1,88 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>3D Waves — Presets + Controls</title>
+
+</head>
+<body>
+<canvas id="canvas"></canvas>
+
+<button id="controlToggle" title="Toggle controls">⚙️</button>
+
+<!-- Controls -->
+<div id="controls" aria-label="Controls">
+  <label>Presets
+    <select id="presetSelect"></select>
+  </label>
+  <input type="text" id="presetName" placeholder="New preset name (optional)">
+  <button id="savePresetBtn" class="small">⭐ Save as Preset (adds + downloads)</button>
+
+  <hr>
+
+  <label>Num Shapes
+    <input type="range" id="numShapes" min="1" max="50" value="17">
+  </label>
+
+  <label>Spacing
+    <input type="range" id="spacing" min="6" max="120" value="48">
+  </label>
+
+  <label>Frequency
+    <input type="range" id="frequency" min="0.1" max="20" step="0.1" value="5">
+  </label>
+
+  <label>Resonance
+    <input type="range" id="resonance" min="0" max="200" value="40">
+  </label>
+
+  <label>Modulation
+    <input type="range" id="modulation" min="0" max="100" value="25">
+  </label>
+
+  <label>Waveform
+    <select id="waveform">
+      <option value="sine">sine</option>
+      <option value="square">square</option>
+      <option value="triangle">triangle</option>
+      <option value="sawtooth">sawtooth</option>
+      <option value="pulse">pulse</option>
+    </select>
+  </label>
+
+  <label>Line Color
+    <input type="color" id="lineColor" value="#ffffff">
+  </label>
+
+  <label>Trail (fade)
+    <input type="range" id="trail" min="0" max="1" step="0.01" value="0.2">
+  </label>
+
+  <label>Glow (shadow blur)
+    <input type="range" id="glow" min="0" max="80" value="20">
+  </label>
+
+  <label>Line Width
+    <input type="range" id="lineWidth" min="1" max="10" value="2">
+  </label>
+
+  <label>Rotation Speed
+    <input type="range" id="rotSpeed" min="-0.2" max="0.2" step="0.005" value="0.01">
+  </label>
+
+  <label>Jiggle
+    <input type="range" id="jiggle" min="0" max="100" value="20">
+  </label>
+
+  <hr>
+
+  <button id="saveJsonBtn" class="small">💾 Copy Current Settings JSON</button>
+  <button id="loadBtn" class="small">📂 Load Presets from File</button>
+  <input id="presetFile" type="file" accept="application/json" style="display:none;">
+  <div style="font-size:12px; opacity:0.8; margin-top:6px;">
+    Click canvas (short click) to toggle zoom out/in. Drag on canvas to rotate.
+  </div>
+</div>
+
+</body>
+</html>
