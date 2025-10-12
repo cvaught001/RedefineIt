@@ -343,6 +343,15 @@
         <input id="hatch" type="range" min="0" max="12" step="1" value="0" />
       </div>
 
+      <div class="row">
+        <label>Divider Arcs</label>
+        <input id="divArcsOn" type="checkbox" />
+      </div>
+      <div class="row">
+        <label>Arc Width (°) <small id="arcWdV"></small></label>
+        <input id="divArcDeg" type="range" min="6" max="120" step="2" value="24" />
+      </div>
+
       <div class="hr"></div>
       <div class="row">
         <button id="reset" class="btn">Reset</button>
@@ -477,6 +486,8 @@
         const $hatch = $('hatch'),
           $hatV = $('hatV')
         const $divMode = $('divMode')
+        const $divArcsOn = $('divArcsOn')
+        const $divArcDeg = $('divArcDeg'), $arcWdV = $('arcWdV')
         const $reset = $('reset'),
           $export = $('export')
         const $infoBtn = $('infoBtn')
@@ -538,6 +549,7 @@
           $chStepsV.textContent = Number($chSteps.value)
           $divV.textContent = Number($dividers.value)
           $hatV.textContent = Number($hatch.value)
+          $arcWdV.textContent = Number($divArcDeg.value)
 
           return {
             turns: turnsCurr,
@@ -567,7 +579,9 @@
             chLabels: $chLabels.checked,
             dividers: Number($dividers.value),
             hatch: Number($hatch.value),
-            divMode: String(($divMode && $divMode.value) || 'even')
+            divMode: String(($divMode && $divMode.value) || 'even'),
+            divArcsOn: Boolean($divArcsOn && $divArcsOn.checked),
+            divArcDeg: Number($divArcDeg && $divArcDeg.value)
           }
         }
 
@@ -794,6 +808,56 @@
               }
               ctx.restore()
             }
+
+            // Divider arcs visualization at chamber mid-angle
+            if (M > 0 && opts.divArcsOn) {
+              const modeArc = opts.divMode || 'even'
+              const tMid = (t0 + t1) / 2
+              const rOutMid = opts.baseR * Math.exp(b * tMid)
+              const rInMid = rOutMid * (1 - thick)
+              const arcSpan = Math.max(6, Math.min(180, Number(opts.divArcDeg || 24))) * Math.PI / 180
+              const aStart = tMid - arcSpan / 2
+              const aEnd = tMid + arcSpan / 2
+              // Build fractions for arcs using same mode semantics
+              const FsArc = []
+              if (modeArc === 'golden') {
+                const phi = (1 + Math.sqrt(5)) / 2
+                const rr = 1 / phi
+                const denom = 1 - Math.pow(rr, M + 1)
+                for (let m = 1; m <= M; m++) FsArc.push((1 - Math.pow(rr, m)) / denom)
+              } else if (modeArc === 'polar') {
+                const l0 = Math.log(1 - thick), l1 = 0
+                for (let m = 1; m <= M; m++) {
+                  const u = m / (M + 1)
+                  const sVal = Math.exp(l0 + u * (l1 - l0))
+                  const f = (sVal - (1 - thick)) / (thick || 1e-9)
+                  FsArc.push(Math.max(0, Math.min(1, f)))
+                }
+              } else if (modeArc === 'arch') {
+                for (let m = 1; m <= M; m++) FsArc.push(m / (M + 1))
+              } else {
+                for (let m = 1; m <= M; m++) FsArc.push(m / (M + 1))
+              }
+              ctx.save()
+              ctx.globalAlpha = 0.85
+              ctx.strokeStyle = opts.outlineC || 'white'
+              ctx.lineWidth = Math.max(1.2, (opts.outlineW || 1) * 1.1)
+              const segs = 24
+              for (const f of FsArc) {
+                const rMid = rInMid + f * (rOutMid - rInMid)
+                ctx.beginPath()
+                for (let i = 0; i <= segs; i++) {
+                  const a = aStart + (i / segs) * (aEnd - aStart)
+                  const ang = a + opts.rot
+                  let x = cx + rMid * Math.cos(ang)
+                  let y = cy + rMid * Math.sin(ang)
+                  if (P) { ;[x, y] = P(x, y) }
+                  if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y)
+                }
+                ctx.stroke()
+              }
+              ctx.restore()
+            }
           }
           ctx.restore()
         }
@@ -928,7 +992,9 @@
           $chLabels,
           $dividers,
           $divMode,
-          $hatch
+          $hatch,
+          $divArcsOn,
+          $divArcDeg
         ]
         inputs.forEach(
           el =>
@@ -972,6 +1038,11 @@
           $chOn.checked = false
           $chSteps.value = 16
           $chLabels.checked = true
+          $dividers.value = 0
+          if ($divMode) $divMode.value = 'even'
+          $hatch.value = 0
+          if ($divArcsOn) $divArcsOn.checked = false
+          if ($divArcDeg) $divArcDeg.value = 24
           spinRad = 0
           turnsCurr = Number($turns.value)
           render()
@@ -1072,7 +1143,9 @@
           chLabels: true,
           dividers: 0,
           hatch: 0,
-          divMode: 'even'
+          divMode: 'even',
+          divArcsOn: false,
+          divArcDeg: 24
         }
 
         const presets = {
@@ -1205,7 +1278,9 @@
             chLabels: Boolean($chLabels.checked),
             dividers: Number($dividers.value),
             hatch: Number($hatch.value),
-            divMode: String(($divMode && $divMode.value) || 'even')
+            divMode: String(($divMode && $divMode.value) || 'even'),
+            divArcsOn: Boolean($divArcsOn && $divArcsOn.checked),
+            divArcDeg: Number($divArcDeg && $divArcDeg.value)
           }
         }
 
@@ -1242,6 +1317,8 @@
           if (typeof s.dividers === 'number') $dividers.value = s.dividers
           if (typeof s.hatch === 'number') $hatch.value = s.hatch
           if (typeof s.divMode === 'string' && $divMode) $divMode.value = s.divMode
+          if (typeof s.divArcsOn === 'boolean' && $divArcsOn) $divArcsOn.checked = s.divArcsOn
+          if (typeof s.divArcDeg === 'number' && $divArcDeg) $divArcDeg.value = s.divArcDeg
           turnsCurr = Number($turns.value)
           render()
         }

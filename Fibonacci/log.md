@@ -111,6 +111,10 @@ The renderer draws a logarithmic spiral “shell” with adjustable thickness, c
   - Similar to dividers, but with more numerous, faint strokes (H lines) to texture the chamber.
   - Uses the same r_m(t) family with lower alpha and thinner width.
 
+- Divider arcs (visual aid)
+  - Optional short circular arcs at each chamber’s mid-angle drawn at the divider radii.
+  - Arc span is configurable (degrees). This makes the chosen divider mode immediately visible.
+
 ## Performance Notes
 
 - Sampling density scales with `Samples / Turn`; raise it for crisper edges at a cost.
