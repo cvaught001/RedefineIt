@@ -53,3 +53,9 @@ https://redefineit.net/winamp-waves/13thfoor.html
 
 
 
+**The Fibonacci Spiral** is a geometric representation derived from the Fibonacci sequence — a series where each number equals the sum of its two predecessors (1, 1, 2, 3, 5, 8, 13, 21…). When plotted as quarter-circle arcs inside a grid of adjoining squares whose side lengths follow this sequence, the resulting curve approximates the **golden spiral**, which expands by a constant factor of **φ ≈ 1.618** — the **golden ratio**.
+
+This ratio emerges naturally in recursive growth systems and optimization patterns throughout biology, from sunflower seed arrangements to nautilus shells and pinecones. In computational geometry and generative art, the Fibonacci spiral serves as a framework for **golden-angle phyllotaxis**, **fractal modeling**, and **parametric growth algorithms**. Its logarithmic curvature can be expressed mathematically as:
+$$
+r = a e^{b\theta}
+$$
