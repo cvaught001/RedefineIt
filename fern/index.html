@@ -156,6 +156,66 @@
         <input id="g" type="range" min="0" max="100" value="100" />
       </div>
       <small>Tip: Press <b>G</b> to toggle growth animation.</small>
+
+      <hr style="border-color: rgba(160, 220, 170, 0.25)" />
+
+      <!-- NEW: complexity controls -->
+      <div class="row">
+        <label>Serration Freq</label>
+        <input id="serrFreq" type="range" min="0" max="6" step="0.1" value="3" />
+      </div>
+      <div class="row">
+        <label>Serration Amp (%)</label>
+        <input id="serrAmp" type="range" min="0" max="60" step="1" value="18" />
+      </div>
+      <div class="row">
+        <label>Pinnules</label>
+        <input id="pinnulesOn" type="checkbox" />
+      </div>
+      <div class="row">
+        <label>Pinnule Count</label>
+        <input id="pinCount" type="range" min="0" max="18" value="8" />
+      </div>
+      <div class="row">
+        <label>Pinnule Scale (%)</label>
+        <input id="pinScale" type="range" min="10" max="50" value="28" />
+      </div>
+      <div class="row">
+        <label>Pinnule Angle (°)</label>
+        <input id="pinAngle" type="range" min="45" max="100" value="70" />
+      </div>
+      <div class="row">
+        <label>Pinnule Bend (%)</label>
+        <input id="pinBend" type="range" min="0" max="120" value="65" />
+      </div>
+
+      <hr style="border-color: rgba(160, 220, 170, 0.25)" />
+
+      <!-- NEW: branches controls -->
+      <div class="row">
+        <label>Branches</label>
+        <input id="branchesOn" type="checkbox" />
+      </div>
+      <div class="row">
+        <label>Branch Count</label>
+        <input id="branchCount" type="range" min="0" max="12" value="4" />
+      </div>
+      <div class="row">
+        <label>Branch Angle (°)</label>
+        <input id="branchAngle" type="range" min="10" max="80" value="36" />
+      </div>
+      <div class="row">
+        <label>Branch Length (%)</label>
+        <input id="branchScale" type="range" min="20" max="120" value="60" />
+      </div>
+      <div class="row">
+        <label>Branch Curvature</label>
+        <input id="branchCurv" type="range" min="0" max="100" value="24" />
+      </div>
+      <div class="row">
+        <label>Branch Leaf Scale (%)</label>
+        <input id="branchLeafScale" type="range" min="40" max="120" value="75" />
+      </div>
     </div>
 
     <script>
@@ -196,6 +256,14 @@
         const $pinScale = document.getElementById('pinScale')
         const $pinAngle = document.getElementById('pinAngle')
         const $pinBend = document.getElementById('pinBend')
+
+        // Branch controls
+        const $branchesOn = document.getElementById('branchesOn')
+        const $branchCount = document.getElementById('branchCount')
+        const $branchAngle = document.getElementById('branchAngle')
+        const $branchScale = document.getElementById('branchScale')
+        const $branchCurv = document.getElementById('branchCurv')
+        const $branchLeafScale = document.getElementById('branchLeafScale')
 
         const $toggleGrow = document.getElementById('toggleGrow')
         const $resetGrow = document.getElementById('resetGrow')
@@ -346,7 +414,13 @@
             pinCount,
             pinScale,
             pinAngleDeg,
-            pinBend
+            pinBend,
+            branchesOn,
+            branchCount,
+            branchAngleDeg,
+            branchScale,
+            branchCurv,
+            branchLeafScale
           } = opts
 
           // Use CSS pixel coordinates; DPI is handled via context transform
@@ -524,6 +598,114 @@
             side *= -1
           }
 
+          // Branches: secondary rachises with their own leaflets
+          if (branchesOn && branchCount > 0) {
+            const usableStart = Math.floor(STEPS * 0.18)
+            const usableEnd = Math.floor(STEPS * 0.88)
+            const bStep = Math.max(1, Math.floor((usableEnd - usableStart) / branchCount))
+            let bSide = 1
+            for (let i = usableStart + Math.floor(bStep * 0.5); i <= usableEnd; i += bStep) {
+              const tStem = i / STEPS
+              const [sx, sy] = stemPts[i]
+              const thetaStem = tanAt(i)
+              const thetaBase = thetaStem + bSide * deg(branchAngleDeg)
+
+              // Local frame
+              const fx = Math.cos(thetaBase), fy = Math.sin(thetaBase)
+              const rx = -Math.sin(thetaBase), ry = Math.cos(thetaBase)
+
+              // Length/curvature
+              const blen = Math.min(W, H) * 0.7 * (branchScale / 100) * (0.9 - 0.4 * tStem)
+              const bcurvPx = Math.min(W, H) * (branchCurv / 100) * 0.18
+              const B_STEPS = 120
+              const bPts = []
+              for (let k = 0; k <= B_STEPS; k++) {
+                const tb = k / B_STEPS
+                const sideSway = bcurvPx * 0.5 * Math.sin(tb * Math.PI * 0.7)
+                const forward = blen * tb * (0.9 + 0.1 * Math.cos(tb * Math.PI))
+                const wx = originX + sx + fx * forward + rx * sideSway
+                const wy = originY + sy + fy * forward + ry * sideSway
+                bPts.push([wx, wy])
+              }
+
+              // Branch growth reveal tied to main growth reaching the branch origin
+              const bReveal = smoothstep(0.0, 0.25, growth - tStem)
+              const gBIdx = Math.max(1, Math.floor(B_STEPS * bReveal))
+
+              // Draw branch stem
+              if (gBIdx > 1) {
+                ctx.beginPath()
+                const p0 = P ? P(bPts[0][0], bPts[0][1]) : bPts[0]
+                ctx.moveTo(p0[0], p0[1])
+                for (let k = 1; k <= gBIdx; k++) {
+                  const pk = P ? P(bPts[k][0], bPts[k][1]) : bPts[k]
+                  ctx.lineTo(pk[0], pk[1])
+                }
+                ctx.strokeStyle = outlineColor
+                ctx.lineWidth = Math.max(0.9, outlineWidth * 0.85)
+                ctx.stroke()
+              }
+
+              // Helpers on branch
+              const tanAtB = j => {
+                const j0 = clamp(j - 2, 0, B_STEPS)
+                const j1 = clamp(j + 2, 0, B_STEPS)
+                const [x0, y0] = bPts[j0]
+                const [x1, y1] = bPts[j1]
+                return Math.atan2(y1 - y0, x1 - x0)
+              }
+
+              // Leaflets along branch
+              const firstB = Math.floor(B_STEPS * 0.08)
+              const lastB = Math.floor(B_STEPS * 0.92)
+              const stepB = Math.max(1, Math.floor((lastB - firstB) / leafletCount))
+              let sideB = 1
+              for (let k = firstB; k <= lastB; k += stepB) {
+                const tb = k / B_STEPS
+                if (tb > bReveal + 0.02) continue
+                const [bx, by] = bPts[k]
+                const thetaB = tanAtB(k)
+                const thetaLeaf = thetaB + deg(baseAngleDeg) * sideB
+
+                const baseLen =
+                  lerp(
+                    blen * 0.10,
+                    blen * 0.24,
+                    Math.cos(tb * Math.PI) * 0.5 + 0.5
+                  ) *
+                  (0.9 - 0.15 * tb) *
+                  (branchLeafScale / 100)
+
+                const revealB = smoothstep(0.0, 0.18, bReveal - tb)
+                const L2 = baseLen * revealB
+                const W2 = L2 * 0.18
+                const bend2 = leafletBend * (0.7 + 0.3 * (1 - tb)) * revealB
+
+                items.push({
+                  type: 'branchLeaf',
+                  x: bx,
+                  y: by,
+                  theta: thetaLeaf,
+                  L: L2,
+                  W: W2,
+                  bend: bend2,
+                  taper: taperPowExp,
+                  fill: fillRGBA(fillOpacity),
+                  stroke: outlineColor,
+                  lw: Math.max(0.8, outlineWidth * 0.9),
+                  partial: revealB,
+                  serrFreq,
+                  serrAmp,
+                  depthY: by
+                })
+
+                sideB *= -1
+              }
+
+              bSide *= -1
+            }
+          }
+
           // Apical leaflet
           if (growth >= 0.95) {
             const tipIdx = Math.min(STEPS - 1, Math.floor(STEPS * growth))
@@ -601,7 +783,13 @@
             pinCount: Number($pinCount ? $pinCount.value : 0),
             pinScale: Number($pinScale ? $pinScale.value : 28),
             pinAngleDeg: Number($pinAngle ? $pinAngle.value : 70),
-            pinBend: Number($pinBend ? $pinBend.value : 65)
+            pinBend: Number($pinBend ? $pinBend.value : 65),
+            branchesOn: $branchesOn ? $branchesOn.checked : false,
+            branchCount: Number($branchCount ? $branchCount.value : 0),
+            branchAngleDeg: Number($branchAngle ? $branchAngle.value : 36),
+            branchScale: Number($branchScale ? $branchScale.value : 60),
+            branchCurv: Number($branchCurv ? $branchCurv.value : 24),
+            branchLeafScale: Number($branchLeafScale ? $branchLeafScale.value : 75)
           }
 
           // labels
@@ -714,7 +902,13 @@
           $pinCount,
           $pinScale,
           $pinAngle,
-          $pinBend
+          $pinBend,
+          $branchesOn,
+          $branchCount,
+          $branchAngle,
+          $branchScale,
+          $branchCurv,
+          $branchLeafScale
         ].filter(Boolean).forEach(el => {
           el.addEventListener('input', () => {
             if (el === $gManual) {
@@ -766,34 +960,3 @@
     </script>
   </body>
 </html>
-      <hr style="border-color: rgba(160, 220, 170, 0.25)" />
-
-      <!-- NEW: complexity controls -->
-      <div class="row">
-        <label>Serration Freq</label>
-        <input id="serrFreq" type="range" min="0" max="6" step="0.1" value="3" />
-      </div>
-      <div class="row">
-        <label>Serration Amp (%)</label>
-        <input id="serrAmp" type="range" min="0" max="60" step="1" value="18" />
-      </div>
-      <div class="row">
-        <label>Pinnules</label>
-        <input id="pinnulesOn" type="checkbox" />
-      </div>
-      <div class="row">
-        <label>Pinnule Count</label>
-        <input id="pinCount" type="range" min="0" max="18" value="8" />
-      </div>
-      <div class="row">
-        <label>Pinnule Scale (%)</label>
-        <input id="pinScale" type="range" min="10" max="50" value="28" />
-      </div>
-      <div class="row">
-        <label>Pinnule Angle (°)</label>
-        <input id="pinAngle" type="range" min="45" max="100" value="70" />
-      </div>
-      <div class="row">
-        <label>Pinnule Bend (%)</label>
-        <input id="pinBend" type="range" min="0" max="120" value="65" />
-      </div>
