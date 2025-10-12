@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <defs>
+    <linearGradient id="g" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#b7f7c9"/>
+      <stop offset="1" stop-color="#6dd0a2"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" fill="#0b0f13"/>
+  <!-- Stylized spiral stroke -->
+  <path d="M 206 128
+           C 206 78 162 62 130 70
+           C 98 78 84 106 100 124
+           C 116 142 148 136 152 116
+           C 156 96 136 84 120 92
+           C 104 100 100 120 112 132
+           C 126 146 150 146 165 132" 
+        fill="none" stroke="url(#g)" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- subtle glow -->
+  <circle cx="165" cy="132" r="3" fill="#b7f7c9"/>
+  <circle cx="206" cy="128" r="2" fill="#6dd0a2"/>
+</svg>
+

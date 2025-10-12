@@ -4,6 +4,19 @@
     <meta charset="utf-8" />
     <title>Fibonacci Shell — Canvas Controls</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- Social preview (Open Graph / Twitter) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Fibonacci Shell — Log Spiral" />
+    <meta property="og:description" content="Interactive logarithmic spiral with chambers, perspective, and presets." />
+    <meta property="og:image" content="thumbnail.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Fibonacci Shell — Log Spiral" />
+    <meta name="twitter:description" content="Interactive logarithmic spiral with chambers, perspective, and presets." />
+    <meta name="twitter:image" content="thumbnail.png" />
+    <!-- Site icon -->
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
     <style>
       :root { color-scheme: dark; }
       html, body { margin: 0; height: 100%; background: #0b0f13; overflow: hidden; }
@@ -217,6 +230,7 @@
       <div class="row">
         <button id="reset" class="btn">Reset</button>
         <button id="export" class="btn">Export PNG</button>
+        <button id="thumb" class="btn" title="Generate social thumbnail (1200×630)">📸 Thumbnail</button>
         <button id="infoBtn" class="btn" title="Info">ⓘ Info</button>
       </div>
       <small>Tip: Growth per turn ≈ φ (1.618) for golden shells. Toggle Spin + Evolve for animation.</small>
@@ -634,6 +648,38 @@
           link.download = 'fibonacci-shell.png'
           link.href = canvas.toDataURL('image/png')
           link.click()
+        })
+
+        // Generate social thumbnail (1200x630) by scaling current canvas
+        const $thumb = $('thumb')
+        $thumb.addEventListener('click', () => {
+          const targetW = 1200, targetH = 630
+          const src = canvas
+          const off = document.createElement('canvas')
+          off.width = targetW
+          off.height = targetH
+          const octx = off.getContext('2d')
+          const bg = getOpts().tbg ? '#000' : getOpts().bgc
+          octx.fillStyle = bg
+          octx.fillRect(0, 0, targetW, targetH)
+          const sRatio = src.width / src.height
+          const tRatio = targetW / targetH
+          let drawW, drawH
+          if (sRatio > tRatio) {
+            drawH = targetH
+            drawW = Math.round(drawH * sRatio)
+          } else {
+            drawW = targetW
+            drawH = Math.round(drawW / sRatio)
+          }
+          const dx = Math.round((targetW - drawW) / 2)
+          const dy = Math.round((targetH - drawH) / 2)
+          octx.imageSmoothingQuality = 'high'
+          octx.drawImage(src, dx, dy, drawW, drawH)
+          const a = document.createElement('a')
+          a.download = 'thumbnail.png'
+          a.href = off.toDataURL('image/png')
+          a.click()
         })
 
         // Eye toggle — show/hide options panel
