@@ -7,73 +7,174 @@
     <!-- Social preview (Open Graph / Twitter) -->
     <meta property="og:type" content="website" />
     <meta property="og:title" content="Fibonacci Shell — Log Spiral" />
-    <meta property="og:description" content="Interactive logarithmic spiral with chambers, perspective, and presets." />
+    <meta
+      property="og:description"
+      content="Interactive logarithmic spiral with chambers, perspective, and presets."
+    />
     <meta property="og:image" content="thumbnail.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Fibonacci Shell — Log Spiral" />
-    <meta name="twitter:description" content="Interactive logarithmic spiral with chambers, perspective, and presets." />
+    <meta
+      name="twitter:description"
+      content="Interactive logarithmic spiral with chambers, perspective, and presets."
+    />
     <meta name="twitter:image" content="thumbnail.png" />
     <!-- Site icon -->
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
     <style>
-      :root { color-scheme: dark; }
-      html, body { margin: 0; height: 100%; background: #0b0f13; overflow: hidden; }
-      canvas { display: block; width: 100vw; height: 100vh; }
+      :root {
+        color-scheme: dark;
+      }
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #0b0f13;
+        overflow: hidden;
+      }
+      canvas {
+        display: block;
+        width: 100vw;
+        height: 100vh;
+      }
       #toggleUi {
-        position: fixed; right: 8px; top: 8px; z-index: 3;
-        width: 36px; height: 36px; border-radius: 10px;
-        display: inline-flex; align-items: center; justify-content: center;
-        background: rgba(12,20,16,0.6); color: #d8f5df;
-        border: 1px solid rgba(150,220,180,0.3); cursor: pointer;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.25);
+        position: fixed;
+        right: 8px;
+        top: 8px;
+        z-index: 3;
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(12, 20, 16, 0.6);
+        color: #d8f5df;
+        border: 1px solid rgba(150, 220, 180, 0.3);
+        cursor: pointer;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
       }
-      #toggleUi:active { transform: translateY(1px); }
+      #toggleUi:active {
+        transform: translateY(1px);
+      }
       #toggleInfo {
-        position: fixed; right: 52px; top: 8px; z-index: 3;
-        width: 36px; height: 36px; border-radius: 10px;
-        display: inline-flex; align-items: center; justify-content: center;
-        background: rgba(12,20,16,0.6); color: #d8f5df;
-        border: 1px solid rgba(150,220,180,0.3); cursor: pointer;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.25);
+        position: fixed;
+        right: 52px;
+        top: 8px;
+        z-index: 3;
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(12, 20, 16, 0.6);
+        color: #d8f5df;
+        border: 1px solid rgba(150, 220, 180, 0.3);
+        cursor: pointer;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
       }
-      #toggleInfo:active { transform: translateY(1px); }
+      #toggleInfo:active {
+        transform: translateY(1px);
+      }
       .ui {
-        position: fixed; left: 12px; top: 12px; z-index: 2;
+        position: fixed;
+        left: 12px;
+        top: 12px;
+        z-index: 2;
         font: 14px/1.35 system-ui, -apple-system, Segoe UI, sans-serif;
-        color: #d8f5df; background: rgba(10,15,20,0.55);
+        color: #d8f5df;
+        background: rgba(10, 15, 20, 0.55);
         backdrop-filter: blur(6px);
-        border: 1px solid rgba(140,200,160,0.25);
-        border-radius: 12px; padding: 12px; width: 330px; max-height: 92vh; overflow: auto;
+        border: 1px solid rgba(140, 200, 160, 0.25);
+        border-radius: 12px;
+        padding: 12px;
+        width: 330px;
+        max-height: 92vh;
+        overflow: auto;
       }
-      .row { display: flex; align-items: center; gap: 8px; margin: 8px 0; }
-      .row label { flex: 1 1 auto; }
-      .row input[type="range"] { width: 140px; }
-      .row input[type="color"] { width: 40px; height: 24px; padding: 0; border: none; background: transparent; }
-      small { opacity: 0.8; }
-      .hr { border: 0; height: 1px; background: rgba(160,220,170,0.25); margin: 10px 0; }
-      .btn { padding: 6px 10px; border-radius: 8px; border: 1px solid rgba(150,220,180,0.3); background: rgba(12,20,16,0.6); color: #d8f5df; cursor: pointer; }
-      .btn:active { transform: translateY(1px); }
+      .row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 8px 0;
+      }
+      .row label {
+        flex: 1 1 auto;
+      }
+      .row input[type='range'] {
+        width: 140px;
+      }
+      .row input[type='color'] {
+        width: 40px;
+        height: 24px;
+        padding: 0;
+        border: none;
+        background: transparent;
+      }
+      small {
+        opacity: 0.8;
+      }
+      .hr {
+        border: 0;
+        height: 1px;
+        background: rgba(160, 220, 170, 0.25);
+        margin: 10px 0;
+      }
+      .btn {
+        padding: 6px 10px;
+        border-radius: 8px;
+        border: 1px solid rgba(150, 220, 180, 0.3);
+        background: rgba(12, 20, 16, 0.6);
+        color: #d8f5df;
+        cursor: pointer;
+      }
+      .btn:active {
+        transform: translateY(1px);
+      }
     </style>
   </head>
   <body>
     <canvas id="c"></canvas>
-    <button id="toggleUi" title="Show/Hide options" aria-label="Show/Hide options">👁</button>
+    <button
+      id="toggleUi"
+      title="Show/Hide options"
+      aria-label="Show/Hide options"
+    >
+      👁
+    </button>
     <button id="toggleInfo" title="Show Info" aria-label="Show Info">ⓘ</button>
     <!-- Optional external preset; if present, adds "User Preset" -->
     <script src="preset.js"></script>
 
     <div class="ui">
-      <strong style="display:block;margin-bottom:6px;">Fibonacci Shell (Log Spiral)</strong>
+      <strong style="display: block; margin-bottom: 6px"
+        >Fibonacci Shell (Log Spiral)</strong
+      >
 
       <div class="row">
         <label>Turns <small id="turnsV"></small></label>
-        <input id="turns" type="range" min="0.5" max="7" step="0.05" value="4" />
+        <input
+          id="turns"
+          type="range"
+          min="0.5"
+          max="7"
+          step="0.05"
+          value="4"
+        />
       </div>
       <div class="row">
         <label>Growth / Turn <small id="growV"></small></label>
-        <input id="growth" type="range" min="1.10" max="2.60" step="0.01" value="1.618" />
+        <input
+          id="growth"
+          type="range"
+          min="1.10"
+          max="2.60"
+          step="0.01"
+          value="1.618"
+        />
       </div>
       <div class="row">
         <label>Base Radius <small id="baseRV"></small></label>
@@ -147,7 +248,7 @@
       <!-- Presets + JSON import/export -->
       <div class="row">
         <label>Preset</label>
-        <select id="presetSelect" style="flex:1 1 auto">
+        <select id="presetSelect" style="flex: 1 1 auto">
           <option value="default">Default</option>
           <option value="golden">Golden Spiral</option>
           <option value="thin">Thin Shell</option>
@@ -195,7 +296,14 @@
       </div>
       <div class="row">
         <label>Spin Speed (°/s) <small id="spinV"></small></label>
-        <input id="spin" type="range" min="-360" max="360" step="1" value="60" />
+        <input
+          id="spin"
+          type="range"
+          min="-360"
+          max="360"
+          step="1"
+          value="60"
+        />
       </div>
       <div class="row">
         <label>Evolve (turns/s) <small id="evoV"></small></label>
@@ -222,6 +330,15 @@
         <input id="dividers" type="range" min="0" max="8" step="1" value="0" />
       </div>
       <div class="row">
+        <label>Divider Mode</label>
+        <select id="divMode">
+          <option value="even">Even</option>
+          <option value="golden">Golden Ratio</option>
+          <option value="polar">Polar (r = a·e^{b t})</option>
+          <option value="arch">Archimedean (r = a + c t)</option>
+        </select>
+      </div>
+      <div class="row">
         <label>Spiral Hatching <small id="hatV"></small></label>
         <input id="hatch" type="range" min="0" max="12" step="1" value="0" />
       </div>
@@ -230,21 +347,72 @@
       <div class="row">
         <button id="reset" class="btn">Reset</button>
         <button id="export" class="btn">Export PNG</button>
-        <button id="thumb" class="btn" title="Generate social thumbnail (1200×630)">📸 Thumbnail</button>
+        <button
+          id="thumb"
+          class="btn"
+          title="Generate social thumbnail (1200×630)"
+        >
+          📸 Thumbnail
+        </button>
         <button id="infoBtn" class="btn" title="Info">ⓘ Info</button>
       </div>
-      <small>Tip: Growth per turn ≈ φ (1.618) for golden shells. Toggle Spin + Evolve for animation.</small>
+      <small
+        >Tip: Growth per turn ≈ φ (1.618) for golden shells. Toggle Spin +
+        Evolve for animation.</small
+      >
     </div>
 
     <!-- Info overlay -->
-    <div id="overlay" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.55);z-index:9;">
-      <div id="modal" style="background:rgba(12,18,22,0.95);color:#e7f6ee;border:1px solid rgba(140,200,160,0.35);border-radius:12px;max-width:800px;width:86vw;max-height:80vh;box-shadow:0 10px 40px rgba(0,0,0,0.6);">
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid rgba(140,200,160,0.25)">
+    <div
+      id="overlay"
+      style="
+        position: fixed;
+        inset: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0, 0, 0, 0.55);
+        z-index: 9;
+      "
+    >
+      <div
+        id="modal"
+        style="
+          background: rgba(12, 18, 22, 0.95);
+          color: #e7f6ee;
+          border: 1px solid rgba(140, 200, 160, 0.35);
+          border-radius: 12px;
+          max-width: 800px;
+          width: 86vw;
+          max-height: 80vh;
+          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+        "
+      >
+        <div
+          style="
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 12px;
+            border-bottom: 1px solid rgba(140, 200, 160, 0.25);
+          "
+        >
           <strong>Info (log.md)</strong>
-          <button id="closeOverlay" class="btn" style="padding:4px 8px;">✕</button>
+          <button id="closeOverlay" class="btn" style="padding: 4px 8px">
+            ✕
+          </button>
         </div>
-        <div style="padding:12px;overflow:auto;max-height:68vh;">
-          <pre id="logContent" style="margin:0;white-space:pre-wrap;word-break:break-word;font:13px/1.4 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;"></pre>
+        <div style="padding: 12px; overflow: auto; max-height: 68vh">
+          <pre
+            id="logContent"
+            style="
+              margin: 0;
+              white-space: pre-wrap;
+              word-break: break-word;
+              font: 13px/1.4 ui-monospace, SFMono-Regular, Menlo, Monaco,
+                Consolas, monospace;
+            "
+          ></pre>
         </div>
       </div>
     </div>
@@ -256,30 +424,61 @@
 
         // UI refs
         const $ = id => document.getElementById(id)
-        const $turns = $('turns'), $turnsV = $('turnsV')
-        const $growth = $('growth'), $growV = $('growV')
-        const $baseR = $('baseR'), $baseRV = $('baseRV')
-        const $thick = $('thick'), $thickV = $('thickV')
-        const $rot = $('rot'), $rotV = $('rotV')
-        const $cx = $('cx'), $cxV = $('cxV')
-        const $cy = $('cy'), $cyV = $('cyV')
-        const $samp = $('samp'), $sampV = $('sampV')
-        const $olw = $('olw'), $olwV = $('olwV')
+        const $turns = $('turns'),
+          $turnsV = $('turnsV')
+        const $growth = $('growth'),
+          $growV = $('growV')
+        const $baseR = $('baseR'),
+          $baseRV = $('baseRV')
+        const $thick = $('thick'),
+          $thickV = $('thickV')
+        const $rot = $('rot'),
+          $rotV = $('rotV')
+        const $cx = $('cx'),
+          $cxV = $('cxV')
+        const $cy = $('cy'),
+          $cyV = $('cyV')
+        const $samp = $('samp'),
+          $sampV = $('sampV')
+        const $olw = $('olw'),
+          $olwV = $('olwV')
         const $olc = $('olc')
-        const $fillA = $('fillA'), $faV = $('faV')
-        const $h0 = $('h0'), $h0V = $('h0V')
-        const $hD = $('hD'), $hDV = $('hDV')
-        const $sat = $('sat'), $satV = $('satV')
-        const $lit = $('lit'), $litV = $('litV')
-        const $tbg = $('tbg'), $bgc = $('bgc')
-        const $ringsOn = $('ringsOn'), $ringC = $('ringC'), $ringCV = $('ringCV'), $ringA = $('ringA'), $ringAV = $('ringAV')
-        const $perspOn = $('perspOn'), $persp = $('persp'), $perspV = $('perspV')
-        const $spinOn = $('spinOn'), $spin = $('spin'), $spinV = $('spinV')
-        const $evo = $('evo'), $evoV = $('evoV')
-        const $chOn = $('chOn'), $chSteps = $('chSteps'), $chStepsV = $('chStepsV'), $chLabels = $('chLabels')
-        const $dividers = $('dividers'), $divV = $('divV')
-        const $hatch = $('hatch'), $hatV = $('hatV')
-        const $reset = $('reset'), $export = $('export')
+        const $fillA = $('fillA'),
+          $faV = $('faV')
+        const $h0 = $('h0'),
+          $h0V = $('h0V')
+        const $hD = $('hD'),
+          $hDV = $('hDV')
+        const $sat = $('sat'),
+          $satV = $('satV')
+        const $lit = $('lit'),
+          $litV = $('litV')
+        const $tbg = $('tbg'),
+          $bgc = $('bgc')
+        const $ringsOn = $('ringsOn'),
+          $ringC = $('ringC'),
+          $ringCV = $('ringCV'),
+          $ringA = $('ringA'),
+          $ringAV = $('ringAV')
+        const $perspOn = $('perspOn'),
+          $persp = $('persp'),
+          $perspV = $('perspV')
+        const $spinOn = $('spinOn'),
+          $spin = $('spin'),
+          $spinV = $('spinV')
+        const $evo = $('evo'),
+          $evoV = $('evoV')
+        const $chOn = $('chOn'),
+          $chSteps = $('chSteps'),
+          $chStepsV = $('chStepsV'),
+          $chLabels = $('chLabels')
+        const $dividers = $('dividers'),
+          $divV = $('divV')
+        const $hatch = $('hatch'),
+          $hatV = $('hatV')
+        const $divMode = $('divMode')
+        const $reset = $('reset'),
+          $export = $('export')
         const $infoBtn = $('infoBtn')
         const $overlay = $('overlay')
         const $closeOverlay = $('closeOverlay')
@@ -299,13 +498,17 @@
           canvas.height = Math.floor(innerHeight * d)
           ctx.setTransform(d, 0, 0, d, 0, 0)
         }
-        addEventListener('resize', () => { resize(); render() })
+        addEventListener('resize', () => {
+          resize()
+          render()
+        })
         resize()
 
         // Helpers
         const clamp = (x, a, b) => Math.max(a, Math.min(b, x))
         const deg = a => (a * Math.PI) / 180
-        const hsla = (h,s,l,a) => `hsla(${(h%360+360)%360} ${s}% ${l}% / ${a})`
+        const hsla = (h, s, l, a) =>
+          `hsla(${((h % 360) + 360) % 360} ${s}% ${l}% / ${a})`
 
         // Animation state
         let spinRad = 0
@@ -361,16 +564,17 @@
             persp: Number($persp.value) / 100,
             chOn: $chOn.checked,
             chSteps: Number($chSteps.value),
-            chLabels: $chLabels.checked
-            ,
+            chLabels: $chLabels.checked,
             dividers: Number($dividers.value),
-            hatch: Number($hatch.value)
+            hatch: Number($hatch.value),
+            divMode: String(($divMode && $divMode.value) || 'even')
           }
         }
 
-        function projectorFactory(W,H, on, k) {
+        function projectorFactory(W, H, on, k) {
           if (!on || k <= 0) return null
-          const ax = W * 0.5, ay = H * 0.85
+          const ax = W * 0.5,
+            ay = H * 0.85
           return (x, y) => {
             const depth = clamp((ay - y) / Math.max(60, H * 0.9), 0, 1)
             const f = 1 / (1 + k * 2 * depth)
@@ -382,17 +586,26 @@
 
         function buildShellPoints(opts, W, H) {
           const {
-            turns, growth, baseR, thickPct, rot, cxPct, cyPct, sampPerTurn,
-            perspOn, persp
+            turns,
+            growth,
+            baseR,
+            thickPct,
+            rot,
+            cxPct,
+            cyPct,
+            sampPerTurn,
+            perspOn,
+            persp
           } = opts
           const totalTheta = Math.max(0.001, turns) * Math.PI * 2
           const b = Math.log(Math.max(1.0001, growth)) / (Math.PI * 2)
-          const cx = W * cxPct, cy = H * cyPct
+          const cx = W * cxPct,
+            cy = H * cyPct
           const S = Math.max(12, Math.floor(sampPerTurn * turns))
-          const P = projectorFactory(W,H, perspOn, persp)
+          const P = projectorFactory(W, H, perspOn, persp)
 
-          const outer = new Array(S+1)
-          const inner = new Array(S+1)
+          const outer = new Array(S + 1)
+          const inner = new Array(S + 1)
           let rMax = 0
           for (let i = 0; i <= S; i++) {
             const t = (i / S) * totalTheta
@@ -414,100 +627,168 @@
           return { outer, inner, cx, cy, rMax }
         }
 
-        function fib(n){ let a=0,b=1; const out=[]; for(let i=0;i<n;i++){out.push(b); [a,b]=[b,a+b]} return out }
+        function fib(n) {
+          let a = 0,
+            b = 1
+          const out = []
+          for (let i = 0; i < n; i++) {
+            out.push(b)
+            ;[a, b] = [b, a + b]
+          }
+          return out
+        }
 
         function drawChambers(ctx, opts, cx, cy) {
           if (!opts.chOn || opts.chSteps <= 0) return
-          const W = innerWidth, H = innerHeight
+          const W = innerWidth,
+            H = innerHeight
           const totalTheta = Math.max(0.001, opts.turns) * Math.PI * 2
           const b = Math.log(Math.max(1.0001, opts.growth)) / (Math.PI * 2)
-          const P = projectorFactory(W,H, opts.perspOn, opts.persp)
+          const P = projectorFactory(W, H, opts.perspOn, opts.persp)
           const N = opts.chSteps
           const thick = opts.thickPct
-          const fseq = fib(N+2)
+          const fseq = fib(N + 2)
           ctx.save()
           ctx.globalAlpha = 0.25
-          for (let k=0;k<N;k++){
+          for (let k = 0; k < N; k++) {
             const t0 = (k / N) * totalTheta
-            const t1 = ((k+1) / N) * totalTheta
+            const t1 = ((k + 1) / N) * totalTheta
             const S = 36
-            const outer=[]; const inner=[]
-            for (let i=0;i<=S;i++){
-              const t = t0 + (i/S)*(t1-t0)
-              const r = opts.baseR * Math.exp(b*t)
+            const outer = []
+            const inner = []
+            for (let i = 0; i <= S; i++) {
+              const t = t0 + (i / S) * (t1 - t0)
+              const r = opts.baseR * Math.exp(b * t)
               const ri = r * (1 - thick)
               const ang = t + opts.rot
-              let xo = cx + r * Math.cos(ang), yo = cy + r * Math.sin(ang)
-              let xi = cx + ri * Math.cos(ang), yi = cy + ri * Math.sin(ang)
-              if (P){ [xo,yo]=P(xo,yo); [xi,yi]=P(xi,yi) }
-              outer.push([xo,yo]); inner.push([xi,yi])
+              let xo = cx + r * Math.cos(ang),
+                yo = cy + r * Math.sin(ang)
+              let xi = cx + ri * Math.cos(ang),
+                yi = cy + ri * Math.sin(ang)
+              if (P) {
+                ;[xo, yo] = P(xo, yo)
+                ;[xi, yi] = P(xi, yi)
+              }
+              outer.push([xo, yo])
+              inner.push([xi, yi])
             }
             ctx.beginPath()
             ctx.moveTo(outer[0][0], outer[0][1])
-            for(let i=1;i<outer.length;i++) ctx.lineTo(outer[i][0], outer[i][1])
-            for(let i=inner.length-1;i>=0;i--) ctx.lineTo(inner[i][0], inner[i][1])
+            for (let i = 1; i < outer.length; i++)
+              ctx.lineTo(outer[i][0], outer[i][1])
+            for (let i = inner.length - 1; i >= 0; i--)
+              ctx.lineTo(inner[i][0], inner[i][1])
             ctx.closePath()
-            const hue = (opts.h0 + (opts.hD*(k/N)))
+            const hue = opts.h0 + opts.hD * (k / N)
             ctx.fillStyle = hsla(hue, opts.sat, opts.lit, 0.25)
             ctx.fill()
-            if (opts.chLabels){
-              const tm = (t0+t1)/2
-              const rm = opts.baseR * Math.exp(b*tm) * (1 - thick*0.5)
+            if (opts.chLabels) {
+              const tm = (t0 + t1) / 2
+              const rm = opts.baseR * Math.exp(b * tm) * (1 - thick * 0.5)
               let x = cx + rm * Math.cos(tm + opts.rot)
               let y = cy + rm * Math.sin(tm + opts.rot)
-              if (P){ [x,y]=P(x,y) }
+              if (P) {
+                ;[x, y] = P(x, y)
+              }
               ctx.fillStyle = 'rgba(240,255,245,0.9)'
               ctx.font = '12px system-ui, sans-serif'
               ctx.textAlign = 'center'
               ctx.textBaseline = 'middle'
-              const label = fseq[k] || (k+1)
+              const label = fseq[k] || k + 1
               ctx.fillText(String(label), x, y)
             }
 
-            // Spiral dividers (M lines evenly spaced across shell thickness)
+            // Spiral dividers (M lines across shell thickness; optionally golden-spaced)
             const M = Math.max(0, Math.min(8, Math.floor(opts.dividers || 0)))
-            if (M > 0){
+            if (M > 0) {
               ctx.save()
               ctx.globalAlpha = 0.6
               ctx.strokeStyle = 'rgba(235,250,245,0.8)'
               ctx.lineWidth = Math.max(0.6, opts.outlineW * 0.7)
-              for (let m=1; m<=M; m++){
-                const f = m / (M+1) // 0..1 fraction from inner->outer
-                const s = (1 - thick) + thick * f
-                ctx.beginPath()
-                for (let i=0;i<=S;i++){
-                  const t = t0 + (i/S)*(t1-t0)
-                  const r = opts.baseR * s * Math.exp(b*t)
-                  const ang = t + opts.rot
-                  let x = cx + r * Math.cos(ang)
-                  let y = cy + r * Math.sin(ang)
-                  if (P){ [x,y]=P(x,y) }
-                  if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y)
+              const mode = (opts.divMode || (opts.divGolden ? 'golden' : 'even'))
+              if (mode === 'arch') {
+                for (let m = 1; m <= M; m++) {
+                  const f = m / (M + 1)
+                  // Match fraction f at t0 and t1; interpolate linearly in r with t
+                  const rOut0 = opts.baseR * Math.exp(b * t0)
+                  const rIn0 = rOut0 * (1 - thick)
+                  const rOut1 = opts.baseR * Math.exp(b * t1)
+                  const rIn1 = rOut1 * (1 - thick)
+                  const r0 = rIn0 + f * (rOut0 - rIn0)
+                  const r1 = rIn1 + f * (rOut1 - rIn1)
+                  const c = (r1 - r0) / (t1 - t0)
+                  ctx.beginPath()
+                  for (let i = 0; i <= S; i++) {
+                    const t = t0 + (i / S) * (t1 - t0)
+                    const r = r0 + c * (t - t0)
+                    const ang = t + opts.rot
+                    let x = cx + r * Math.cos(ang)
+                    let y = cy + r * Math.sin(ang)
+                    if (P) { ;[x, y] = P(x, y) }
+                    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y)
+                  }
+                  ctx.stroke()
                 }
-                ctx.stroke()
+              } else {
+                // Build fractions f across thickness
+                const Fs = []
+                if (mode === 'golden') {
+                  const phi = (1 + Math.sqrt(5)) / 2
+                  const r = 1 / phi
+                  const denom = 1 - Math.pow(r, M + 1)
+                  for (let m = 1; m <= M; m++) Fs.push((1 - Math.pow(r, m)) / denom)
+                } else if (mode === 'polar') {
+                  // Log-uniform spacing across thickness
+                  const l0 = Math.log(1 - thick), l1 = 0
+                  for (let m = 1; m <= M; m++) {
+                    const u = m / (M + 1)
+                    const s = Math.exp(l0 + u * (l1 - l0))
+                    const f = (s - (1 - thick)) / (thick || 1e-9)
+                    Fs.push(Math.max(0, Math.min(1, f)))
+                  }
+                } else {
+                  for (let m = 1; m <= M; m++) Fs.push(m / (M + 1))
+                }
+                for (const f of Fs) {
+                  const s = 1 - thick + thick * f
+                  ctx.beginPath()
+                  for (let i = 0; i <= S; i++) {
+                    const t = t0 + (i / S) * (t1 - t0)
+                    const r = opts.baseR * s * Math.exp(b * t)
+                    const ang = t + opts.rot
+                    let x = cx + r * Math.cos(ang)
+                    let y = cy + r * Math.sin(ang)
+                    if (P) { ;[x, y] = P(x, y) }
+                    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y)
+                  }
+                  ctx.stroke()
+                }
               }
               ctx.restore()
             }
 
             // Spiral hatching (H faint lines, 0 disables)
             const Hc = Math.max(0, Math.min(12, Math.floor(opts.hatch || 0)))
-            if (Hc > 0){
+            if (Hc > 0) {
               ctx.save()
               ctx.globalAlpha = 0.18
               ctx.strokeStyle = 'rgba(230,245,240,0.9)'
               ctx.lineWidth = Math.max(0.4, opts.outlineW * 0.5)
-              for (let h=1; h<=Hc; h++){
-                const f = h / (Hc+1)
-                const s = (1 - thick) + thick * f
+              for (let h = 1; h <= Hc; h++) {
+                const f = h / (Hc + 1)
+                const s = 1 - thick + thick * f
                 ctx.beginPath()
-                for (let i=0;i<=S;i++){
-                  const t = t0 + (i/S)*(t1-t0)
-                  const r = opts.baseR * s * Math.exp(b*t)
+                for (let i = 0; i <= S; i++) {
+                  const t = t0 + (i / S) * (t1 - t0)
+                  const r = opts.baseR * s * Math.exp(b * t)
                   const ang = t + opts.rot
                   let x = cx + r * Math.cos(ang)
                   let y = cy + r * Math.sin(ang)
-                  if (P){ [x,y]=P(x,y) }
-                  if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y)
+                  if (P) {
+                    ;[x, y] = P(x, y)
+                  }
+                  if (i === 0) ctx.moveTo(x, y)
+                  else ctx.lineTo(x, y)
                 }
                 ctx.stroke()
               }
@@ -518,7 +799,8 @@
         }
 
         function drawShell(ctx, opts) {
-          const W = innerWidth, H = innerHeight
+          const W = innerWidth,
+            H = innerHeight
           ctx.clearRect(0, 0, W, H)
 
           if (!opts.tbg) {
@@ -528,14 +810,31 @@
 
           const { outer, inner, cx, cy, rMax } = buildShellPoints(opts, W, H)
 
-          const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(60, rMax))
+          const g = ctx.createRadialGradient(
+            cx,
+            cy,
+            0,
+            cx,
+            cy,
+            Math.max(60, rMax)
+          )
           g.addColorStop(0, hsla(opts.h0, opts.sat, opts.lit, opts.fillAlpha))
-          g.addColorStop(1, hsla(opts.h0 + opts.hD, opts.sat, Math.max(0, opts.lit - 12), Math.max(0, opts.fillAlpha - 0.15)))
+          g.addColorStop(
+            1,
+            hsla(
+              opts.h0 + opts.hD,
+              opts.sat,
+              Math.max(0, opts.lit - 12),
+              Math.max(0, opts.fillAlpha - 0.15)
+            )
+          )
 
           ctx.beginPath()
           ctx.moveTo(outer[0][0], outer[0][1])
-          for (let i = 1; i < outer.length; i++) ctx.lineTo(outer[i][0], outer[i][1])
-          for (let i = inner.length - 1; i >= 0; i--) ctx.lineTo(inner[i][0], inner[i][1])
+          for (let i = 1; i < outer.length; i++)
+            ctx.lineTo(outer[i][0], outer[i][1])
+          for (let i = inner.length - 1; i >= 0; i--)
+            ctx.lineTo(inner[i][0], inner[i][1])
           ctx.closePath()
 
           ctx.fillStyle = g
@@ -554,7 +853,7 @@
             ctx.lineWidth = Math.max(0.5, opts.outlineW * 0.7)
             const totalTheta = Math.max(0.001, opts.turns) * Math.PI * 2
             const b = Math.log(Math.max(1.0001, opts.growth)) / (Math.PI * 2)
-            const P = projectorFactory(W,H, opts.perspOn, opts.persp)
+            const P = projectorFactory(W, H, opts.perspOn, opts.persp)
             for (let j = 1; j <= opts.ringCount; j++) {
               const t = (j / opts.ringCount) * totalTheta
               const r = opts.baseR * Math.exp(b * t)
@@ -575,18 +874,20 @@
           }
         }
 
-        function render() { drawShell(ctx, getOpts()) }
+        function render() {
+          drawShell(ctx, getOpts())
+        }
 
         // Animation
-        function tick(t){
+        function tick(t) {
           const dt = (t - lastT) / 1000
           lastT = t
-          if ($spinOn.checked){
+          if ($spinOn.checked) {
             const degPerSec = Number($spin.value)
-            spinRad += (degPerSec * Math.PI/180) * dt
+            spinRad += ((degPerSec * Math.PI) / 180) * dt
           }
           const evoRate = Number($evo.value)
-          if (evoRate > 0){
+          if (evoRate > 0) {
             turnsCurr = Math.max(0.1, turnsCurr + evoRate * dt)
           } else {
             turnsCurr = Number($turns.value)
@@ -597,17 +898,50 @@
 
         // Wire up
         const inputs = [
-          $turns,$growth,$baseR,$thick,$rot,$cx,$cy,$samp,
-          $olw,$olc,$fillA,$h0,$hD,$sat,$lit,$tbg,$bgc,
-          $ringsOn,$ringC,$ringA,$perspOn,$persp,
-          $spinOn,$spin,$evo,$chOn,$chSteps,$chLabels,
-          $dividers,$hatch
+          $turns,
+          $growth,
+          $baseR,
+          $thick,
+          $rot,
+          $cx,
+          $cy,
+          $samp,
+          $olw,
+          $olc,
+          $fillA,
+          $h0,
+          $hD,
+          $sat,
+          $lit,
+          $tbg,
+          $bgc,
+          $ringsOn,
+          $ringC,
+          $ringA,
+          $perspOn,
+          $persp,
+          $spinOn,
+          $spin,
+          $evo,
+          $chOn,
+          $chSteps,
+          $chLabels,
+          $dividers,
+          $divMode,
+          $hatch
         ]
-        inputs.forEach(el => el && el.addEventListener('input', () => {
-          if ($presetSelect && $presetSelect.value !== 'custom') $presetSelect.value = 'custom'
-          render()
-        }))
-        $turns.addEventListener('input', () => { turnsCurr = Number($turns.value) })
+        inputs.forEach(
+          el =>
+            el &&
+            el.addEventListener('input', () => {
+              if ($presetSelect && $presetSelect.value !== 'custom')
+                $presetSelect.value = 'custom'
+              render()
+            })
+        )
+        $turns.addEventListener('input', () => {
+          turnsCurr = Number($turns.value)
+        })
 
         $reset.addEventListener('click', () => {
           $turns.value = 4
@@ -634,7 +968,7 @@
           $persp.value = 40
           $spinOn.checked = false
           $spin.value = 60
-          $evo.value = 0.20
+          $evo.value = 0.2
           $chOn.checked = false
           $chSteps.value = 16
           $chLabels.checked = true
@@ -653,7 +987,8 @@
         // Generate social thumbnail (1200x630) by scaling current canvas
         const $thumb = $('thumb')
         $thumb.addEventListener('click', () => {
-          const targetW = 1200, targetH = 630
+          const targetW = 1200,
+            targetH = 630
           const src = canvas
           const off = document.createElement('canvas')
           off.width = targetW
@@ -736,27 +1071,46 @@
           chSteps: 16,
           chLabels: true,
           dividers: 0,
-          hatch: 0
+          hatch: 0,
+          divMode: 'even'
         }
 
         const presets = {
           default: defaultPreset,
-          golden: { ...defaultPreset, growth: 1.618, h0: 40, hD: 60, sat: 70, lit: 58 },
+          golden: {
+            ...defaultPreset,
+            growth: 1.618,
+            h0: 40,
+            hD: 60,
+            sat: 70,
+            lit: 58
+          },
           thin: { ...defaultPreset, thick: 15, ringC: 64, ringA: 8, fillA: 70 },
-          thick: { ...defaultPreset, thick: 60, baseR: 40, ringC: 24, ringA: 16 },
+          thick: {
+            ...defaultPreset,
+            thick: 60,
+            baseR: 40,
+            ringC: 24,
+            ringA: 16
+          },
           ringsOff: { ...defaultPreset, ringsOn: false },
           perspective: { ...defaultPreset, perspOn: true, persp: 70, cy: 65 }
         }
 
         // If an external preset is provided (via Fibonacci/preset.js), register it
-        if (window.FIB_USER_PRESET && typeof window.FIB_USER_PRESET === 'object') {
+        if (
+          window.FIB_USER_PRESET &&
+          typeof window.FIB_USER_PRESET === 'object'
+        ) {
           presets.user = { ...defaultPreset, ...window.FIB_USER_PRESET }
           // Add to dropdown before "custom"
           if ($presetSelect) {
             const opt = document.createElement('option')
             opt.value = 'user'
             opt.textContent = 'User Preset'
-            const customOpt = Array.from($presetSelect.options).find(o => o.value === 'custom')
+            const customOpt = Array.from($presetSelect.options).find(
+              o => o.value === 'custom'
+            )
             if (customOpt) $presetSelect.add(opt, customOpt)
             else $presetSelect.appendChild(opt)
           }
@@ -764,17 +1118,20 @@
 
         function addPresetOption(key, label) {
           if (!$presetSelect) return
-          if (Array.from($presetSelect.options).some(o => o.value === key)) return
+          if (Array.from($presetSelect.options).some(o => o.value === key))
+            return
           const opt = document.createElement('option')
           opt.value = key
           opt.textContent = label
-          const customOpt = Array.from($presetSelect.options).find(o => o.value === 'custom')
+          const customOpt = Array.from($presetSelect.options).find(
+            o => o.value === 'custom'
+          )
           if (customOpt) $presetSelect.add(opt, customOpt)
           else $presetSelect.appendChild(opt)
         }
 
         // Load additional presets from presets.json if present
-        ;(async function loadJsonPresets(){
+        ;(async function loadJsonPresets() {
           try {
             const res = await fetch('presets.json', { cache: 'no-store' })
             if (!res.ok) return
@@ -783,15 +1140,26 @@
             if (Array.isArray(data)) list = data
             else if (Array.isArray(data.presets)) list = data.presets
             else if (data && typeof data === 'object') {
-              list = Object.keys(data).map(k => ({ name: k, settings: data[k] }))
+              list = Object.keys(data).map(k => ({
+                name: k,
+                settings: data[k]
+              }))
             }
             let selectedKey = null
             list.forEach(item => {
-              const key = 'json_' + String(item.name || 'preset')
-                .toLowerCase().replace(/[^a-z0-9]+/g, '_')
+              const key =
+                'json_' +
+                String(item.name || 'preset')
+                  .toLowerCase()
+                  .replace(/[^a-z0-9]+/g, '_')
               presets[key] = { ...defaultPreset, ...(item.settings || {}) }
               addPresetOption(key, item.name || key)
-              if ((item.name || '').toLowerCase().includes('perspective — user') || (item.name || '').toLowerCase().includes('perspective - user')) {
+              if (
+                (item.name || '')
+                  .toLowerCase()
+                  .includes('perspective — user') ||
+                (item.name || '').toLowerCase().includes('perspective - user')
+              ) {
                 selectedKey = key
               }
             })
@@ -836,7 +1204,8 @@
             chSteps: Number($chSteps.value),
             chLabels: Boolean($chLabels.checked),
             dividers: Number($dividers.value),
-            hatch: Number($hatch.value)
+            hatch: Number($hatch.value),
+            divMode: String(($divMode && $divMode.value) || 'even')
           }
         }
 
@@ -872,6 +1241,7 @@
           if (typeof s.chLabels === 'boolean') $chLabels.checked = s.chLabels
           if (typeof s.dividers === 'number') $dividers.value = s.dividers
           if (typeof s.hatch === 'number') $hatch.value = s.hatch
+          if (typeof s.divMode === 'string' && $divMode) $divMode.value = s.divMode
           turnsCurr = Number($turns.value)
           render()
         }
@@ -919,16 +1289,22 @@
             const text = await res.text()
             $logContent.textContent = text
           } catch (err) {
-            $logContent.textContent = 'No log.md found next to this file. Create fern/log.md to show content.'
+            $logContent.textContent =
+              'No log.md found next to this file. Create fern/log.md to show content.'
           }
         }
         $infoBtn.addEventListener('click', openInfo)
-        $closeOverlay.addEventListener('click', () => ($overlay.style.display = 'none'))
-        $overlay.addEventListener('click', e => { if (e.target === $overlay) $overlay.style.display = 'none' })
+        $closeOverlay.addEventListener(
+          'click',
+          () => ($overlay.style.display = 'none')
+        )
+        $overlay.addEventListener('click', e => {
+          if (e.target === $overlay) $overlay.style.display = 'none'
+        })
 
         render()
         requestAnimationFrame(tick)
       })()
     </script>
   </body>
-  </html>
+</html>

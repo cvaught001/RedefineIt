@@ -99,9 +99,13 @@ The renderer draws a logarithmic spiral “shell” with adjustable thickness, c
   - The k‑th Fibonacci number can be displayed (or fallback to k+1).
 
 - Spiral dividers (new)
-  - Draw M inner log‑spiral curves within each chamber to emphasize the spiral flow.
-  - For divider m in 1..M, compute thickness fraction f = m/(M+1), scale s = (1 − thickPct) + thickPct·f, and draw
-    r_m(t) = baseR·s·e^(b·t), t ∈ [t_k, t_{k+1}].
+  - Draw M inner spiral curves within each chamber to emphasize the spiral flow.
+  - Modes:
+    - Even: f_m = m/(M+1), linear across thickness.
+    - Golden Ratio: geometric spacing with r = 1/φ; f_m = (1 − r^m)/(1 − r^{M+1}).
+    - Polar (log-uniform): equal spacing in log radius; s_m = exp(ln(1−thick) + u·(0→1)), map to f.
+    - Archimedean: r(t) = a + c(t−t0) matching the same thickness fraction at t0 and t1.
+  - For even/golden/polar: scale s = (1 − thickPct) + thickPct·f, and draw r_m(t) = baseR·s·e^(b·t), t ∈ [t_k, t_{k+1}].
 
 - Spiral hatching (new)
   - Similar to dividers, but with more numerous, faint strokes (H lines) to texture the chamber.
