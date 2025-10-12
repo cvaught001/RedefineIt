@@ -204,6 +204,15 @@
         <input id="chLabels" type="checkbox" checked />
       </div>
 
+      <div class="row">
+        <label>Spiral Dividers <small id="divV"></small></label>
+        <input id="dividers" type="range" min="0" max="8" step="1" value="0" />
+      </div>
+      <div class="row">
+        <label>Spiral Hatching <small id="hatV"></small></label>
+        <input id="hatch" type="range" min="0" max="12" step="1" value="0" />
+      </div>
+
       <div class="hr"></div>
       <div class="row">
         <button id="reset" class="btn">Reset</button>
@@ -254,6 +263,8 @@
         const $spinOn = $('spinOn'), $spin = $('spin'), $spinV = $('spinV')
         const $evo = $('evo'), $evoV = $('evoV')
         const $chOn = $('chOn'), $chSteps = $('chSteps'), $chStepsV = $('chStepsV'), $chLabels = $('chLabels')
+        const $dividers = $('dividers'), $divV = $('divV')
+        const $hatch = $('hatch'), $hatV = $('hatV')
         const $reset = $('reset'), $export = $('export')
         const $infoBtn = $('infoBtn')
         const $overlay = $('overlay')
@@ -308,6 +319,8 @@
           $spinV.textContent = Number($spin.value)
           $evoV.textContent = Number($evo.value)
           $chStepsV.textContent = Number($chSteps.value)
+          $divV.textContent = Number($dividers.value)
+          $hatV.textContent = Number($hatch.value)
 
           return {
             turns: turnsCurr,
@@ -335,6 +348,9 @@
             chOn: $chOn.checked,
             chSteps: Number($chSteps.value),
             chLabels: $chLabels.checked
+            ,
+            dividers: Number($dividers.value),
+            hatch: Number($hatch.value)
           }
         }
 
@@ -433,6 +449,56 @@
               const label = fseq[k] || (k+1)
               ctx.fillText(String(label), x, y)
             }
+
+            // Spiral dividers (M lines evenly spaced across shell thickness)
+            const M = Math.max(0, Math.min(8, Math.floor(opts.dividers || 0)))
+            if (M > 0){
+              ctx.save()
+              ctx.globalAlpha = 0.6
+              ctx.strokeStyle = 'rgba(235,250,245,0.8)'
+              ctx.lineWidth = Math.max(0.6, opts.outlineW * 0.7)
+              for (let m=1; m<=M; m++){
+                const f = m / (M+1) // 0..1 fraction from inner->outer
+                const s = (1 - thick) + thick * f
+                ctx.beginPath()
+                for (let i=0;i<=S;i++){
+                  const t = t0 + (i/S)*(t1-t0)
+                  const r = opts.baseR * s * Math.exp(b*t)
+                  const ang = t + opts.rot
+                  let x = cx + r * Math.cos(ang)
+                  let y = cy + r * Math.sin(ang)
+                  if (P){ [x,y]=P(x,y) }
+                  if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y)
+                }
+                ctx.stroke()
+              }
+              ctx.restore()
+            }
+
+            // Spiral hatching (H faint lines, 0 disables)
+            const Hc = Math.max(0, Math.min(12, Math.floor(opts.hatch || 0)))
+            if (Hc > 0){
+              ctx.save()
+              ctx.globalAlpha = 0.18
+              ctx.strokeStyle = 'rgba(230,245,240,0.9)'
+              ctx.lineWidth = Math.max(0.4, opts.outlineW * 0.5)
+              for (let h=1; h<=Hc; h++){
+                const f = h / (Hc+1)
+                const s = (1 - thick) + thick * f
+                ctx.beginPath()
+                for (let i=0;i<=S;i++){
+                  const t = t0 + (i/S)*(t1-t0)
+                  const r = opts.baseR * s * Math.exp(b*t)
+                  const ang = t + opts.rot
+                  let x = cx + r * Math.cos(ang)
+                  let y = cy + r * Math.sin(ang)
+                  if (P){ [x,y]=P(x,y) }
+                  if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y)
+                }
+                ctx.stroke()
+              }
+              ctx.restore()
+            }
           }
           ctx.restore()
         }
@@ -520,7 +586,8 @@
           $turns,$growth,$baseR,$thick,$rot,$cx,$cy,$samp,
           $olw,$olc,$fillA,$h0,$hD,$sat,$lit,$tbg,$bgc,
           $ringsOn,$ringC,$ringA,$perspOn,$persp,
-          $spinOn,$spin,$evo,$chOn,$chSteps,$chLabels
+          $spinOn,$spin,$evo,$chOn,$chSteps,$chLabels,
+          $dividers,$hatch
         ]
         inputs.forEach(el => el && el.addEventListener('input', () => {
           if ($presetSelect && $presetSelect.value !== 'custom') $presetSelect.value = 'custom'
@@ -621,7 +688,9 @@
           evo: 0.2,
           chOn: false,
           chSteps: 16,
-          chLabels: true
+          chLabels: true,
+          dividers: 0,
+          hatch: 0
         }
 
         const presets = {
@@ -719,7 +788,9 @@
             evo: Number($evo.value),
             chOn: Boolean($chOn.checked),
             chSteps: Number($chSteps.value),
-            chLabels: Boolean($chLabels.checked)
+            chLabels: Boolean($chLabels.checked),
+            dividers: Number($dividers.value),
+            hatch: Number($hatch.value)
           }
         }
 
@@ -753,6 +824,8 @@
           if (typeof s.chOn === 'boolean') $chOn.checked = s.chOn
           if (typeof s.chSteps === 'number') $chSteps.value = s.chSteps
           if (typeof s.chLabels === 'boolean') $chLabels.checked = s.chLabels
+          if (typeof s.dividers === 'number') $dividers.value = s.dividers
+          if (typeof s.hatch === 'number') $hatch.value = s.hatch
           turnsCurr = Number($turns.value)
           render()
         }

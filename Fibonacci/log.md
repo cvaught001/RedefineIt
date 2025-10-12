@@ -1,82 +1,138 @@
-# Fibonacci Spiral Section (JavaScript Module)
+# Fibonacci Shell — Features and Math
 
-A drop-in ES module that renders a beautiful, self-contained section explaining the **Fibonacci Spiral** — complete with a styled paragraph, formula, and an optional procedurally drawn SVG spiral.
+This document explains the controls, features, and mathematics used by the Fibonacci Shell visualizer in `Fibonacci/index.html`.
 
----
+## Overview
 
-## 📦 Installation
+The renderer draws a logarithmic spiral “shell” with adjustable thickness, color, perspective, rings, and animated evolution. Chambers (annular spiral bands) can be overlaid, along with spiral dividers and spiral hatching to emphasize the spiral structure. Presets can be loaded from a JSON file and applied via a dropdown.
 
-Save the file as:
+## Quick Start
 
-```bash
-fibonacci-spiral-section.module.js
-```
+- Show/hide options: top‑right eye button.
+- Toggle info: top‑right info button (loads this file).
+- Choose a preset: Preset dropdown. JSON presets from `Fibonacci/presets.json` are added automatically.
+- Export/Import settings JSON: buttons in the panel; import by pasting JSON.
+- Export PNG: click Export PNG.
 
----
+## Controls
 
-## 🧩 Usage
+- Geometry
+  - `Turns`: Total spiral turns. Also animates if Evolve > 0.
+  - `Growth / Turn`: Growth factor per 360°; ≈1.618 produces “golden” shells.
+  - `Base Radius`: Radius at t=0.
+  - `Thickness (%)`: Fractional shell thickness from inner to outer spiral.
+  - `Rotation (°)`: Rotates the shell in the plane.
+  - `Samples / Turn`: Curve sampling for precision.
+  - `Center X/Y (%)`: Center as canvas percent.
+- Appearance
+  - `Outline (px)`, `Outline Color`.
+  - `Fill Alpha (%)`: Shell fill alpha via radial gradient across hue shift.
+  - `Base Hue`, `Hue Delta`, `Saturation`, `Lightness`.
+  - `Transparent BG`, `BG Color`.
+- Rings
+  - `Rings`: Toggle. Concentric rings spaced at equal angle increments along the spiral.
+  - `Ring Count`, `Ring Alpha (%)`.
+- Perspective
+  - `Perspective`: Toggle and `Foreshortening` amount.
+- Animation
+  - `Spin`: Toggle and speed (°/s).
+  - `Evolve`: Increase/decrease turns per second.
+- Chambers
+  - `Chambers`: Toggle.
+  - `Chamber Steps`: Number of chamber bands across total turns.
+  - `Label Fibonacci`: Draws Fibonacci numbers along chamber centers.
+  - `Spiral Dividers`: Draws M inner spiral ribs in each chamber.
+  - `Spiral Hatching`: Draws H faint inner spiral lines in each chamber.
+- Presets and JSON
+  - Preset dropdown includes built‑ins and any found in `presets.json`.
+  - Export JSON copies current UI to clipboard (prompt fallback).
+  - Import JSON prompts for a JSON blob and applies it.
 
-Place a mount element in your HTML:
+## Math Background
 
-```html
-<section id="fib-mount"></section>
-```
+- Logarithmic spiral
+  - Polar form: r(t) = a·e^(b·t), where t is radians.
+  - Growth per turn: G = e^(b·2π). Therefore b = ln(G) / (2π).
+  - For the golden spiral feel, set G ≈ φ ≈ 1.618.
 
-Then import and render the module:
+- Thickness and inner spiral
+  - The outer spiral uses radius r(t) = baseR·e^(b·t).
+  - The inner spiral uses r_i(t) = r(t)·(1 − thickPct), where thickPct ∈ [0,1].
+  - The shell is the region between inner and outer curves.
 
-```html
-<script type="module">
-  import { renderFibonacciSection } from './fibonacci-spiral-section.module.js'
+- Sampling and polygon fill
+  - We sample S points along t ∈ [0, T] where T = turns·2π.
+  - Build two polylines: outer[0..S], inner[0..S]. The shell polygon is
+    outer(0→S) + inner(S→0) closed, then filled and optionally stroked.
 
-  // Minimal example
-  renderFibonacciSection('#fib-mount')
+- Rings along the spiral
+  - For j = 1..ringCount, pick angle t_j = (j/ringCount)·T.
+  - Draw a circle with radius r(t_j) around the center (after perspective projection), approximated by short segments.
 
-  // Customizable example
-  renderFibonacciSection('#fib-mount', {
-    theme: 'dark', // 'dark' | 'light'
-    accent: '#5eead4', // accent color
-    showGraphic: true, // toggle the SVG spiral
-    density: 1100, // spiral smoothness (420–2000)
-    maxTheta: Math.PI * 5, // spiral turns (≈3.2π–8π)
-    headingLevel: 2 // heading tag level (h2–h6)
-  })
-</script>
-```
+- Perspective projection
+  - A lightweight non‑linear projection emphasizing depth toward a vanishing line:
+    - Let A = (ax, ay) be the anchor near the bottom of the canvas.
+    - Depth d = clamp((ay − y)/H, 0, 1) with H ≈ canvas height.
+    - Scale f = 1/(1 + k·2·d), k ∈ [0,1] is `Foreshortening`.
+    - Projected point P(x,y) → A + (P − A)·f.
 
----
+- Rotation
+  - Apply an in‑plane rotation by `rot` to angle: t' = t + rot.
+  - Optional `Spin` animates rot(t) over time.
 
-## 🎨 Features
+- Evolve
+  - If `Evolve` > 0, the effective turns increases over time: turns_curr += rate·dt.
 
-- Isolated **Shadow DOM** styling (no conflicts)
-- Accessible content with ARIA roles and labels
-- Built-in **Fibonacci spiral SVG generator**
-- Configurable **theme, accent color, and detail density**
-- Lightweight (pure JavaScript, no dependencies)
+## Chambers
 
----
+- Partitioning
+  - With `N = Chamber Steps`, partition t into N equal segments: [t_k, t_{k+1}], k=0..N−1,
+    where t_k = (k/N)·T and T = turns·2π.
 
-## 🧮 Mathematical Basis
+- Chamber polygon
+  - For each chamber segment, sample S_c points between t_k..t_{k+1} on both outer and inner spirals, then build a closed polygon and fill it.
+  - Fill color uses a hue ramp: h = h0 + hD·(k/N) with alpha from `Fill Alpha`.
 
-The logarithmic spiral used in this module is based on the Fibonacci sequence and golden ratio (φ ≈ 1.618):
+- Labels
+  - Center angle t_m = (t_k + t_{k+1})/2.
+  - Label radius r_m = baseR·e^(b·t_m)·(1 − 0.5·thickPct).
+  - The k‑th Fibonacci number can be displayed (or fallback to k+1).
 
-```text
-r(θ) = a · e^{bθ}
-where b = ln(φ) / (π/2)
-```
+- Spiral dividers (new)
+  - Draw M inner log‑spiral curves within each chamber to emphasize the spiral flow.
+  - For divider m in 1..M, compute thickness fraction f = m/(M+1), scale s = (1 − thickPct) + thickPct·f, and draw
+    r_m(t) = baseR·s·e^(b·t), t ∈ [t_k, t_{k+1}].
 
-This produces the same growth ratio seen in natural phenomena such as **nautilus shells**, **sunflower seeds**, and **spiral galaxies**.
+- Spiral hatching (new)
+  - Similar to dividers, but with more numerous, faint strokes (H lines) to texture the chamber.
+  - Uses the same r_m(t) family with lower alpha and thinner width.
 
----
+## Performance Notes
 
-## 🪄 Example Output
+- Sampling density scales with `Samples / Turn`; raise it for crisper edges at a cost.
+- Dividers/hatching add strokes proportional to `Chamber Steps` × (M or H); moderate values recommended for mobile.
+- A trim, single‑pass 2D canvas pipeline is used; perspective is applied per vertex.
 
-When rendered, the module produces a section like this:
+## Presets and JSON
 
-> **Fibonacci Spiral (φ ≈ 1.618)**  
-> A self-contained card with an explanation, inline formula, and optional SVG visualization. The component can be dropped into any webpage with no additional styling required.
+- Built‑in presets appear in the dropdown.
+- `Fibonacci/presets.json` can define additional presets in any of these shapes:
+  - { "presets": [ { "name": "MyPreset", "settings": { … } } ] }
+  - [ { "name": "MyPreset", "settings": { … } } ]
+  - { "MyPreset": { … }, "Another": { … } }
+- An optional `Fibonacci/preset.js` can provide a global `window.FIB_USER_PRESET` object which is added as “User Preset”.
 
----
+## Coordinate System Summary
 
-## 🧱 Optional Extensions
+- Canvas pixel space with device‑pixel‑ratio scaling.
+- Center point (cx, cy) is in pixels derived from `%` inputs.
+- Spiral defined in polar (r, t), mapped to Cartesian, rotated, optionally projected, then rasterized.
 
-Would you like to extend this into a reusable **Web Component** (`<fibonacci-spiral>` tag) or a **React wrapper**? Both can be layered directly on top of this module.
+## Ideas for Extension
+
+- Adaptive sampling: allocate more segments where curvature is higher.
+- Shaded relief: derive tangents and apply light/shadow along the shell.
+- WASM core for higher‑res output.
+- SVG export of outlines and chamber polygons.
+
+— End —
