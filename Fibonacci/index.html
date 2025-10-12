@@ -203,6 +203,24 @@
         <input id="samp" type="range" min="48" max="360" step="1" value="180" />
       </div>
 
+      <!-- Multi-shell controls -->
+      <div class="row">
+        <label>Shells <small id="shellCountV"></small></label>
+        <input id="shellCount" type="range" min="1" max="3" step="1" value="1" />
+      </div>
+      <div class="row">
+        <label>Shell Offset (°) <small id="shellOffV"></small></label>
+        <input id="shellOffset" type="range" min="0" max="360" step="1" value="20" />
+      </div>
+      <div class="row">
+        <label>Shell Scale (%) <small id="shellScaleV"></small></label>
+        <input id="shellScale" type="range" min="50" max="150" step="1" value="100" />
+      </div>
+      <div class="row">
+        <label>Hue Shift / Shell <small id="shellHueV"></small></label>
+        <input id="shellHueDelta" type="range" min="-180" max="180" step="1" value="0" />
+      </div>
+
       <div class="hr"></div>
 
       <div class="row">
@@ -319,6 +337,18 @@
       <div class="row">
         <label>Chamber Steps <small id="chStepsV"></small></label>
         <input id="chSteps" type="range" min="1" max="64" step="1" value="16" />
+      </div>
+      <div class="row">
+        <label>Chamber Line Width <small id="chLWV"></small></label>
+        <input id="chLineW" type="range" min="0" max="4" step="0.1" value="1" />
+      </div>
+      <div class="row">
+        <label>Smooth Curves</label>
+        <input id="smoothCurves" type="checkbox" />
+      </div>
+      <div class="row">
+        <label>Curve Amount <small id="smAmtV"></small></label>
+        <input id="smoothAmt" type="range" min="0" max="1" step="0.05" value="0.5" />
       </div>
       <div class="row">
         <label>Label Fibonacci</label>
@@ -480,7 +510,12 @@
         const $chOn = $('chOn'),
           $chSteps = $('chSteps'),
           $chStepsV = $('chStepsV'),
+          $chLineW = $('chLineW'),
+          $chLWV = $('chLWV'),
           $chLabels = $('chLabels')
+        const $smoothCurves = $('smoothCurves'),
+          $smoothAmt = $('smoothAmt'),
+          $smAmtV = $('smAmtV')
         const $dividers = $('dividers'),
           $divV = $('divV')
         const $hatch = $('hatch'),
@@ -547,9 +582,20 @@
           $spinV.textContent = Number($spin.value)
           $evoV.textContent = Number($evo.value)
           $chStepsV.textContent = Number($chSteps.value)
+          $chLWV.textContent = Number($chLineW.value).toFixed(1)
+          if ($smAmtV) $smAmtV.textContent = Number($smoothAmt.value).toFixed(2)
           $divV.textContent = Number($dividers.value)
           $hatV.textContent = Number($hatch.value)
           $arcWdV.textContent = Number($divArcDeg.value)
+          // Multi-shell readouts
+          const sc = $('shellCount'), scv = $('shellCountV')
+          const so = $('shellOffset'), sov = $('shellOffV')
+          const ss = $('shellScale'), ssv = $('shellScaleV')
+          const sh = $('shellHueDelta'), shv = $('shellHueV')
+          if (sc && scv) scv.textContent = Number(sc.value)
+          if (so && sov) sov.textContent = Number(so.value) + '°'
+          if (ss && ssv) ssv.textContent = Number(ss.value) + '%'
+          if (sh && shv) shv.textContent = Number(sh.value)
 
           return {
             turns: turnsCurr,
@@ -576,12 +622,20 @@
             persp: Number($persp.value) / 100,
             chOn: $chOn.checked,
             chSteps: Number($chSteps.value),
+            chLineW: Number($chLineW.value),
+            smoothCurves: Boolean($smoothCurves && $smoothCurves.checked),
+            smoothAmt: Number($smoothAmt && $smoothAmt.value),
             chLabels: $chLabels.checked,
             dividers: Number($dividers.value),
             hatch: Number($hatch.value),
             divMode: String(($divMode && $divMode.value) || 'even'),
             divArcsOn: Boolean($divArcsOn && $divArcsOn.checked),
-            divArcDeg: Number($divArcDeg && $divArcDeg.value)
+            divArcDeg: Number($divArcDeg && $divArcDeg.value),
+            // Multi-shell options
+            shellCount: Number(sc ? sc.value : 1),
+            shellOffsetRad: deg(Number(so ? so.value : 0)),
+            shellScale: Number(ss ? ss.value : 100) / 100,
+            shellHueDelta: Number(sh ? sh.value : 0)
           }
         }
 
@@ -652,6 +706,27 @@
           return out
         }
 
+        // Quadratic smoothing for polylines
+        function strokeSmoothOpen(ctx, pts, amt) {
+          const n = pts.length
+          if (n < 2) return
+          const t = Math.max(0, Math.min(1, isFinite(amt) ? amt : 0.5))
+          ctx.beginPath()
+          ctx.moveTo(pts[0][0], pts[0][1])
+          for (let i = 1; i < n - 1; i++) {
+            const p0 = pts[i - 1]
+            const p1 = pts[i]
+            const p2 = pts[i + 1]
+            const cx = p1[0] + (p2[0] - p0[0]) * 0.25 * t
+            const cy = p1[1] + (p2[1] - p0[1]) * 0.25 * t
+            const mx = (p1[0] + p2[0]) * 0.5
+            const my = (p1[1] + p2[1]) * 0.5
+            ctx.quadraticCurveTo(cx, cy, mx, my)
+          }
+          ctx.lineTo(pts[n - 1][0], pts[n - 1][1])
+          ctx.stroke()
+        }
+
         function drawChambers(ctx, opts, cx, cy) {
           if (!opts.chOn || opts.chSteps <= 0) return
           const W = innerWidth,
@@ -696,6 +771,28 @@
             const hue = opts.h0 + opts.hD * (k / N)
             ctx.fillStyle = hsla(hue, opts.sat, opts.lit, 0.25)
             ctx.fill()
+            if (opts.chLineW > 0) {
+              ctx.save()
+              ctx.globalAlpha = 0.85
+              ctx.strokeStyle = opts.outlineC
+              ctx.lineWidth = opts.chLineW
+              if (opts.smoothCurves) {
+                // stroke outer and inner separately as smoothed paths
+                strokeSmoothOpen(ctx, outer, opts.smoothAmt)
+                strokeSmoothOpen(ctx, inner.slice().reverse(), opts.smoothAmt)
+              } else {
+                // straight polylines
+                ctx.beginPath()
+                ctx.moveTo(outer[0][0], outer[0][1])
+                for (let i = 1; i < outer.length; i++) ctx.lineTo(outer[i][0], outer[i][1])
+                ctx.stroke()
+                ctx.beginPath()
+                ctx.moveTo(inner[inner.length - 1][0], inner[inner.length - 1][1])
+                for (let i = inner.length - 2; i >= 0; i--) ctx.lineTo(inner[i][0], inner[i][1])
+                ctx.stroke()
+              }
+              ctx.restore()
+            }
             if (opts.chLabels) {
               const tm = (t0 + t1) / 2
               const rm = opts.baseR * Math.exp(b * tm) * (1 - thick * 0.5)
@@ -718,7 +815,7 @@
               ctx.save()
               ctx.globalAlpha = 0.6
               ctx.strokeStyle = 'rgba(235,250,245,0.8)'
-              ctx.lineWidth = Math.max(0.6, opts.outlineW * 0.7)
+              ctx.lineWidth = Math.max(0.2, (opts.chLineW || 1) * 0.9)
               const mode = (opts.divMode || (opts.divGolden ? 'golden' : 'even'))
               if (mode === 'arch') {
                 for (let m = 1; m <= M; m++) {
@@ -765,17 +862,25 @@
                 }
                 for (const f of Fs) {
                   const s = 1 - thick + thick * f
+                const ptsD = []
+                for (let i = 0; i <= S; i++) {
+                  const t = t0 + (i / S) * (t1 - t0)
+                  const r = opts.baseR * s * Math.exp(b * t)
+                  const ang = t + opts.rot
+                  let x = cx + r * Math.cos(ang)
+                  let y = cy + r * Math.sin(ang)
+                  if (P) { ;[x, y] = P(x, y) }
+                  ptsD.push([x, y])
+                }
+                if (opts.smoothCurves) strokeSmoothOpen(ctx, ptsD, opts.smoothAmt)
+                else {
                   ctx.beginPath()
-                  for (let i = 0; i <= S; i++) {
-                    const t = t0 + (i / S) * (t1 - t0)
-                    const r = opts.baseR * s * Math.exp(b * t)
-                    const ang = t + opts.rot
-                    let x = cx + r * Math.cos(ang)
-                    let y = cy + r * Math.sin(ang)
-                    if (P) { ;[x, y] = P(x, y) }
+                  for (let i = 0; i < ptsD.length; i++) {
+                    const [x, y] = ptsD[i]
                     if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y)
                   }
                   ctx.stroke()
+                }
                 }
               }
               ctx.restore()
@@ -787,24 +892,29 @@
               ctx.save()
               ctx.globalAlpha = 0.18
               ctx.strokeStyle = 'rgba(230,245,240,0.9)'
-              ctx.lineWidth = Math.max(0.4, opts.outlineW * 0.5)
+              ctx.lineWidth = Math.max(0.2, (opts.chLineW || 1) * 0.6)
               for (let h = 1; h <= Hc; h++) {
                 const f = h / (Hc + 1)
                 const s = 1 - thick + thick * f
-                ctx.beginPath()
+                const ptsH = []
                 for (let i = 0; i <= S; i++) {
                   const t = t0 + (i / S) * (t1 - t0)
                   const r = opts.baseR * s * Math.exp(b * t)
                   const ang = t + opts.rot
                   let x = cx + r * Math.cos(ang)
                   let y = cy + r * Math.sin(ang)
-                  if (P) {
-                    ;[x, y] = P(x, y)
-                  }
-                  if (i === 0) ctx.moveTo(x, y)
-                  else ctx.lineTo(x, y)
+                  if (P) { ;[x, y] = P(x, y) }
+                  ptsH.push([x, y])
                 }
-                ctx.stroke()
+                if (opts.smoothCurves) strokeSmoothOpen(ctx, ptsH, opts.smoothAmt)
+                else {
+                  ctx.beginPath()
+                  for (let i = 0; i < ptsH.length; i++) {
+                    const [x, y] = ptsH[i]
+                    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y)
+                  }
+                  ctx.stroke()
+                }
               }
               ctx.restore()
             }
@@ -841,20 +951,28 @@
               ctx.save()
               ctx.globalAlpha = 0.85
               ctx.strokeStyle = opts.outlineC || 'white'
-              ctx.lineWidth = Math.max(1.2, (opts.outlineW || 1) * 1.1)
+              ctx.lineWidth = Math.max(0.6, (opts.chLineW || 1) * 1.0)
               const segs = 24
               for (const f of FsArc) {
                 const rMid = rInMid + f * (rOutMid - rInMid)
-                ctx.beginPath()
+                const ptsA = []
                 for (let i = 0; i <= segs; i++) {
                   const a = aStart + (i / segs) * (aEnd - aStart)
                   const ang = a + opts.rot
                   let x = cx + rMid * Math.cos(ang)
                   let y = cy + rMid * Math.sin(ang)
                   if (P) { ;[x, y] = P(x, y) }
-                  if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y)
+                  ptsA.push([x, y])
                 }
-                ctx.stroke()
+                if (opts.smoothCurves) strokeSmoothOpen(ctx, ptsA, opts.smoothAmt)
+                else {
+                  ctx.beginPath()
+                  for (let i = 0; i < ptsA.length; i++) {
+                    const [x, y] = ptsA[i]
+                    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y)
+                  }
+                  ctx.stroke()
+                }
               }
               ctx.restore()
             }
@@ -865,11 +983,12 @@
         function drawShell(ctx, opts) {
           const W = innerWidth,
             H = innerHeight
-          ctx.clearRect(0, 0, W, H)
-
-          if (!opts.tbg) {
-            ctx.fillStyle = opts.bgc
-            ctx.fillRect(0, 0, W, H)
+          if (opts.__drawBg !== false) {
+            ctx.clearRect(0, 0, W, H)
+            if (!opts.tbg) {
+              ctx.fillStyle = opts.bgc
+              ctx.fillRect(0, 0, W, H)
+            }
           }
 
           const { outer, inner, cx, cy, rMax } = buildShellPoints(opts, W, H)
@@ -939,7 +1058,19 @@
         }
 
         function render() {
-          drawShell(ctx, getOpts())
+          const base = getOpts()
+          const count = Math.max(1, Math.min(5, Math.floor(base.shellCount || 1)))
+          for (let s = 0; s < count; s++) {
+            const factor = Math.pow(base.shellScale || 1, s)
+            const optsS = {
+              ...base,
+              baseR: base.baseR * factor,
+              rot: base.rot + (base.shellOffsetRad || 0) * s,
+              h0: base.h0 + (base.shellHueDelta || 0) * s,
+              __drawBg: s === 0
+            }
+            drawShell(ctx, optsS)
+          }
         }
 
         // Animation
@@ -989,6 +1120,9 @@
           $evo,
           $chOn,
           $chSteps,
+          $chLineW,
+          $smoothCurves,
+          $smoothAmt,
           $chLabels,
           $dividers,
           $divMode,
@@ -1037,12 +1171,21 @@
           $evo.value = 0.2
           $chOn.checked = false
           $chSteps.value = 16
+          $chLineW.value = 1
           $chLabels.checked = true
           $dividers.value = 0
           if ($divMode) $divMode.value = 'even'
           $hatch.value = 0
           if ($divArcsOn) $divArcsOn.checked = false
           if ($divArcDeg) $divArcDeg.value = 24
+          const $shellCount = $('shellCount')
+          const $shellOffset = $('shellOffset')
+          const $shellScale = $('shellScale')
+          const $shellHueDelta = $('shellHueDelta')
+          if ($shellCount) $shellCount.value = 1
+          if ($shellOffset) $shellOffset.value = 20
+          if ($shellScale) $shellScale.value = 100
+          if ($shellHueDelta) $shellHueDelta.value = 0
           spinRad = 0
           turnsCurr = Number($turns.value)
           render()
@@ -1141,11 +1284,18 @@
           chOn: false,
           chSteps: 16,
           chLabels: true,
+          chLineW: 1,
+          smoothCurves: false,
+          smoothAmt: 0.5,
           dividers: 0,
           hatch: 0,
           divMode: 'even',
           divArcsOn: false,
-          divArcDeg: 24
+          divArcDeg: 24,
+          shellCount: 1,
+          shellOffsetDeg: 20,
+          shellScalePct: 100,
+          shellHueDelta: 0
         }
 
         const presets = {
@@ -1275,12 +1425,19 @@
             evo: Number($evo.value),
             chOn: Boolean($chOn.checked),
             chSteps: Number($chSteps.value),
+            chLineW: Number($chLineW.value),
+            smoothCurves: Boolean($smoothCurves && $smoothCurves.checked),
+            smoothAmt: Number($smoothAmt && $smoothAmt.value),
             chLabels: Boolean($chLabels.checked),
             dividers: Number($dividers.value),
             hatch: Number($hatch.value),
             divMode: String(($divMode && $divMode.value) || 'even'),
             divArcsOn: Boolean($divArcsOn && $divArcsOn.checked),
-            divArcDeg: Number($divArcDeg && $divArcDeg.value)
+            divArcDeg: Number($divArcDeg && $divArcDeg.value),
+            shellCount: Number($('shellCount')?.value || 1),
+            shellOffsetDeg: Number($('shellOffset')?.value || 0),
+            shellScalePct: Number($('shellScale')?.value || 100),
+            shellHueDelta: Number($('shellHueDelta')?.value || 0)
           }
         }
 
@@ -1313,12 +1470,24 @@
           if (typeof s.evo === 'number') $evo.value = s.evo
           if (typeof s.chOn === 'boolean') $chOn.checked = s.chOn
           if (typeof s.chSteps === 'number') $chSteps.value = s.chSteps
+          if (typeof s.chLineW === 'number') $chLineW.value = s.chLineW
+          if (typeof s.smoothCurves === 'boolean' && $smoothCurves) $smoothCurves.checked = s.smoothCurves
+          if (typeof s.smoothAmt === 'number' && $smoothAmt) $smoothAmt.value = s.smoothAmt
           if (typeof s.chLabels === 'boolean') $chLabels.checked = s.chLabels
           if (typeof s.dividers === 'number') $dividers.value = s.dividers
           if (typeof s.hatch === 'number') $hatch.value = s.hatch
           if (typeof s.divMode === 'string' && $divMode) $divMode.value = s.divMode
           if (typeof s.divArcsOn === 'boolean' && $divArcsOn) $divArcsOn.checked = s.divArcsOn
           if (typeof s.divArcDeg === 'number' && $divArcDeg) $divArcDeg.value = s.divArcDeg
+          // Multi-shell
+          const $shellCount = $('shellCount')
+          const $shellOffset = $('shellOffset')
+          const $shellScale = $('shellScale')
+          const $shellHueDelta = $('shellHueDelta')
+          if (typeof s.shellCount === 'number' && $shellCount) $shellCount.value = s.shellCount
+          if (typeof s.shellOffsetDeg === 'number' && $shellOffset) $shellOffset.value = s.shellOffsetDeg
+          if (typeof s.shellScalePct === 'number' && $shellScale) $shellScale.value = s.shellScalePct
+          if (typeof s.shellHueDelta === 'number' && $shellHueDelta) $shellHueDelta.value = s.shellHueDelta
           turnsCurr = Number($turns.value)
           render()
         }

@@ -23,6 +23,10 @@ The renderer draws a logarithmic spiral “shell” with adjustable thickness, c
   - `Thickness (%)`: Fractional shell thickness from inner to outer spiral.
   - `Rotation (°)`: Rotates the shell in the plane.
   - `Samples / Turn`: Curve sampling for precision.
+  - `Shells`: Number of shells to draw (multi‑shell).
+  - `Shell Offset (°)`: Extra rotation per additional shell.
+  - `Shell Scale (%)`: Scale factor applied per additional shell.
+  - `Hue Shift / Shell`: Hue offset added per shell.
   - `Center X/Y (%)`: Center as canvas percent.
 - Appearance
   - `Outline (px)`, `Outline Color`.
@@ -40,6 +44,7 @@ The renderer draws a logarithmic spiral “shell” with adjustable thickness, c
 - Chambers
   - `Chambers`: Toggle.
   - `Chamber Steps`: Number of chamber bands across total turns.
+  - `Chamber Line Width`: Strokes chamber boundaries; 0 disables.
   - `Label Fibonacci`: Draws Fibonacci numbers along chamber centers.
   - `Spiral Dividers`: Draws M inner spiral ribs in each chamber.
   - `Spiral Hatching`: Draws H faint inner spiral lines in each chamber.
