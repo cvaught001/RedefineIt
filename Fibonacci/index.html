@@ -381,6 +381,14 @@
         <label>Arc Width (°) <small id="arcWdV"></small></label>
         <input id="divArcDeg" type="range" min="6" max="120" step="2" value="24" />
       </div>
+      <div class="row">
+        <label>Arc Bend</label>
+        <input id="divArcBend" type="range" min="-0.75" max="0.75" step="0.05" value="0" />
+      </div>
+      <div class="row">
+        <label>Arc End Offset (%) <small id="arcEndV"></small></label>
+        <input id="divArcEnd" type="range" min="-50" max="50" step="1" value="0" />
+      </div>
 
       <div class="hr"></div>
       <div class="row">
@@ -523,6 +531,8 @@
         const $divMode = $('divMode')
         const $divArcsOn = $('divArcsOn')
         const $divArcDeg = $('divArcDeg'), $arcWdV = $('arcWdV')
+        const $divArcBend = $('divArcBend')
+        const $divArcEnd = $('divArcEnd'), $arcEndV = $('arcEndV')
         const $reset = $('reset'),
           $export = $('export')
         const $infoBtn = $('infoBtn')
@@ -587,6 +597,7 @@
           $divV.textContent = Number($dividers.value)
           $hatV.textContent = Number($hatch.value)
           $arcWdV.textContent = Number($divArcDeg.value)
+          if ($arcEndV) $arcEndV.textContent = Number($divArcEnd.value)
           // Multi-shell readouts
           const sc = $('shellCount'), scv = $('shellCountV')
           const so = $('shellOffset'), sov = $('shellOffV')
@@ -631,6 +642,8 @@
             divMode: String(($divMode && $divMode.value) || 'even'),
             divArcsOn: Boolean($divArcsOn && $divArcsOn.checked),
             divArcDeg: Number($divArcDeg && $divArcDeg.value),
+            divArcBend: Number($divArcBend && $divArcBend.value),
+            divArcEnd: Number($divArcEnd && $divArcEnd.value),
             // Multi-shell options
             shellCount: Number(sc ? sc.value : 1),
             shellOffsetRad: deg(Number(so ? so.value : 0)),
@@ -954,13 +967,19 @@
               ctx.lineWidth = Math.max(0.6, (opts.chLineW || 1) * 1.0)
               const segs = 24
               for (const f of FsArc) {
-                const rMid = rInMid + f * (rOutMid - rInMid)
+                const rBase = rInMid + f * (rOutMid - rInMid)
                 const ptsA = []
                 for (let i = 0; i <= segs; i++) {
-                  const a = aStart + (i / segs) * (aEnd - aStart)
+                  const u = i / segs
+                  const a = aStart + u * (aEnd - aStart)
                   const ang = a + opts.rot
-                  let x = cx + rMid * Math.cos(ang)
-                  let y = cy + rMid * Math.sin(ang)
+                  const bend = Number(opts.divArcBend || 0)
+                  const endPct = Number(opts.divArcEnd || 0) / 100
+                  const bendTerm = Math.sin(Math.PI * u) * bend // peak at mid, 0 at ends
+                  const endTerm = (2 * u - 1) * endPct // -end at start, +end at stop
+                  const r = rBase * (1 + bendTerm + endTerm)
+                  let x = cx + r * Math.cos(ang)
+                  let y = cy + r * Math.sin(ang)
                   if (P) { ;[x, y] = P(x, y) }
                   ptsA.push([x, y])
                 }
@@ -1128,7 +1147,9 @@
           $divMode,
           $hatch,
           $divArcsOn,
-          $divArcDeg
+          $divArcDeg,
+          $divArcBend,
+          $divArcEnd
         ]
         inputs.forEach(
           el =>
@@ -1178,6 +1199,8 @@
           $hatch.value = 0
           if ($divArcsOn) $divArcsOn.checked = false
           if ($divArcDeg) $divArcDeg.value = 24
+          if ($divArcBend) $divArcBend.value = 0
+          if ($divArcEnd) $divArcEnd.value = 0
           const $shellCount = $('shellCount')
           const $shellOffset = $('shellOffset')
           const $shellScale = $('shellScale')
@@ -1292,6 +1315,8 @@
           divMode: 'even',
           divArcsOn: false,
           divArcDeg: 24,
+          divArcBend: 0,
+          divArcEnd: 0,
           shellCount: 1,
           shellOffsetDeg: 20,
           shellScalePct: 100,
@@ -1434,6 +1459,8 @@
             divMode: String(($divMode && $divMode.value) || 'even'),
             divArcsOn: Boolean($divArcsOn && $divArcsOn.checked),
             divArcDeg: Number($divArcDeg && $divArcDeg.value),
+            divArcBend: Number($divArcBend && $divArcBend.value),
+            divArcEnd: Number($divArcEnd && $divArcEnd.value),
             shellCount: Number($('shellCount')?.value || 1),
             shellOffsetDeg: Number($('shellOffset')?.value || 0),
             shellScalePct: Number($('shellScale')?.value || 100),
@@ -1479,6 +1506,8 @@
           if (typeof s.divMode === 'string' && $divMode) $divMode.value = s.divMode
           if (typeof s.divArcsOn === 'boolean' && $divArcsOn) $divArcsOn.checked = s.divArcsOn
           if (typeof s.divArcDeg === 'number' && $divArcDeg) $divArcDeg.value = s.divArcDeg
+          if (typeof s.divArcBend === 'number' && $divArcBend) $divArcBend.value = s.divArcBend
+          if (typeof s.divArcEnd === 'number' && $divArcEnd) $divArcEnd.value = s.divArcEnd
           // Multi-shell
           const $shellCount = $('shellCount')
           const $shellOffset = $('shellOffset')

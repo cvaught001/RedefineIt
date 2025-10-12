@@ -118,7 +118,10 @@ The renderer draws a logarithmic spiral “shell” with adjustable thickness, c
 
 - Divider arcs (visual aid)
   - Optional short circular arcs at each chamber’s mid-angle drawn at the divider radii.
-  - Arc span is configurable (degrees). This makes the chosen divider mode immediately visible.
+  - Arc span is configurable (degrees), with additional shaping:
+    - Arc Bend: warps radius across the arc (bulge inward/outward).
+    - Arc End Offset: pushes start/end radii in opposite directions.
+  - Makes the chosen divider mode immediately visible and expressive.
 
 ## Performance Notes
 
