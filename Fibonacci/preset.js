@@ -1,0 +1,33 @@
+// Global user preset for Fibonacci Shell
+// Loaded by Fibonacci/index.html and merged into the Presets dropdown as "User Preset"
+window.FIB_USER_PRESET = {
+  "turns": 4,
+  "growth": 1.62,
+  "baseR": 60,
+  "thick": 35,
+  "rot": 0,
+  "cx": 48,
+  "cy": 3,
+  "samp": 360,
+  "olw": 1,
+  "olc": "#fbecc8",
+  "fillA": 8,
+  "h0": 32,
+  "hD": -45,
+  "sat": 60,
+  "lit": 55,
+  "tbg": true,
+  "bgc": "#0b0f13",
+  "ringsOn": true,
+  "ringC": 40,
+  "ringA": 12,
+  "perspOn": true,
+  "persp": 100,
+  "spinOn": true,
+  "spin": 60,
+  "evo": 0.2,
+  "chOn": true,
+  "chSteps": 16,
+  "chLabels": true
+}
+

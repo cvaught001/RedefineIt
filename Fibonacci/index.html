@@ -8,6 +8,24 @@
       :root { color-scheme: dark; }
       html, body { margin: 0; height: 100%; background: #0b0f13; overflow: hidden; }
       canvas { display: block; width: 100vw; height: 100vh; }
+      #toggleUi {
+        position: fixed; right: 8px; top: 8px; z-index: 3;
+        width: 36px; height: 36px; border-radius: 10px;
+        display: inline-flex; align-items: center; justify-content: center;
+        background: rgba(12,20,16,0.6); color: #d8f5df;
+        border: 1px solid rgba(150,220,180,0.3); cursor: pointer;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.25);
+      }
+      #toggleUi:active { transform: translateY(1px); }
+      #toggleInfo {
+        position: fixed; right: 52px; top: 8px; z-index: 3;
+        width: 36px; height: 36px; border-radius: 10px;
+        display: inline-flex; align-items: center; justify-content: center;
+        background: rgba(12,20,16,0.6); color: #d8f5df;
+        border: 1px solid rgba(150,220,180,0.3); cursor: pointer;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.25);
+      }
+      #toggleInfo:active { transform: translateY(1px); }
       .ui {
         position: fixed; left: 12px; top: 12px; z-index: 2;
         font: 14px/1.35 system-ui, -apple-system, Segoe UI, sans-serif;
@@ -28,6 +46,10 @@
   </head>
   <body>
     <canvas id="c"></canvas>
+    <button id="toggleUi" title="Show/Hide options" aria-label="Show/Hide options">👁</button>
+    <button id="toggleInfo" title="Show Info" aria-label="Show Info">ⓘ</button>
+    <!-- Optional external preset; if present, adds "User Preset" -->
+    <script src="preset.js"></script>
 
     <div class="ui">
       <strong style="display:block;margin-bottom:6px;">Fibonacci Shell (Log Spiral)</strong>
@@ -105,6 +127,26 @@
       <div class="row">
         <label>BG Color</label>
         <input id="bgc" type="color" value="#0b0f13" />
+      </div>
+
+      <div class="hr"></div>
+
+      <!-- Presets + JSON import/export -->
+      <div class="row">
+        <label>Preset</label>
+        <select id="presetSelect" style="flex:1 1 auto">
+          <option value="default">Default</option>
+          <option value="golden">Golden Spiral</option>
+          <option value="thin">Thin Shell</option>
+          <option value="thick">Thick Shell</option>
+          <option value="ringsOff">No Rings</option>
+          <option value="perspective">Perspective</option>
+          <option value="custom">Custom</option>
+        </select>
+      </div>
+      <div class="row">
+        <button id="saveJson" class="btn">💾 Export JSON</button>
+        <button id="loadJson" class="btn">📂 Import JSON</button>
       </div>
 
       <div class="hr"></div>
@@ -217,6 +259,12 @@
         const $overlay = $('overlay')
         const $closeOverlay = $('closeOverlay')
         const $logContent = $('logContent')
+        const $presetSelect = $('presetSelect')
+        const $saveJson = $('saveJson')
+        const $loadJson = $('loadJson')
+        const $toggleUi = $('toggleUi')
+        const $toggleInfo = $('toggleInfo')
+        const $uiBox = document.querySelector('.ui')
 
         // Canvas DPI scaling
         const dpi = () => window.devicePixelRatio || 1
@@ -474,7 +522,10 @@
           $ringsOn,$ringC,$ringA,$perspOn,$persp,
           $spinOn,$spin,$evo,$chOn,$chSteps,$chLabels
         ]
-        inputs.forEach(el => el && el.addEventListener('input', render))
+        inputs.forEach(el => el && el.addEventListener('input', () => {
+          if ($presetSelect && $presetSelect.value !== 'custom') $presetSelect.value = 'custom'
+          render()
+        }))
         $turns.addEventListener('input', () => { turnsCurr = Number($turns.value) })
 
         $reset.addEventListener('click', () => {
@@ -516,6 +567,227 @@
           link.download = 'fibonacci-shell.png'
           link.href = canvas.toDataURL('image/png')
           link.click()
+        })
+
+        // Eye toggle — show/hide options panel
+        function setUiVisible(v) {
+          if (!$uiBox) return
+          $uiBox.style.display = v ? 'block' : 'none'
+          $toggleUi.textContent = v ? '🙈' : '👁'
+          localStorage.setItem('fib_ui_visible', v ? '1' : '0')
+        }
+        const uiVisiblePref = localStorage.getItem('fib_ui_visible')
+        setUiVisible(uiVisiblePref !== '0')
+        $toggleUi.addEventListener('click', () => {
+          const isVisible = $uiBox && $uiBox.style.display !== 'none'
+          setUiVisible(!isVisible)
+        })
+
+        // Info toggle — open/close log.md overlay
+        $toggleInfo.addEventListener('click', () => {
+          if ($overlay && $overlay.style.display === 'flex') {
+            $overlay.style.display = 'none'
+          } else {
+            openInfo()
+          }
+        })
+
+        // Presets + JSON
+        const defaultPreset = {
+          turns: 4,
+          growth: 1.618,
+          baseR: 60,
+          thick: 35,
+          rot: 0,
+          cx: 50,
+          cy: 60,
+          samp: 180,
+          olw: 1,
+          olc: '#fbecc8',
+          fillA: 85,
+          h0: 130,
+          hD: -45,
+          sat: 60,
+          lit: 55,
+          tbg: false,
+          bgc: '#0b0f13',
+          ringsOn: true,
+          ringC: 40,
+          ringA: 12,
+          perspOn: false,
+          persp: 40,
+          spinOn: false,
+          spin: 60,
+          evo: 0.2,
+          chOn: false,
+          chSteps: 16,
+          chLabels: true
+        }
+
+        const presets = {
+          default: defaultPreset,
+          golden: { ...defaultPreset, growth: 1.618, h0: 40, hD: 60, sat: 70, lit: 58 },
+          thin: { ...defaultPreset, thick: 15, ringC: 64, ringA: 8, fillA: 70 },
+          thick: { ...defaultPreset, thick: 60, baseR: 40, ringC: 24, ringA: 16 },
+          ringsOff: { ...defaultPreset, ringsOn: false },
+          perspective: { ...defaultPreset, perspOn: true, persp: 70, cy: 65 }
+        }
+
+        // If an external preset is provided (via Fibonacci/preset.js), register it
+        if (window.FIB_USER_PRESET && typeof window.FIB_USER_PRESET === 'object') {
+          presets.user = { ...defaultPreset, ...window.FIB_USER_PRESET }
+          // Add to dropdown before "custom"
+          if ($presetSelect) {
+            const opt = document.createElement('option')
+            opt.value = 'user'
+            opt.textContent = 'User Preset'
+            const customOpt = Array.from($presetSelect.options).find(o => o.value === 'custom')
+            if (customOpt) $presetSelect.add(opt, customOpt)
+            else $presetSelect.appendChild(opt)
+          }
+        }
+
+        function addPresetOption(key, label) {
+          if (!$presetSelect) return
+          if (Array.from($presetSelect.options).some(o => o.value === key)) return
+          const opt = document.createElement('option')
+          opt.value = key
+          opt.textContent = label
+          const customOpt = Array.from($presetSelect.options).find(o => o.value === 'custom')
+          if (customOpt) $presetSelect.add(opt, customOpt)
+          else $presetSelect.appendChild(opt)
+        }
+
+        // Load additional presets from presets.json if present
+        ;(async function loadJsonPresets(){
+          try {
+            const res = await fetch('presets.json', { cache: 'no-store' })
+            if (!res.ok) return
+            const data = await res.json()
+            let list = []
+            if (Array.isArray(data)) list = data
+            else if (Array.isArray(data.presets)) list = data.presets
+            else if (data && typeof data === 'object') {
+              list = Object.keys(data).map(k => ({ name: k, settings: data[k] }))
+            }
+            let selectedKey = null
+            list.forEach(item => {
+              const key = 'json_' + String(item.name || 'preset')
+                .toLowerCase().replace(/[^a-z0-9]+/g, '_')
+              presets[key] = { ...defaultPreset, ...(item.settings || {}) }
+              addPresetOption(key, item.name || key)
+              if ((item.name || '').toLowerCase().includes('perspective — user') || (item.name || '').toLowerCase().includes('perspective - user')) {
+                selectedKey = key
+              }
+            })
+            // If a "Perspective — User" JSON preset exists, select it by default
+            if (selectedKey) {
+              applySettings(presets[selectedKey])
+              if ($presetSelect) $presetSelect.value = selectedKey
+            }
+          } catch (e) {
+            // ignore if not available (e.g., local file open)
+          }
+        })()
+
+        function getSettings() {
+          return {
+            turns: Number($turns.value),
+            growth: Number($growth.value),
+            baseR: Number($baseR.value),
+            thick: Number($thick.value),
+            rot: Number($rot.value),
+            cx: Number($cx.value),
+            cy: Number($cy.value),
+            samp: Number($samp.value),
+            olw: Number($olw.value),
+            olc: String($olc.value),
+            fillA: Number($fillA.value),
+            h0: Number($h0.value),
+            hD: Number($hD.value),
+            sat: Number($sat.value),
+            lit: Number($lit.value),
+            tbg: Boolean($tbg.checked),
+            bgc: String($bgc.value),
+            ringsOn: Boolean($ringsOn.checked),
+            ringC: Number($ringC.value),
+            ringA: Number($ringA.value),
+            perspOn: Boolean($perspOn.checked),
+            persp: Number($persp.value),
+            spinOn: Boolean($spinOn.checked),
+            spin: Number($spin.value),
+            evo: Number($evo.value),
+            chOn: Boolean($chOn.checked),
+            chSteps: Number($chSteps.value),
+            chLabels: Boolean($chLabels.checked)
+          }
+        }
+
+        function applySettings(s) {
+          if (!s) return
+          if (typeof s.turns === 'number') $turns.value = s.turns
+          if (typeof s.growth === 'number') $growth.value = s.growth
+          if (typeof s.baseR === 'number') $baseR.value = s.baseR
+          if (typeof s.thick === 'number') $thick.value = s.thick
+          if (typeof s.rot === 'number') $rot.value = s.rot
+          if (typeof s.cx === 'number') $cx.value = s.cx
+          if (typeof s.cy === 'number') $cy.value = s.cy
+          if (typeof s.samp === 'number') $samp.value = s.samp
+          if (typeof s.olw === 'number') $olw.value = s.olw
+          if (typeof s.olc === 'string') $olc.value = s.olc
+          if (typeof s.fillA === 'number') $fillA.value = s.fillA
+          if (typeof s.h0 === 'number') $h0.value = s.h0
+          if (typeof s.hD === 'number') $hD.value = s.hD
+          if (typeof s.sat === 'number') $sat.value = s.sat
+          if (typeof s.lit === 'number') $lit.value = s.lit
+          if (typeof s.tbg === 'boolean') $tbg.checked = s.tbg
+          if (typeof s.bgc === 'string') $bgc.value = s.bgc
+          if (typeof s.ringsOn === 'boolean') $ringsOn.checked = s.ringsOn
+          if (typeof s.ringC === 'number') $ringC.value = s.ringC
+          if (typeof s.ringA === 'number') $ringA.value = s.ringA
+          if (typeof s.perspOn === 'boolean') $perspOn.checked = s.perspOn
+          if (typeof s.persp === 'number') $persp.value = s.persp
+          if (typeof s.spinOn === 'boolean') $spinOn.checked = s.spinOn
+          if (typeof s.spin === 'number') $spin.value = s.spin
+          if (typeof s.evo === 'number') $evo.value = s.evo
+          if (typeof s.chOn === 'boolean') $chOn.checked = s.chOn
+          if (typeof s.chSteps === 'number') $chSteps.value = s.chSteps
+          if (typeof s.chLabels === 'boolean') $chLabels.checked = s.chLabels
+          turnsCurr = Number($turns.value)
+          render()
+        }
+
+        // Init preset select and wire up
+        $presetSelect.addEventListener('change', () => {
+          const key = $presetSelect.value
+          if (key === 'custom') return
+          const p = presets[key]
+          if (p) applySettings(p)
+        })
+
+        $saveJson.addEventListener('click', () => {
+          const json = JSON.stringify(getSettings(), null, 2)
+          // Try clipboard first; fallback to prompt
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(json).then(
+              () => alert('Settings JSON copied to clipboard'),
+              () => prompt('Copy settings JSON:', json)
+            )
+          } else {
+            prompt('Copy settings JSON:', json)
+          }
+        })
+
+        $loadJson.addEventListener('click', async () => {
+          const text = prompt('Paste settings JSON:')
+          if (!text) return
+          try {
+            const obj = JSON.parse(text)
+            applySettings(obj)
+            $presetSelect.value = 'custom'
+          } catch (e) {
+            alert('Invalid JSON')
+          }
         })
 
         // Info Overlay: load ./log.md if present
