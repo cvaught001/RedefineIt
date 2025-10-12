@@ -1,0 +1,2136 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Fibonacci Shell — Canvas Controls</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- Social preview (Open Graph / Twitter) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Fibonacci Shell — Log Spiral" />
+    <meta
+      property="og:description"
+      content="Interactive logarithmic spiral with chambers, perspective, and presets."
+    />
+    <meta property="og:image" content="thumbnail.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Fibonacci Shell — Log Spiral" />
+    <meta
+      name="twitter:description"
+      content="Interactive logarithmic spiral with chambers, perspective, and presets."
+    />
+    <meta name="twitter:image" content="thumbnail.png" />
+    <!-- Site icon -->
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <!-- Enochian font (for Magic Mode) -->
+    <link
+      href="https://db.onlinewebfonts.com/c/d130dcf578cce8a2cf5353aa3394b278?family=Enochian+Regular"
+      rel="stylesheet"
+    />
+    <style>
+      @font-face {
+        font-family: 'Enochian';
+        src: url('https://db.onlinewebfonts.com/t/d130dcf578cce8a2cf5353aa3394b278.woff2') format('woff2'),
+             url('https://db.onlinewebfonts.com/t/d130dcf578cce8a2cf5353aa3394b278.woff') format('woff');
+        font-display: swap;
+      }
+    </style>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #0b0f13;
+        overflow: hidden;
+      }
+      canvas {
+        display: block;
+        width: 100vw;
+        height: 100vh;
+      }
+      #toggleUi {
+        position: fixed;
+        right: 8px;
+        top: 8px;
+        z-index: 3;
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(12, 20, 16, 0.6);
+        color: #d8f5df;
+        border: 1px solid rgba(150, 220, 180, 0.3);
+        cursor: pointer;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+      }
+      #toggleUi:active {
+        transform: translateY(1px);
+      }
+      #toggleInfo {
+        position: fixed;
+        right: 52px;
+        top: 8px;
+        z-index: 3;
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(12, 20, 16, 0.6);
+        color: #d8f5df;
+        border: 1px solid rgba(150, 220, 180, 0.3);
+        cursor: pointer;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+      }
+      #toggleInfo:active {
+        transform: translateY(1px);
+      }
+      .ui {
+        position: fixed;
+        left: 12px;
+        top: 12px;
+        z-index: 2;
+        font: 14px/1.35 system-ui, -apple-system, Segoe UI, sans-serif;
+        color: #d8f5df;
+        background: rgba(10, 15, 20, 0.55);
+        backdrop-filter: blur(6px);
+        border: 1px solid rgba(140, 200, 160, 0.25);
+        border-radius: 12px;
+        padding: 12px;
+        width: 330px;
+        max-height: 92vh;
+        overflow: auto;
+      }
+      .row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 8px 0;
+      }
+      .row label {
+        flex: 1 1 auto;
+      }
+      .row input[type='range'] {
+        width: 140px;
+      }
+      .row input[type='color'] {
+        width: 40px;
+        height: 24px;
+        padding: 0;
+        border: none;
+        background: transparent;
+      }
+      small {
+        opacity: 0.8;
+      }
+      .hr {
+        border: 0;
+        height: 1px;
+        background: rgba(160, 220, 170, 0.25);
+        margin: 10px 0;
+      }
+      .btn {
+        padding: 6px 10px;
+        border-radius: 8px;
+        border: 1px solid rgba(150, 220, 180, 0.3);
+        background: rgba(12, 20, 16, 0.6);
+        color: #d8f5df;
+        cursor: pointer;
+      }
+      .btn:active {
+        transform: translateY(1px);
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="c"></canvas>
+    <button
+      id="toggleUi"
+      title="Show/Hide options"
+      aria-label="Show/Hide options"
+    >
+      👁
+    </button>
+    <button id="toggleInfo" title="Show Info" aria-label="Show Info">ⓘ</button>
+    <!-- Optional external preset; if present, adds "User Preset" -->
+    <script src="preset.js"></script>
+
+    <div class="ui">
+      <strong style="display: block; margin-bottom: 6px"
+        >Fibonacci Shell (Log Spiral)</strong
+      >
+
+      <div class="row">
+        <label>Turns <small id="turnsV"></small></label>
+        <input
+          id="turns"
+          type="range"
+          min="0.5"
+          max="7"
+          step="0.05"
+          value="4"
+        />
+      </div>
+      <div class="row">
+        <label>Growth / Turn <small id="growV"></small></label>
+        <input
+          id="growth"
+          type="range"
+          min="1.10"
+          max="2.60"
+          step="0.01"
+          value="1.618"
+        />
+      </div>
+      <div class="row">
+        <label>Base Radius <small id="baseRV"></small></label>
+        <input id="baseR" type="range" min="10" max="300" step="1" value="60" />
+      </div>
+      <div class="row">
+        <label>Thickness (%) <small id="thickV"></small></label>
+        <input id="thick" type="range" min="5" max="80" step="1" value="35" />
+      </div>
+      <div class="row">
+        <label>Rotation (°) <small id="rotV"></small></label>
+        <input id="rot" type="range" min="0" max="360" step="1" value="0" />
+      </div>
+
+      <div class="row">
+        <label>Center X (%) <small id="cxV"></small></label>
+        <input id="cx" type="range" min="0" max="100" step="1" value="50" />
+      </div>
+      <div class="row">
+        <label>Center Y (%) <small id="cyV"></small></label>
+        <input id="cy" type="range" min="0" max="100" step="1" value="60" />
+      </div>
+
+      <div class="row">
+        <label>Samples / Turn <small id="sampV"></small></label>
+        <input id="samp" type="range" min="48" max="360" step="1" value="180" />
+      </div>
+
+      <!-- Multi-shell controls -->
+      <div class="row">
+        <label>Shells <small id="shellCountV"></small></label>
+        <input id="shellCount" type="range" min="1" max="3" step="1" value="1" />
+      </div>
+      <div class="row">
+        <label>Shell Offset (°) <small id="shellOffV"></small></label>
+        <input id="shellOffset" type="range" min="0" max="360" step="1" value="20" />
+      </div>
+      <div class="row">
+        <label>Shell Scale (%) <small id="shellScaleV"></small></label>
+        <input id="shellScale" type="range" min="50" max="150" step="1" value="100" />
+      </div>
+      <div class="row">
+        <label>Hue Shift / Shell <small id="shellHueV"></small></label>
+        <input id="shellHueDelta" type="range" min="-180" max="180" step="1" value="0" />
+      </div>
+
+      <div class="hr"></div>
+
+      <div class="row">
+        <label>Outline (px) <small id="olwV"></small></label>
+        <input id="olw" type="range" min="0" max="4" step="0.1" value="1" />
+      </div>
+      <div class="row">
+        <label>Outline Color</label>
+        <input id="olc" type="color" value="#fbecc8" />
+      </div>
+      <div class="row">
+        <label>Fill Alpha (%) <small id="faV"></small></label>
+        <input id="fillA" type="range" min="0" max="100" step="1" value="85" />
+      </div>
+      <div class="row">
+        <label>Monochrome Lines</label>
+        <input id="monoOn" type="checkbox" />
+      </div>
+
+      <div class="row">
+        <label>Dual Planes</label>
+        <input id="planesOn" type="checkbox" />
+      </div>
+      <div class="row">
+        <label>Plane Offset (°) <small id="planeOffV"></small></label>
+        <input id="planeOff" type="range" min="0" max="180" step="1" value="12" />
+      </div>
+
+      <div class="row">
+        <button id="planesToggle" class="btn" style="width: 100%">▼ Planes</button>
+      </div>
+      <div id="planesGroup">
+      <div class="hr"></div>
+      <div class="row"><strong>Plane A</strong></div>
+      <div class="row">
+        <label>Plane A Color</label>
+        <input id="p1Color" type="color" value="#fbecc8" />
+      </div>
+      <div class="row">
+        <label>Plane A X (%)</label>
+        <input id="p1x" type="range" min="-100" max="100" step="1" value="0" />
+      </div>
+      <div class="row">
+        <label>Plane A Y (%)</label>
+        <input id="p1y" type="range" min="-100" max="100" step="1" value="0" />
+      </div>
+      <div class="row">
+        <label>Plane A Z Rot (°)</label>
+        <input id="p1z" type="range" min="-180" max="180" step="1" value="0" />
+      </div>
+      <div class="row">
+        <label>Plane A Mod Amp (px)</label>
+        <input id="p1ModA" type="range" min="0" max="30" step="0.5" value="0" />
+      </div>
+      <div class="row">
+        <label>Plane A Mod Freq (/turn)</label>
+        <input id="p1ModF" type="range" min="0" max="12" step="0.1" value="3" />
+      </div>
+      <div class="row">
+        <label>Plane A Spin (°/s) <small id="p1SpinV"></small></label>
+        <input id="p1Spin" type="range" min="-360" max="360" step="1" value="0" />
+      </div>
+
+      <div class="row"><strong>Plane B</strong></div>
+      <div class="row">
+        <label>Plane B Color</label>
+        <input id="p2Color" type="color" value="#9fe7d8" />
+      </div>
+      <div class="row">
+        <label>Plane B X (%)</label>
+        <input id="p2x" type="range" min="-100" max="100" step="1" value="0" />
+      </div>
+      <div class="row">
+        <label>Plane B Y (%)</label>
+        <input id="p2y" type="range" min="-100" max="100" step="1" value="0" />
+      </div>
+      <div class="row">
+        <label>Plane B Z Rot (°)</label>
+        <input id="p2z" type="range" min="-180" max="180" step="1" value="12" />
+      </div>
+      <div class="row">
+        <label>Plane B Mod Amp (px)</label>
+        <input id="p2ModA" type="range" min="0" max="30" step="0.5" value="0" />
+      </div>
+      <div class="row">
+        <label>Plane B Mod Freq (/turn)</label>
+        <input id="p2ModF" type="range" min="0" max="12" step="0.1" value="3" />
+      </div>
+      <div class="row">
+        <label>Plane B Spin (°/s) <small id="p2SpinV"></small></label>
+        <input id="p2Spin" type="range" min="-360" max="360" step="1" value="0" />
+      </div>
+      </div> <!-- /#planesGroup -->
+      <div class="row">
+        <label>Base Hue <small id="h0V"></small></label>
+        <input id="h0" type="range" min="0" max="360" step="1" value="130" />
+      </div>
+      <div class="row">
+        <label>Hue Delta <small id="hDV"></small></label>
+        <input id="hD" type="range" min="-180" max="180" step="1" value="-45" />
+      </div>
+      <div class="row">
+        <label>Saturation (%) <small id="satV"></small></label>
+        <input id="sat" type="range" min="0" max="100" step="1" value="60" />
+      </div>
+      <div class="row">
+        <label>Lightness (%) <small id="litV"></small></label>
+        <input id="lit" type="range" min="0" max="100" step="1" value="55" />
+      </div>
+
+      <div class="row">
+        <label>Transparent BG</label>
+        <input id="tbg" type="checkbox" />
+      </div>
+      <div class="row">
+        <label>BG Color</label>
+        <input id="bgc" type="color" value="#0b0f13" />
+      </div>
+
+      <div class="hr"></div>
+
+      <!-- Presets + JSON import/export -->
+      <div class="row">
+        <label>Preset</label>
+        <select id="presetSelect" style="flex: 1 1 auto">
+          <option value="default">Default</option>
+          <option value="golden">Golden Spiral</option>
+          <option value="thin">Thin Shell</option>
+          <option value="thick">Thick Shell</option>
+          <option value="ringsOff">No Rings</option>
+          <option value="perspective">Perspective</option>
+          <option value="custom">Custom</option>
+        </select>
+      </div>
+      <div class="row">
+        <button id="saveJson" class="btn">💾 Export JSON</button>
+        <button id="loadJson" class="btn">📂 Import JSON</button>
+      </div>
+
+      <div class="hr"></div>
+
+      <div class="row">
+        <label>Rings</label>
+        <input id="ringsOn" type="checkbox" checked />
+      </div>
+      <div class="row">
+        <label>Ring Count <small id="ringCV"></small></label>
+        <input id="ringC" type="range" min="0" max="120" step="1" value="40" />
+      </div>
+      <div class="row">
+        <label>Ring Alpha (%) <small id="ringAV"></small></label>
+        <input id="ringA" type="range" min="0" max="50" step="1" value="12" />
+      </div>
+
+      <div class="hr"></div>
+
+      <div class="row">
+        <label>Perspective</label>
+        <input id="perspOn" type="checkbox" />
+      </div>
+      <div class="row">
+        <label>Foreshortening <small id="perspV"></small></label>
+        <input id="persp" type="range" min="0" max="100" step="1" value="40" />
+      </div>
+      <div class="row">
+        <label>Projection Mode</label>
+        <select id="projMode">
+          <option value="classic">Classic</option>
+          <option value="quadratic">Quadratic</option>
+          <option value="exp">Exponential</option>
+        </select>
+      </div>
+
+      <div class="hr"></div>
+      <div class="row">
+        <label>Spin</label>
+        <input id="spinOn" type="checkbox" checked />
+      </div>
+      <div class="row">
+        <label>Spin Speed (°/s) <small id="spinV"></small></label>
+        <input
+          id="spin"
+          type="range"
+          min="-360"
+          max="360"
+          step="1"
+          value="60"
+        />
+      </div>
+      <div class="row">
+        <label>Evolve (turns/s) <small id="evoV"></small></label>
+        <input id="evo" type="range" min="0" max="2" step="0.01" value="0.20" />
+      </div>
+
+      <div class="hr"></div>
+
+      <div class="row">
+        <label>Chambers</label>
+        <input id="chOn" type="checkbox" checked />
+      </div>
+      <div class="row">
+        <label>Both Planes</label>
+        <input id="chBoth" type="checkbox" />
+      </div>
+      <div class="row">
+        <label>Chamber Steps <small id="chStepsV"></small></label>
+        <input id="chSteps" type="range" min="1" max="64" step="1" value="16" />
+      </div>
+      <div class="row">
+        <label>Chamber Line Width <small id="chLWV"></small></label>
+        <input id="chLineW" type="range" min="0" max="4" step="0.1" value="1" />
+      </div>
+      <div class="row">
+        <label>Smooth Curves</label>
+        <input id="smoothCurves" type="checkbox" />
+      </div>
+      <div class="row">
+        <label>Curve Amount <small id="smAmtV"></small></label>
+        <input id="smoothAmt" type="range" min="0" max="1" step="0.05" value="0.5" />
+      </div>
+      <div class="row">
+        <label>Label Fibonacci</label>
+        <input id="chLabels" type="checkbox" checked />
+      </div>
+
+      <div class="row">
+        <label>Fibonacci Offshoots</label>
+        <input id="fibSpOn" type="checkbox" />
+      </div>
+      <div class="row">
+        <label>Offshoot Turns <small id="fibTurnV"></small></label>
+        <input id="fibTurns" type="range" min="0.25" max="3" step="0.05" value="1" />
+      </div>
+      <div class="row">
+        <label>Offshoot Scale (px) <small id="fibScaleV"></small></label>
+        <input id="fibScale" type="range" min="2" max="60" step="1" value="12" />
+      </div>
+      <div class="row">
+        <label>Offshoot Growth <small id="fibGrowV"></small></label>
+        <input id="fibGrow" type="range" min="1.05" max="2.50" step="0.01" value="1.25" />
+      </div>
+      <div class="row">
+        <label>Offshoot Line (px) <small id="fibLWV"></small></label>
+        <input id="fibLW" type="range" min="0" max="4" step="0.1" value="1" />
+      </div>
+      <div class="row">
+        <label>Offshoot Count <small id="fibArmsV"></small></label>
+        <input id="fibArms" type="range" min="1" max="12" step="1" value="1" />
+      </div>
+      <div class="row">
+        <label>Offshoot Spin (°/s) <small id="fibSpinV"></small></label>
+        <input id="fibSpin" type="range" min="-360" max="360" step="1" value="0" />
+      </div>
+      <div class="row">
+        <label>Enochian Magic Mode</label>
+        <input id="enochOn" type="checkbox" />
+      </div>
+      <div class="row">
+        <label>Letter Scale (px) <small id="enochSV"></small></label>
+        <input id="enochScale" type="range" min="20" max="300" step="1" value="20" />
+      </div>
+
+      <div class="row">
+        <label>Spiral Dividers <small id="divV"></small></label>
+        <input id="dividers" type="range" min="0" max="8" step="1" value="0" />
+      </div>
+      <div class="row">
+        <label>Divider Mode</label>
+        <select id="divMode">
+          <option value="even">Even</option>
+          <option value="golden">Golden Ratio</option>
+          <option value="polar">Polar (r = a·e^{b t})</option>
+          <option value="arch">Archimedean (r = a + c t)</option>
+        </select>
+      </div>
+      <div class="row">
+        <label>Spiral Hatching <small id="hatV"></small></label>
+        <input id="hatch" type="range" min="0" max="12" step="1" value="0" />
+      </div>
+
+      <div class="row">
+        <label>Divider Arcs</label>
+        <input id="divArcsOn" type="checkbox" />
+      </div>
+      <div class="row">
+        <label>Arc Count <small id="arcCntV"></small></label>
+        <input id="divArcCount" type="range" min="1" max="12" step="1" value="3" />
+      </div>
+      <div class="row">
+        <label>Arc Width (°) <small id="arcWdV"></small></label>
+        <input id="divArcDeg" type="range" min="6" max="120" step="2" value="24" />
+      </div>
+      <div class="row">
+        <label>Arc Bend</label>
+        <input id="divArcBend" type="range" min="-0.75" max="0.75" step="0.05" value="0" />
+      </div>
+      <div class="row">
+        <label>Arc End Offset (%) <small id="arcEndV"></small></label>
+        <input id="divArcEnd" type="range" min="-50" max="50" step="1" value="0" />
+      </div>
+
+      <div class="hr"></div>
+      <div class="row">
+        <button id="reset" class="btn">Reset</button>
+        <button id="export" class="btn">Export PNG</button>
+        <button
+          id="thumb"
+          class="btn"
+          title="Generate social thumbnail (1200×630)"
+        >
+          📸 Thumbnail
+        </button>
+        <button id="infoBtn" class="btn" title="Info">ⓘ Info</button>
+      </div>
+      <small
+        >Tip: Growth per turn ≈ φ (1.618) for golden shells. Toggle Spin +
+        Evolve for animation.</small
+      >
+    </div>
+
+    <!-- Info overlay -->
+    <div
+      id="overlay"
+      style="
+        position: fixed;
+        inset: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0, 0, 0, 0.55);
+        z-index: 9;
+      "
+    >
+      <div
+        id="modal"
+        style="
+          background: rgba(12, 18, 22, 0.95);
+          color: #e7f6ee;
+          border: 1px solid rgba(140, 200, 160, 0.35);
+          border-radius: 12px;
+          max-width: 800px;
+          width: 86vw;
+          max-height: 80vh;
+          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+        "
+      >
+        <div
+          style="
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 12px;
+            border-bottom: 1px solid rgba(140, 200, 160, 0.25);
+          "
+        >
+          <strong>Info (log.md)</strong>
+          <button id="closeOverlay" class="btn" style="padding: 4px 8px">
+            ✕
+          </button>
+        </div>
+        <div style="padding: 12px; overflow: auto; max-height: 68vh">
+          <pre
+            id="logContent"
+            style="
+              margin: 0;
+              white-space: pre-wrap;
+              word-break: break-word;
+              font: 13px/1.4 ui-monospace, SFMono-Regular, Menlo, Monaco,
+                Consolas, monospace;
+            "
+          ></pre>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      ;(() => {
+        const canvas = document.getElementById('c')
+        const ctx = canvas.getContext('2d')
+
+        // UI refs
+        const $ = id => document.getElementById(id)
+        const $turns = $('turns'),
+          $turnsV = $('turnsV')
+        const $growth = $('growth'),
+          $growV = $('growV')
+        const $baseR = $('baseR'),
+          $baseRV = $('baseRV')
+        const $thick = $('thick'),
+          $thickV = $('thickV')
+        const $rot = $('rot'),
+          $rotV = $('rotV')
+        const $cx = $('cx'),
+          $cxV = $('cxV')
+        const $cy = $('cy'),
+          $cyV = $('cyV')
+        const $samp = $('samp'),
+          $sampV = $('sampV')
+        const $olw = $('olw'),
+          $olwV = $('olwV')
+        const $olc = $('olc')
+        const $fillA = $('fillA'),
+          $faV = $('faV')
+        const $h0 = $('h0'),
+          $h0V = $('h0V')
+        const $hD = $('hD'),
+          $hDV = $('hDV')
+        const $sat = $('sat'),
+          $satV = $('satV')
+        const $lit = $('lit'),
+          $litV = $('litV')
+        const $tbg = $('tbg'),
+          $bgc = $('bgc')
+        const $monoOn = $('monoOn')
+        const $planesOn = $('planesOn')
+        const $planeOff = $('planeOff')
+        const $planeOffV = $('planeOffV')
+        const $p1Color = $('p1Color'),
+          $p2Color = $('p2Color')
+        const $p1x = $('p1x'),
+          $p1y = $('p1y'),
+          $p1z = $('p1z')
+        const $p2x = $('p2x'),
+          $p2y = $('p2y'),
+          $p2z = $('p2z')
+        const $p1ModA = $('p1ModA'),
+          $p1ModF = $('p1ModF')
+        const $p2ModA = $('p2ModA'),
+          $p2ModF = $('p2ModF')
+        const $p1Spin = $('p1Spin'),
+          $p2Spin = $('p2Spin'),
+          $p1SpinV = $('p1SpinV'),
+          $p2SpinV = $('p2SpinV')
+        const $ringsOn = $('ringsOn'),
+          $ringC = $('ringC'),
+          $ringCV = $('ringCV'),
+          $ringA = $('ringA'),
+          $ringAV = $('ringAV')
+        const $perspOn = $('perspOn'),
+          $persp = $('persp'),
+          $perspV = $('perspV'),
+          $projMode = $('projMode')
+        const $spinOn = $('spinOn'),
+          $spin = $('spin'),
+          $spinV = $('spinV')
+        const $evo = $('evo'),
+          $evoV = $('evoV')
+        const $chOn = $('chOn'),
+          $chSteps = $('chSteps'),
+          $chStepsV = $('chStepsV'),
+          $chLineW = $('chLineW'),
+          $chLWV = $('chLWV'),
+          $chLabels = $('chLabels')
+        const $chBoth = $('chBoth')
+        const $fibSpOn = $('fibSpOn')
+        const $fibTurns = $('fibTurns'), $fibTurnV = $('fibTurnV')
+        const $fibScale = $('fibScale'), $fibScaleV = $('fibScaleV')
+        const $fibGrow = $('fibGrow'), $fibGrowV = $('fibGrowV')
+        const $fibLW = $('fibLW'), $fibLWV = $('fibLWV')
+        const $fibArms = $('fibArms'), $fibArmsV = $('fibArmsV')
+        const $fibSpin = $('fibSpin'), $fibSpinV = $('fibSpinV')
+        const $smoothCurves = $('smoothCurves'),
+          $smoothAmt = $('smoothAmt'),
+          $smAmtV = $('smAmtV')
+        const $dividers = $('dividers'),
+          $divV = $('divV')
+        const $hatch = $('hatch'),
+          $hatV = $('hatV')
+        const $divMode = $('divMode')
+        const $divArcsOn = $('divArcsOn')
+        const $divArcCount = $('divArcCount'), $arcCntV = $('arcCntV')
+        const $divArcDeg = $('divArcDeg'), $arcWdV = $('arcWdV')
+        const $divArcBend = $('divArcBend')
+        const $divArcEnd = $('divArcEnd'), $arcEndV = $('arcEndV')
+        // Enochian mode
+        const $enochOn = $('enochOn')
+        const $enochScale = $('enochScale'), $enochSV = $('enochSV')
+        const $reset = $('reset'),
+          $export = $('export')
+        const $infoBtn = $('infoBtn')
+        const $overlay = $('overlay')
+        const $closeOverlay = $('closeOverlay')
+        const $logContent = $('logContent')
+        const $presetSelect = $('presetSelect')
+        const $saveJson = $('saveJson')
+        const $loadJson = $('loadJson')
+        const $toggleUi = $('toggleUi')
+        const $toggleInfo = $('toggleInfo')
+        const $uiBox = document.querySelector('.ui')
+        const $planesToggle = $('planesToggle')
+        const $planesGroup = $('planesGroup')
+
+        // Canvas DPI scaling
+        const dpi = () => window.devicePixelRatio || 1
+        function resize() {
+          const d = dpi()
+          canvas.width = Math.floor(innerWidth * d)
+          canvas.height = Math.floor(innerHeight * d)
+          ctx.setTransform(d, 0, 0, d, 0, 0)
+        }
+        addEventListener('resize', () => {
+          resize()
+          render()
+        })
+        resize()
+
+        // Helpers
+        // Planes group toggle
+        function setPlanesVisible(v) {
+          if ($planesGroup) $planesGroup.style.display = v ? 'block' : 'none'
+          if ($planesToggle) $planesToggle.textContent = (v ? '▼' : '▶') + ' Planes'
+          try { localStorage.setItem('fib_planes_visible', v ? '1' : '0') } catch {}
+        }
+        const planesVisPref = (typeof localStorage !== 'undefined') ? localStorage.getItem('fib_planes_visible') : null
+        setPlanesVisible(planesVisPref !== '0')
+        if ($planesToggle) $planesToggle.addEventListener('click', () => {
+          const vis = $planesGroup && $planesGroup.style.display !== 'none'
+          setPlanesVisible(!vis)
+        })
+        const clamp = (x, a, b) => Math.max(a, Math.min(b, x))
+        const deg = a => (a * Math.PI) / 180
+        const hsla = (h, s, l, a) =>
+          `hsla(${((h % 360) + 360) % 360} ${s}% ${l}% / ${a})`
+
+        // Wavy-line modulation helpers
+        function modulateClosed(pts, amp, freq) {
+          const n = pts.length
+          if (!Array.isArray(pts) || n < 3) return pts.slice()
+          const A = Math.max(0, amp || 0)
+          const F = Math.max(0, freq || 0)
+          if (A <= 0 || F <= 0) return pts.slice()
+          const out = new Array(n)
+          for (let i = 0; i < n; i++) {
+            const prev = pts[(i - 1 + n) % n]
+            const curr = pts[i]
+            const next = pts[(i + 1) % n]
+            let tx = next[0] - prev[0]
+            let ty = next[1] - prev[1]
+            const len = Math.hypot(tx, ty) || 1
+            tx /= len; ty /= len
+            const nx = -ty, ny = tx
+            const u = i / n
+            const a = A * Math.sin(2 * Math.PI * F * u)
+            out[i] = [curr[0] + nx * a, curr[1] + ny * a]
+          }
+          return out
+        }
+
+        // Animation state
+        let spinRad = 0
+        let spin1Rad = 0
+        let spin2Rad = 0
+        let offSpinRad = 0
+        let turnsCurr = Number($turns.value)
+        let lastT = performance.now()
+
+        function getOpts() {
+          $turnsV.textContent = Number($turns.value).toFixed(2)
+          $growV.textContent = Number($growth.value).toFixed(3)
+          $baseRV.textContent = Number($baseR.value)
+          $thickV.textContent = Number($thick.value) + '%'
+          $rotV.textContent = Number($rot.value) + '°'
+          $cxV.textContent = Number($cx.value) + '%'
+          $cyV.textContent = Number($cy.value) + '%'
+          $sampV.textContent = Number($samp.value)
+          $olwV.textContent = Number($olw.value).toFixed(1)
+          $faV.textContent = Number($fillA.value) + '%'
+          $h0V.textContent = Number($h0.value)
+          $hDV.textContent = Number($hD.value)
+          $satV.textContent = Number($sat.value) + '%'
+          $litV.textContent = Number($lit.value) + '%'
+          if ($planeOffV) $planeOffV.textContent = Number($planeOff && $planeOff.value || 0)
+          $ringCV.textContent = Number($ringC.value)
+          $ringAV.textContent = Number($ringA.value) + '%'
+          $perspV.textContent = Number($persp.value)
+          if ($p1SpinV && $p1Spin) $p1SpinV.textContent = Number($p1Spin.value)
+          if ($p2SpinV && $p2Spin) $p2SpinV.textContent = Number($p2Spin.value)
+          $spinV.textContent = Number($spin.value)
+          $evoV.textContent = Number($evo.value)
+          $chStepsV.textContent = Number($chSteps.value)
+          $chLWV.textContent = Number($chLineW.value).toFixed(1)
+          if ($smAmtV) $smAmtV.textContent = Number($smoothAmt.value).toFixed(2)
+          $divV.textContent = Number($dividers.value)
+          $hatV.textContent = Number($hatch.value)
+          $arcWdV.textContent = Number($divArcDeg.value)
+          if ($arcCntV) $arcCntV.textContent = Number($divArcCount && $divArcCount.value || 3)
+          if ($arcEndV) $arcEndV.textContent = Number($divArcEnd.value)
+          if ($fibTurnV) $fibTurnV.textContent = Number($fibTurns && $fibTurns.value || 1).toFixed(2)
+          if ($fibScaleV) $fibScaleV.textContent = Number($fibScale && $fibScale.value || 12)
+          if ($fibGrowV) $fibGrowV.textContent = Number($fibGrow && $fibGrow.value || 1.25).toFixed(2)
+          if ($fibLWV) $fibLWV.textContent = Number($fibLW && $fibLW.value || 1).toFixed(1)
+          if ($enochSV) $enochSV.textContent = Number($enochScale && $enochScale.value || 20)
+          if ($fibArmsV) $fibArmsV.textContent = Number($fibArms && $fibArms.value || 1)
+          if ($fibSpinV) $fibSpinV.textContent = Number($fibSpin && $fibSpin.value || 0)
+          // Multi-shell readouts
+          const sc = $('shellCount'), scv = $('shellCountV')
+          const so = $('shellOffset'), sov = $('shellOffV')
+          const ss = $('shellScale'), ssv = $('shellScaleV')
+          const sh = $('shellHueDelta'), shv = $('shellHueV')
+          if (sc && scv) scv.textContent = Number(sc.value)
+          if (so && sov) sov.textContent = Number(so.value) + '°'
+          if (ss && ssv) ssv.textContent = Number(ss.value) + '%'
+          if (sh && shv) shv.textContent = Number(sh.value)
+
+          return {
+            turns: turnsCurr,
+            growth: Number($growth.value),
+            baseR: Number($baseR.value),
+            thickPct: Number($thick.value) / 100,
+            rot: deg(Number($rot.value)) + spinRad,
+            cxPct: Number($cx.value) / 100,
+            cyPct: Number($cy.value) / 100,
+            sampPerTurn: Number($samp.value),
+            outlineW: Number($olw.value),
+            outlineC: $olc.value,
+            fillAlpha: Number($fillA.value) / 100,
+            h0: Number($h0.value),
+            hD: Number($hD.value),
+            sat: Number($sat.value),
+            lit: Number($lit.value),
+            tbg: $tbg.checked,
+            bgc: $bgc.value,
+            monoOn: Boolean($monoOn && $monoOn.checked),
+            planesOn: Boolean($planesOn && $planesOn.checked),
+            planeOffRad: deg(Number($planeOff && $planeOff.value || 0)),
+            // Per-plane overrides
+            p1Color: String($p1Color && $p1Color.value || ''),
+            p2Color: String($p2Color && $p2Color.value || ''),
+            p1x: Number($p1x && $p1x.value || 0),
+            p1y: Number($p1y && $p1y.value || 0),
+            p1zRad: deg(Number($p1z && $p1z.value || 0)),
+            p2x: Number($p2x && $p2x.value || 0),
+            p2y: Number($p2y && $p2y.value || 0),
+            p2zRad: deg(Number($p2z && $p2z.value || 0)),
+            p1ModA: Number($p1ModA && $p1ModA.value || 0),
+            p1ModF: Number($p1ModF && $p1ModF.value || 0),
+            p2ModA: Number($p2ModA && $p2ModA.value || 0),
+            p2ModF: Number($p2ModF && $p2ModF.value || 0),
+            p1Spin: Number($p1Spin && $p1Spin.value || 0),
+            p2Spin: Number($p2Spin && $p2Spin.value || 0),
+            ringsOn: $ringsOn.checked,
+            ringCount: Number($ringC.value),
+            ringAlpha: Number($ringA.value) / 100,
+            perspOn: $perspOn.checked,
+            persp: Number($persp.value) / 100,
+            projMode: String($projMode && $projMode.value || 'classic'),
+          chOn: $chOn.checked,
+          chBoth: Boolean($chBoth && $chBoth.checked),
+          chSteps: Number($chSteps.value),
+            chLineW: Number($chLineW.value),
+            smoothCurves: Boolean($smoothCurves && $smoothCurves.checked),
+            smoothAmt: Number($smoothAmt && $smoothAmt.value),
+            chLabels: $chLabels.checked,
+            fibSpOn: Boolean($fibSpOn && $fibSpOn.checked),
+            fibSpTurns: Number($fibTurns && $fibTurns.value || 1),
+            fibSpScale: Number($fibScale && $fibScale.value || 12),
+            fibSpGrow: Number($fibGrow && $fibGrow.value || 1.25),
+            fibSpLW: Number($fibLW && $fibLW.value || 1),
+            fibSpArms: Number($fibArms && $fibArms.value || 1),
+            fibSpSpin: Number($fibSpin && $fibSpin.value || 0),
+            enochOn: Boolean($enochOn && $enochOn.checked),
+            enochScale: Number($enochScale && $enochScale.value || 20),
+            dividers: Number($dividers.value),
+            hatch: Number($hatch.value),
+            divMode: String(($divMode && $divMode.value) || 'even'),
+            divArcsOn: Boolean($divArcsOn && $divArcsOn.checked),
+            divArcCount: Number($divArcCount && $divArcCount.value || 3),
+            divArcDeg: Number($divArcDeg && $divArcDeg.value),
+            divArcBend: Number($divArcBend && $divArcBend.value),
+            divArcEnd: Number($divArcEnd && $divArcEnd.value),
+            // Multi-shell options
+            shellCount: Number(sc ? sc.value : 1),
+            shellOffsetRad: deg(Number(so ? so.value : 0)),
+            shellScale: Number(ss ? ss.value : 100) / 100,
+            shellHueDelta: Number(sh ? sh.value : 0)
+          }
+        }
+
+        function projectorFactory(W, H, on, k, mode) {
+          if (!on || k <= 0) return null
+          const ax = W * 0.5,
+            ay = H * 0.85
+          return (x, y) => {
+            const depth = clamp((ay - y) / Math.max(60, H * 0.9), 0, 1)
+            let f
+            const kk = k * 2
+            switch (mode) {
+              case 'quadratic':
+                f = 1 / (1 + kk * depth * depth)
+                break
+              case 'exp':
+                f = Math.exp(-kk * depth)
+                break
+              default:
+                f = 1 / (1 + kk * depth)
+            }
+            const xp = ax + (x - ax) * f
+            const yp = ay + (y - ay) * f
+            return [xp, yp]
+          }
+        }
+
+        function buildShellPoints(opts, W, H) {
+          const {
+            turns,
+            growth,
+            baseR,
+            thickPct,
+            rot,
+            cxPct,
+            cyPct,
+            sampPerTurn,
+            perspOn,
+            persp,
+            projMode
+          } = opts
+          const totalTheta = Math.max(0.001, turns) * Math.PI * 2
+          const b = Math.log(Math.max(1.0001, growth)) / (Math.PI * 2)
+          const cx = W * cxPct,
+            cy = H * cyPct
+          const S = Math.max(12, Math.floor(sampPerTurn * turns))
+          const P = projectorFactory(W, H, perspOn, persp, projMode)
+
+          const outer = new Array(S + 1)
+          const inner = new Array(S + 1)
+          let rMax = 0
+          for (let i = 0; i <= S; i++) {
+            const t = (i / S) * totalTheta
+            const r = baseR * Math.exp(b * t)
+            const ri = r * (1 - thickPct)
+            const ang = t + rot
+            let xo = cx + r * Math.cos(ang)
+            let yo = cy + r * Math.sin(ang)
+            let xi = cx + ri * Math.cos(ang)
+            let yi = cy + ri * Math.sin(ang)
+            if (P) {
+              ;[xo, yo] = P(xo, yo)
+              ;[xi, yi] = P(xi, yi)
+            }
+            outer[i] = [xo, yo]
+            inner[i] = [xi, yi]
+            if (r > rMax) rMax = r
+          }
+          return { outer, inner, cx, cy, rMax }
+        }
+
+        function fib(n) {
+          let a = 0,
+            b = 1
+          const out = []
+          for (let i = 0; i < n; i++) {
+            out.push(b)
+            ;[a, b] = [b, a + b]
+          }
+          return out
+        }
+
+        // Quadratic smoothing for polylines
+        function strokeSmoothOpen(ctx, pts, amt) {
+          const n = pts.length
+          if (n < 2) return
+          const t = Math.max(0, Math.min(1, isFinite(amt) ? amt : 0.5))
+          ctx.beginPath()
+          ctx.moveTo(pts[0][0], pts[0][1])
+          for (let i = 1; i < n - 1; i++) {
+            const p0 = pts[i - 1]
+            const p1 = pts[i]
+            const p2 = pts[i + 1]
+            const cx = p1[0] + (p2[0] - p0[0]) * 0.25 * t
+            const cy = p1[1] + (p2[1] - p0[1]) * 0.25 * t
+            const mx = (p1[0] + p2[0]) * 0.5
+            const my = (p1[1] + p2[1]) * 0.5
+            ctx.quadraticCurveTo(cx, cy, mx, my)
+          }
+          ctx.lineTo(pts[n - 1][0], pts[n - 1][1])
+          ctx.stroke()
+        }
+
+        // Deterministic Enochian letter based on Fibonacci value i and arm j
+        function enochChar(i, j) {
+          const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+          const ii = Math.abs(Number(i) | 0)
+          const jj = Math.abs(Number(j) | 0)
+          const idx = (ii + jj * 11) % letters.length
+          return letters[idx]
+        }
+
+        // Draw a small log-spiral offshoot from a pre-projection anchor
+        function drawOffshoot(ctx, opts, x0, y0, ang, P) {
+          if (!opts.fibSpOn) return
+          const turns = Math.max(0.05, Number(opts.fibSpTurns || 1))
+          const growth = Math.max(1.001, Number(opts.fibSpGrow || 1.25))
+          const base = Math.max(0, Number(opts.fibSpScale || 12))
+          const b = Math.log(growth) / (Math.PI * 2)
+          const total = Math.PI * 2 * turns
+          const segs = Math.max(10, Math.floor(48 * turns))
+          // Start at anchor
+          let xa = x0, ya = y0
+          if (P) [xa, ya] = P(xa, ya)
+          ctx.save()
+          ctx.beginPath()
+          ctx.moveTo(xa, ya)
+          for (let i = 0; i <= segs; i++) {
+            const t = (i / segs) * total
+            const r = base * Math.exp(b * t)
+            let x = x0 + r * Math.cos(ang + t)
+            let y = y0 + r * Math.sin(ang + t)
+            if (P) [x, y] = P(x, y)
+            ctx.lineTo(x, y)
+          }
+          ctx.globalAlpha = 0.95
+          ctx.strokeStyle = opts.__strokeColor || opts.outlineC
+          ctx.lineWidth = Math.max(0.1, Number(opts.fibSpLW || opts.chLineW || 1))
+          ctx.stroke()
+          ctx.restore()
+        }
+
+        function drawChambers(ctx, opts, cx, cy) {
+          if (!opts.chOn || opts.chSteps <= 0) return
+          const W = innerWidth,
+            H = innerHeight
+          const totalTheta = Math.max(0.001, opts.turns) * Math.PI * 2
+          const b = Math.log(Math.max(1.0001, opts.growth)) / (Math.PI * 2)
+          const P = projectorFactory(W, H, opts.perspOn, opts.persp, opts.projMode)
+          const N = opts.chSteps
+          const thick = opts.thickPct
+          const fseq = fib(N + 2)
+          ctx.save()
+          ctx.globalAlpha = 0.25
+          for (let k = 0; k < N; k++) {
+            const t0 = (k / N) * totalTheta
+            const t1 = ((k + 1) / N) * totalTheta
+            const S = 36
+            const outer = []
+            const inner = []
+            for (let i = 0; i <= S; i++) {
+              const t = t0 + (i / S) * (t1 - t0)
+              const r = opts.baseR * Math.exp(b * t)
+              const ri = r * (1 - thick)
+              const ang = t + opts.rot
+              let xo = cx + r * Math.cos(ang),
+                yo = cy + r * Math.sin(ang)
+              let xi = cx + ri * Math.cos(ang),
+                yi = cy + ri * Math.sin(ang)
+              if (P) {
+                ;[xo, yo] = P(xo, yo)
+                ;[xi, yi] = P(xi, yi)
+              }
+              outer.push([xo, yo])
+              inner.push([xi, yi])
+            }
+            ctx.beginPath()
+            ctx.moveTo(outer[0][0], outer[0][1])
+            for (let i = 1; i < outer.length; i++)
+              ctx.lineTo(outer[i][0], outer[i][1])
+            for (let i = inner.length - 1; i >= 0; i--)
+              ctx.lineTo(inner[i][0], inner[i][1])
+            ctx.closePath()
+            if (!opts.__mono) {
+              const hue = opts.h0 + opts.hD * (k / N)
+              ctx.fillStyle = hsla(hue, opts.sat, opts.lit, 0.25)
+              ctx.fill()
+            }
+            if (opts.chLineW > 0) {
+              ctx.save()
+              ctx.globalAlpha = 0.85
+              ctx.strokeStyle = opts.__strokeColor || opts.outlineC
+              ctx.lineWidth = opts.chLineW
+              if (opts.smoothCurves) {
+                // stroke outer and inner separately as smoothed paths
+                strokeSmoothOpen(ctx, outer, opts.smoothAmt)
+                strokeSmoothOpen(ctx, inner.slice().reverse(), opts.smoothAmt)
+              } else {
+                // straight polylines
+                ctx.beginPath()
+                ctx.moveTo(outer[0][0], outer[0][1])
+                for (let i = 1; i < outer.length; i++) ctx.lineTo(outer[i][0], outer[i][1])
+                ctx.stroke()
+                ctx.beginPath()
+                ctx.moveTo(inner[inner.length - 1][0], inner[inner.length - 1][1])
+                for (let i = inner.length - 2; i >= 0; i--) ctx.lineTo(inner[i][0], inner[i][1])
+                ctx.stroke()
+              }
+              ctx.restore()
+            }
+            if (opts.chLabels || opts.fibSpOn) {
+              const tm = (t0 + t1) / 2
+              const rm = opts.baseR * Math.exp(b * tm) * (1 - thick * 0.5)
+              const angm = tm + opts.rot
+              // Pre-projection anchor
+              const x0 = cx + rm * Math.cos(angm)
+              const y0 = cy + rm * Math.sin(angm)
+              // Label (post-projection)
+              if (opts.chLabels) {
+                let xl = x0, yl = y0
+                if (P) { ;[xl, yl] = P(xl, yl) }
+                ctx.fillStyle = opts.__mono ? opts.outlineC : 'rgba(240,255,245,0.9)'
+                ctx.font = '12px system-ui, sans-serif'
+                ctx.textAlign = 'center'
+                ctx.textBaseline = 'middle'
+                const label = fseq[k] || k + 1
+                ctx.fillText(String(label), xl, yl)
+              }
+              // Offshoot spiral at this Fibonacci point
+              if (opts.fibSpOn) {
+                const arms = Math.max(1, Math.floor(Number(opts.fibSpArms || 1)))
+                for (let j = 0; j < arms; j++) {
+                  const dAng = (j * Math.PI * 2) / arms
+                  // Offshoot line
+                  drawOffshoot(ctx, opts, x0, y0, angm + (opts.__offspinRad || 0) + dAng, P)
+                  // Enochian glyph near offshoot origin (static; grow/shrink only)
+                  if (opts.enochOn) {
+                    const dist = Math.max(6, Number(opts.fibSpScale || 12) * 0.35)
+                    const baseAng = angm + dAng // do NOT add offspin; letters stay put
+                    const xr = x0 + dist * Math.cos(baseAng)
+                    const yr = y0 + dist * Math.sin(baseAng)
+                    let xg = xr, yg = yr
+                    if (P) { ;[xg, yg] = P(xg, yg) }
+                    ctx.save()
+                    const col = '#ffd56a'
+                    // Grow/shrink oscillation
+                    const tsec = performance.now() / 1000
+                    const sBase = Math.max(20, Number(opts.enochScale || 20))
+                    const s = 1 + 0.25 * Math.sin(2 * Math.PI * 0.5 * tsec + k * 0.3 + j * 0.7)
+                    const px = Math.round(sBase * s)
+                    ctx.fillStyle = col
+                    ctx.shadowColor = col
+                    ctx.shadowBlur = Math.max(10, px * 0.7)
+                    ctx.font = `bold ${px}px Enochian, system-ui, sans-serif`
+                    ctx.textAlign = 'center'
+                    ctx.textBaseline = 'middle'
+                    const ch = enochChar((fseq[k] || (k + 1)), j + 1)
+                    // outline for readability
+                    ctx.lineWidth = Math.max(1, px * 0.07)
+                    ctx.strokeStyle = 'rgba(0,0,0,0.6)'
+                    ctx.strokeText(ch, xg, yg)
+                    ctx.fillText(ch, xg, yg)
+                    ctx.restore()
+                  }
+                }
+              }
+            }
+
+            // Spiral dividers (M lines across shell thickness; optionally golden-spaced)
+            const M = Math.max(0, Math.min(8, Math.floor(opts.dividers || 0)))
+            if (M > 0) {
+              ctx.save()
+              ctx.globalAlpha = 0.6
+              ctx.strokeStyle = opts.__strokeColor || (opts.__mono ? opts.outlineC : 'rgba(235,250,245,0.8)')
+              ctx.lineWidth = Math.max(0.2, (opts.chLineW || 1) * 0.9)
+              const mode = (opts.divMode || (opts.divGolden ? 'golden' : 'even'))
+              if (mode === 'arch') {
+                for (let m = 1; m <= M; m++) {
+                  const f = m / (M + 1)
+                  // Match fraction f at t0 and t1; interpolate linearly in r with t
+                  const rOut0 = opts.baseR * Math.exp(b * t0)
+                  const rIn0 = rOut0 * (1 - thick)
+                  const rOut1 = opts.baseR * Math.exp(b * t1)
+                  const rIn1 = rOut1 * (1 - thick)
+                  const r0 = rIn0 + f * (rOut0 - rIn0)
+                  const r1 = rIn1 + f * (rOut1 - rIn1)
+                  const c = (r1 - r0) / (t1 - t0)
+                  ctx.beginPath()
+                  for (let i = 0; i <= S; i++) {
+                    const t = t0 + (i / S) * (t1 - t0)
+                    const r = r0 + c * (t - t0)
+                    const ang = t + opts.rot
+                    let x = cx + r * Math.cos(ang)
+                    let y = cy + r * Math.sin(ang)
+                    if (P) { ;[x, y] = P(x, y) }
+                    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y)
+                  }
+                  ctx.stroke()
+                }
+              } else {
+                // Build fractions f across thickness
+                const Fs = []
+                if (mode === 'golden') {
+                  const phi = (1 + Math.sqrt(5)) / 2
+                  const r = 1 / phi
+                  const denom = 1 - Math.pow(r, M + 1)
+                  for (let m = 1; m <= M; m++) Fs.push((1 - Math.pow(r, m)) / denom)
+                } else if (mode === 'polar') {
+                  // Log-uniform spacing across thickness
+                  const l0 = Math.log(1 - thick), l1 = 0
+                  for (let m = 1; m <= M; m++) {
+                    const u = m / (M + 1)
+                    const s = Math.exp(l0 + u * (l1 - l0))
+                    const f = (s - (1 - thick)) / (thick || 1e-9)
+                    Fs.push(Math.max(0, Math.min(1, f)))
+                  }
+                } else {
+                  for (let m = 1; m <= M; m++) Fs.push(m / (M + 1))
+                }
+                for (const f of Fs) {
+                  const s = 1 - thick + thick * f
+                const ptsD = []
+                for (let i = 0; i <= S; i++) {
+                  const t = t0 + (i / S) * (t1 - t0)
+                  const r = opts.baseR * s * Math.exp(b * t)
+                  const ang = t + opts.rot
+                  let x = cx + r * Math.cos(ang)
+                  let y = cy + r * Math.sin(ang)
+                  if (P) { ;[x, y] = P(x, y) }
+                  ptsD.push([x, y])
+                }
+                if (opts.smoothCurves) strokeSmoothOpen(ctx, ptsD, opts.smoothAmt)
+                else {
+                  ctx.beginPath()
+                  for (let i = 0; i < ptsD.length; i++) {
+                    const [x, y] = ptsD[i]
+                    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y)
+                  }
+                  ctx.stroke()
+                }
+                }
+              }
+              ctx.restore()
+            }
+
+            // Spiral hatching (H faint lines, 0 disables)
+            const Hc = Math.max(0, Math.min(12, Math.floor(opts.hatch || 0)))
+            if (Hc > 0) {
+              ctx.save()
+              ctx.globalAlpha = 0.18
+              ctx.strokeStyle = opts.__strokeColor || (opts.__mono ? opts.outlineC : 'rgba(230,245,240,0.9)')
+              ctx.lineWidth = Math.max(0.2, (opts.chLineW || 1) * 0.6)
+              for (let h = 1; h <= Hc; h++) {
+                const f = h / (Hc + 1)
+                const s = 1 - thick + thick * f
+                const ptsH = []
+                for (let i = 0; i <= S; i++) {
+                  const t = t0 + (i / S) * (t1 - t0)
+                  const r = opts.baseR * s * Math.exp(b * t)
+                  const ang = t + opts.rot
+                  let x = cx + r * Math.cos(ang)
+                  let y = cy + r * Math.sin(ang)
+                  if (P) { ;[x, y] = P(x, y) }
+                  ptsH.push([x, y])
+                }
+                if (opts.smoothCurves) strokeSmoothOpen(ctx, ptsH, opts.smoothAmt)
+                else {
+                  ctx.beginPath()
+                  for (let i = 0; i < ptsH.length; i++) {
+                    const [x, y] = ptsH[i]
+                    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y)
+                  }
+                  ctx.stroke()
+                }
+              }
+              ctx.restore()
+            }
+
+            // Divider arcs visualization at chamber mid-angle
+            if (opts.divArcsOn) {
+              const modeArc = opts.divMode || 'even'
+              const tMid = (t0 + t1) / 2
+              const rOutMid = opts.baseR * Math.exp(b * tMid)
+              const rInMid = rOutMid * (1 - thick)
+              const arcSpan = Math.max(6, Math.min(180, Number(opts.divArcDeg || 24))) * Math.PI / 180
+              const aStart = tMid - arcSpan / 2
+              const aEnd = tMid + arcSpan / 2
+              // Build fractions for arcs using same mode semantics
+              const FsArc = []
+              const MArc = Math.max(1, Math.min(12, Math.floor(opts.divArcCount || 0) || 3))
+              if (modeArc === 'golden') {
+                const phi = (1 + Math.sqrt(5)) / 2
+                const rr = 1 / phi
+                const denom = 1 - Math.pow(rr, MArc + 1)
+                for (let m = 1; m <= MArc; m++) FsArc.push((1 - Math.pow(rr, m)) / denom)
+              } else if (modeArc === 'polar') {
+                const l0 = Math.log(1 - thick), l1 = 0
+                for (let m = 1; m <= MArc; m++) {
+                  const u = m / (MArc + 1)
+                  const sVal = Math.exp(l0 + u * (l1 - l0))
+                  const f = (sVal - (1 - thick)) / (thick || 1e-9)
+                  FsArc.push(Math.max(0, Math.min(1, f)))
+                }
+              } else if (modeArc === 'arch') {
+                for (let m = 1; m <= MArc; m++) FsArc.push(m / (MArc + 1))
+              } else {
+                for (let m = 1; m <= MArc; m++) FsArc.push(m / (MArc + 1))
+              }
+              ctx.save()
+              ctx.globalAlpha = 0.85
+              ctx.strokeStyle = opts.__strokeColor || opts.outlineC || 'white'
+              ctx.lineWidth = Math.max(0.6, (opts.chLineW || 1) * 1.0)
+              const segs = 24
+              for (const f of FsArc) {
+                const rBase = rInMid + f * (rOutMid - rInMid)
+                const ptsA = []
+                for (let i = 0; i <= segs; i++) {
+                  const u = i / segs
+                  const a = aStart + u * (aEnd - aStart)
+                  const ang = a + opts.rot
+                  const bend = Number(opts.divArcBend || 0)
+                  const endPct = Number(opts.divArcEnd || 0) / 100
+                  const bendTerm = Math.sin(Math.PI * u) * bend // peak at mid, 0 at ends
+                  const endTerm = (2 * u - 1) * endPct // -end at start, +end at stop
+                  const r = rBase * (1 + bendTerm + endTerm)
+                  let x = cx + r * Math.cos(ang)
+                  let y = cy + r * Math.sin(ang)
+                  if (P) { ;[x, y] = P(x, y) }
+                  ptsA.push([x, y])
+                }
+                if (opts.smoothCurves) strokeSmoothOpen(ctx, ptsA, opts.smoothAmt)
+                else {
+                  ctx.beginPath()
+                  for (let i = 0; i < ptsA.length; i++) {
+                    const [x, y] = ptsA[i]
+                    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y)
+                  }
+                  ctx.stroke()
+                }
+              }
+              ctx.restore()
+            }
+          }
+          ctx.restore()
+        }
+
+        function drawShell(ctx, opts) {
+          const W = innerWidth,
+            H = innerHeight
+          if (opts.__drawBg !== false) {
+            ctx.clearRect(0, 0, W, H)
+            if (!opts.tbg) {
+              ctx.fillStyle = opts.bgc
+              ctx.fillRect(0, 0, W, H)
+            }
+          }
+
+          const { outer, inner, cx, cy, rMax } = buildShellPoints(opts, W, H)
+
+          const g = ctx.createRadialGradient(
+            cx,
+            cy,
+            0,
+            cx,
+            cy,
+            Math.max(60, rMax)
+          )
+          g.addColorStop(0, hsla(opts.h0, opts.sat, opts.lit, opts.fillAlpha))
+          g.addColorStop(
+            1,
+            hsla(
+              opts.h0 + opts.hD,
+              opts.sat,
+              Math.max(0, opts.lit - 12),
+              Math.max(0, opts.fillAlpha - 0.15)
+            )
+          )
+
+          // Build boundary once
+          const boundary = []
+          for (let i = 0; i < outer.length; i++) boundary.push(outer[i])
+          for (let i = inner.length - 1; i >= 0; i--) boundary.push(inner[i])
+
+          // Fill unmodulated interior when not mono
+          if (!opts.__mono) {
+            ctx.beginPath()
+            ctx.moveTo(boundary[0][0], boundary[0][1])
+            for (let i = 1; i < boundary.length; i++) ctx.lineTo(boundary[i][0], boundary[i][1])
+            ctx.closePath()
+            ctx.fillStyle = g
+            ctx.fill()
+          }
+          // Stroke (modulation aware)
+          if (opts.outlineW > 0) {
+            const pts = opts.__modAmp > 0 ? modulateClosed(boundary, opts.__modAmp, opts.__modFreq) : boundary
+            ctx.beginPath()
+            ctx.moveTo(pts[0][0], pts[0][1])
+            for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1])
+            ctx.closePath()
+            ctx.strokeStyle = (opts.__strokeColor || opts.outlineC)
+            ctx.lineWidth = opts.outlineW
+            ctx.stroke()
+          }
+
+          if (opts.__drawChambers !== false) {
+            drawChambers(ctx, opts, cx, cy)
+          }
+
+          if (opts.ringsOn && opts.ringCount > 0) {
+            ctx.save()
+            ctx.strokeStyle = opts.__strokeColor || (opts.__mono
+              ? opts.outlineC
+              : `rgba(230,240,235,${opts.ringAlpha})`)
+            ctx.lineWidth = Math.max(0.5, opts.outlineW * 0.7)
+            const totalTheta = Math.max(0.001, opts.turns) * Math.PI * 2
+            const b = Math.log(Math.max(1.0001, opts.growth)) / (Math.PI * 2)
+            const P = projectorFactory(W, H, opts.perspOn, opts.persp, opts.projMode)
+            for (let j = 1; j <= opts.ringCount; j++) {
+              const t = (j / opts.ringCount) * totalTheta
+              const r = opts.baseR * Math.exp(b * t)
+              const segs = 120
+              const ptsR = []
+              for (let k = 0; k <= segs; k++) {
+                const a = opts.rot + (k / segs) * Math.PI * 2
+                let x = cx + r * Math.cos(a)
+                let y = cy + r * Math.sin(a)
+                if (P) [x, y] = P(x, y)
+                ptsR.push([x, y])
+              }
+              const ringPts = opts.__modAmp > 0 ? modulateClosed(ptsR, opts.__modAmp, opts.__modFreq) : ptsR
+              ctx.beginPath()
+              ctx.moveTo(ringPts[0][0], ringPts[0][1])
+              for (let i = 1; i < ringPts.length; i++) ctx.lineTo(ringPts[i][0], ringPts[i][1])
+              ctx.closePath()
+              ctx.stroke()
+            }
+            ctx.restore()
+          }
+        }
+
+        function render() {
+          const base = getOpts()
+          const count = Math.max(1, Math.min(5, Math.floor(base.shellCount || 1)))
+          const planes = base.planesOn ? 2 : 1
+          const off = base.planeOffRad || 0
+          for (let s = 0; s < count; s++) {
+            const factor = Math.pow(base.shellScale || 1, s)
+            for (let p = 0; p < planes; p++) {
+              // Plane-specific overrides (fallback to global offset if not set)
+              const pColor = p === 0 ? base.p1Color : base.p2Color
+              const px = (p === 0 ? base.p1x : base.p2x) || 0
+              const py = (p === 0 ? base.p1y : base.p2y) || 0
+              const pz = p === 0 ? (base.p1zRad || 0) : (base.p2zRad || 0)
+              const modA = p === 0 ? (base.p1ModA || 0) : (base.p2ModA || 0)
+              const modF = p === 0 ? (base.p1ModF || 0) : (base.p2ModF || 0)
+              const delta = planes > 1 ? (p - (planes - 1) / 2) * off : 0
+              const rotZ = (pz !== 0) ? pz : delta
+              const optsS = {
+                ...base,
+                baseR: base.baseR * factor,
+                rot: base.rot + (base.shellOffsetRad || 0) * s + rotZ + (p === 0 ? spin1Rad : spin2Rad),
+                cxPct: clamp(base.cxPct + (px / 100), 0, 1),
+                cyPct: clamp(base.cyPct + (py / 100), 0, 1),
+                h0: base.h0 + (base.shellHueDelta || 0) * s,
+                __drawBg: s === 0 && p === 0,
+                __mono: Boolean(base.monoOn),
+                __strokeColor: pColor || base.outlineC,
+                __modAmp: modA,
+                __modFreq: modF,
+                __offspinRad: offSpinRad,
+                __drawChambers: base.chBoth ? true : !(planes > 1 && p > 0)
+              }
+              if (optsS.__mono) optsS.fillAlpha = 0
+              drawShell(ctx, optsS)
+            }
+          }
+        }
+
+        // Animation
+        function tick(t) {
+          const dt = (t - lastT) / 1000
+          lastT = t
+          if ($spinOn.checked) {
+            const degPerSec = Number($spin.value)
+            spinRad += ((degPerSec * Math.PI) / 180) * dt
+            // Per-plane spin
+            const s1 = Number($p1Spin && $p1Spin.value || 0)
+            const s2 = Number($p2Spin && $p2Spin.value || 0)
+            spin1Rad += ((s1 * Math.PI) / 180) * dt
+            spin2Rad += ((s2 * Math.PI) / 180) * dt
+          }
+          // Offshoot spin (independent)
+          if ($fibSpOn && $fibSpOn.checked) {
+            const osp = Number($fibSpin && $fibSpin.value || 0)
+            offSpinRad += ((osp * Math.PI) / 180) * dt
+          }
+          const evoRate = Number($evo.value)
+          if (evoRate > 0) {
+            turnsCurr = Math.max(0.1, turnsCurr + evoRate * dt)
+          } else {
+            turnsCurr = Number($turns.value)
+          }
+          render()
+          requestAnimationFrame(tick)
+        }
+
+        // Wire up
+        const inputs = [
+          $turns,
+          $growth,
+          $baseR,
+          $thick,
+          $rot,
+          $cx,
+          $cy,
+          $samp,
+          $olw,
+          $olc,
+          $fillA,
+          $h0,
+          $hD,
+          $sat,
+          $lit,
+          $tbg,
+          $bgc,
+          $ringsOn,
+          $ringC,
+          $ringA,
+          $perspOn,
+          $persp,
+          $projMode,
+          $spinOn,
+          $spin,
+          $evo,
+          $chBoth,
+          $monoOn,
+          $planesOn,
+          $planeOff,
+          $p1Color,
+          $p2Color,
+          $p1x,
+          $p1y,
+          $p1z,
+          $p2x,
+          $p2y,
+          $p2z,
+          $p1ModA,
+          $p1ModF,
+          $p2ModA,
+          $p2ModF,
+          $p1Spin,
+          $p2Spin,
+          $chOn,
+          $chSteps,
+          $chLineW,
+          $smoothCurves,
+          $smoothAmt,
+          $chLabels,
+          $fibSpOn,
+          $fibTurns,
+          $fibScale,
+          $fibGrow,
+          $fibLW,
+          $fibArms,
+          $fibSpin,
+          $dividers,
+          $divMode,
+          $hatch,
+          $divArcsOn,
+          $divArcCount,
+          $divArcDeg,
+          $divArcBend,
+          $divArcEnd
+        ]
+        inputs.forEach(
+          el =>
+            el &&
+            el.addEventListener('input', () => {
+              if ($presetSelect && $presetSelect.value !== 'custom')
+                $presetSelect.value = 'custom'
+              render()
+            })
+        )
+        $turns.addEventListener('input', () => {
+          turnsCurr = Number($turns.value)
+        })
+
+        $reset.addEventListener('click', () => {
+          $turns.value = 4
+          $growth.value = 1.618
+          $baseR.value = 60
+          $thick.value = 35
+          $rot.value = 0
+          $cx.value = 50
+          $cy.value = 60
+          $samp.value = 180
+          $olw.value = 1
+          $olc.value = '#fbecc8'
+          $fillA.value = 85
+          $h0.value = 130
+          $hD.value = -45
+          $sat.value = 60
+          $lit.value = 55
+          $tbg.checked = false
+          $bgc.value = '#0b0f13'
+          $ringsOn.checked = true
+          $ringC.value = 40
+          $ringA.value = 12
+          if ($monoOn) $monoOn.checked = false
+          if ($planesOn) $planesOn.checked = false
+          if ($planeOff) $planeOff.value = 12
+          if ($p1Color) $p1Color.value = '#fbecc8'
+          if ($p2Color) $p2Color.value = '#9fe7d8'
+          if ($p1x) $p1x.value = 0
+          if ($p1y) $p1y.value = 0
+          if ($p1z) $p1z.value = 0
+          if ($p2x) $p2x.value = 0
+          if ($p2y) $p2y.value = 0
+          if ($p2z) $p2z.value = 12
+          if ($p1ModA) $p1ModA.value = 0
+          if ($p1ModF) $p1ModF.value = 3
+          if ($p2ModA) $p2ModA.value = 0
+          if ($p2ModF) $p2ModF.value = 3
+          if ($p1Spin) $p1Spin.value = 0
+          if ($p2Spin) $p2Spin.value = 0
+          spinRad = 0
+          spin1Rad = 0
+          spin2Rad = 0
+          $perspOn.checked = false
+          $persp.value = 40
+          if ($projMode) $projMode.value = 'classic'
+          $spinOn.checked = false
+          $spin.value = 60
+          $evo.value = 0.2
+          $chOn.checked = false
+          if ($chBoth) $chBoth.checked = false
+          $chSteps.value = 16
+          $chLineW.value = 1
+          $chLabels.checked = true
+          if ($fibSpOn) $fibSpOn.checked = false
+          if ($fibTurns) $fibTurns.value = 1
+          if ($fibScale) $fibScale.value = 12
+          if ($fibGrow) $fibGrow.value = 1.25
+          if ($fibLW) $fibLW.value = 1
+          if ($fibArms) $fibArms.value = 1
+          if ($fibSpin) $fibSpin.value = 0
+          if ($enochOn) $enochOn.checked = false
+          if ($enochScale) $enochScale.value = 20
+          $dividers.value = 0
+          if ($divMode) $divMode.value = 'even'
+          $hatch.value = 0
+          if ($divArcsOn) $divArcsOn.checked = false
+          if ($divArcCount) $divArcCount.value = 3
+          if ($divArcDeg) $divArcDeg.value = 24
+          if ($divArcBend) $divArcBend.value = 0
+          if ($divArcEnd) $divArcEnd.value = 0
+          const $shellCount = $('shellCount')
+          const $shellOffset = $('shellOffset')
+          const $shellScale = $('shellScale')
+          const $shellHueDelta = $('shellHueDelta')
+          if ($shellCount) $shellCount.value = 1
+          if ($shellOffset) $shellOffset.value = 20
+          if ($shellScale) $shellScale.value = 100
+          if ($shellHueDelta) $shellHueDelta.value = 0
+          spinRad = 0
+          turnsCurr = Number($turns.value)
+          render()
+        })
+
+        $export.addEventListener('click', () => {
+          const link = document.createElement('a')
+          link.download = 'fibonacci-shell.png'
+          link.href = canvas.toDataURL('image/png')
+          link.click()
+        })
+
+        // Generate social thumbnail (1200x630) by scaling current canvas
+        const $thumb = $('thumb')
+        $thumb.addEventListener('click', () => {
+          const targetW = 1200,
+            targetH = 630
+          const src = canvas
+          const off = document.createElement('canvas')
+          off.width = targetW
+          off.height = targetH
+          const octx = off.getContext('2d')
+          const bg = getOpts().tbg ? '#000' : getOpts().bgc
+          octx.fillStyle = bg
+          octx.fillRect(0, 0, targetW, targetH)
+          const sRatio = src.width / src.height
+          const tRatio = targetW / targetH
+          let drawW, drawH
+          if (sRatio > tRatio) {
+            drawH = targetH
+            drawW = Math.round(drawH * sRatio)
+          } else {
+            drawW = targetW
+            drawH = Math.round(drawW / sRatio)
+          }
+          const dx = Math.round((targetW - drawW) / 2)
+          const dy = Math.round((targetH - drawH) / 2)
+          octx.imageSmoothingQuality = 'high'
+          octx.drawImage(src, dx, dy, drawW, drawH)
+          const a = document.createElement('a')
+          a.download = 'thumbnail.png'
+          a.href = off.toDataURL('image/png')
+          a.click()
+        })
+
+        // Eye toggle — show/hide options panel
+        function setUiVisible(v) {
+          if (!$uiBox) return
+          $uiBox.style.display = v ? 'block' : 'none'
+          $toggleUi.textContent = v ? '🙈' : '👁'
+          localStorage.setItem('fib_ui_visible', v ? '1' : '0')
+        }
+        const uiVisiblePref = localStorage.getItem('fib_ui_visible')
+        setUiVisible(uiVisiblePref !== '0')
+        $toggleUi.addEventListener('click', () => {
+          const isVisible = $uiBox && $uiBox.style.display !== 'none'
+          setUiVisible(!isVisible)
+        })
+
+        // Info toggle — open/close log.md overlay
+        $toggleInfo.addEventListener('click', () => {
+          if ($overlay && $overlay.style.display === 'flex') {
+            $overlay.style.display = 'none'
+          } else {
+            openInfo()
+          }
+        })
+
+        // Presets + JSON
+        const defaultPreset = {
+          turns: 4,
+          growth: 1.618,
+          baseR: 60,
+          thick: 35,
+          rot: 0,
+          cx: 50,
+          cy: 60,
+          samp: 180,
+          olw: 1,
+          olc: '#fbecc8',
+          fillA: 85,
+          h0: 130,
+          hD: -45,
+          sat: 60,
+          lit: 55,
+          tbg: false,
+          bgc: '#0b0f13',
+          monoOn: false,
+          planesOn: false,
+          planeOffDeg: 12,
+          p1Color: '#fbecc8',
+          p2Color: '#9fe7d8',
+          p1x: 0,
+          p1y: 0,
+          p1z: 0,
+          p2x: 0,
+          p2y: 0,
+          p2z: 12,
+          p1ModA: 0,
+          p1ModF: 3,
+          p2ModA: 0,
+          p2ModF: 3,
+          p1Spin: 0,
+          p2Spin: 0,
+          ringsOn: true,
+          ringC: 40,
+          ringA: 12,
+          perspOn: false,
+          persp: 40,
+          projMode: 'classic',
+          spinOn: false,
+          spin: 60,
+          evo: 0.2,
+          chOn: false,
+          chBoth: false,
+          chSteps: 16,
+          chLabels: true,
+          chLineW: 1,
+          smoothCurves: false,
+          smoothAmt: 0.5,
+          fibSpOn: false,
+          fibSpTurns: 1,
+          fibSpScale: 12,
+          fibSpGrow: 1.25,
+          fibSpLW: 1,
+          fibSpArms: 1,
+          fibSpSpin: 0,
+          enochOn: false,
+          enochScale: 20,
+          dividers: 0,
+          hatch: 0,
+          divMode: 'even',
+          divArcsOn: false,
+          divArcCount: 3,
+          divArcDeg: 24,
+          divArcBend: 0,
+          divArcEnd: 0,
+          shellCount: 1,
+          shellOffsetDeg: 20,
+          shellScalePct: 100,
+          shellHueDelta: 0
+        }
+
+        const presets = {
+          default: defaultPreset,
+          golden: {
+            ...defaultPreset,
+            growth: 1.618,
+            h0: 40,
+            hD: 60,
+            sat: 70,
+            lit: 58
+          },
+          thin: { ...defaultPreset, thick: 15, ringC: 64, ringA: 8, fillA: 70 },
+          thick: {
+            ...defaultPreset,
+            thick: 60,
+            baseR: 40,
+            ringC: 24,
+            ringA: 16
+          },
+          ringsOff: { ...defaultPreset, ringsOn: false },
+          perspective: { ...defaultPreset, perspOn: true, persp: 70, cy: 65 }
+        }
+
+        // If an external preset is provided (via Fibonacci/preset.js), register it
+        if (
+          window.FIB_USER_PRESET &&
+          typeof window.FIB_USER_PRESET === 'object'
+        ) {
+          presets.user = { ...defaultPreset, ...window.FIB_USER_PRESET }
+          // Add to dropdown before "custom"
+          if ($presetSelect) {
+            const opt = document.createElement('option')
+            opt.value = 'user'
+            opt.textContent = 'User Preset'
+            const customOpt = Array.from($presetSelect.options).find(
+              o => o.value === 'custom'
+            )
+            if (customOpt) $presetSelect.add(opt, customOpt)
+            else $presetSelect.appendChild(opt)
+          }
+        }
+
+        function addPresetOption(key, label) {
+          if (!$presetSelect) return
+          if (Array.from($presetSelect.options).some(o => o.value === key))
+            return
+          const opt = document.createElement('option')
+          opt.value = key
+          opt.textContent = label
+          const customOpt = Array.from($presetSelect.options).find(
+            o => o.value === 'custom'
+          )
+          if (customOpt) $presetSelect.add(opt, customOpt)
+          else $presetSelect.appendChild(opt)
+        }
+
+        // Load additional presets from presets.json if present
+        ;(async function loadJsonPresets() {
+          try {
+            const res = await fetch('presets.json', { cache: 'no-store' })
+            if (!res.ok) return
+            const data = await res.json()
+            let list = []
+            if (Array.isArray(data)) list = data
+            else if (Array.isArray(data.presets)) list = data.presets
+            else if (data && typeof data === 'object') {
+              list = Object.keys(data).map(k => ({
+                name: k,
+                settings: data[k]
+              }))
+            }
+            let selectedKey = null
+            list.forEach(item => {
+              const key =
+                'json_' +
+                String(item.name || 'preset')
+                  .toLowerCase()
+                  .replace(/[^a-z0-9]+/g, '_')
+              presets[key] = { ...defaultPreset, ...(item.settings || {}) }
+              addPresetOption(key, item.name || key)
+              if (
+                (item.name || '')
+                  .toLowerCase()
+                  .includes('perspective — user') ||
+                (item.name || '').toLowerCase().includes('perspective - user')
+              ) {
+                selectedKey = key
+              }
+            })
+            // If a "Perspective — User" JSON preset exists, select it by default
+            if (selectedKey) {
+              applySettings(presets[selectedKey])
+              if ($presetSelect) $presetSelect.value = selectedKey
+            }
+          } catch (e) {
+            // ignore if not available (e.g., local file open)
+          }
+        })()
+
+        function getSettings() {
+          return {
+            turns: Number($turns.value),
+            growth: Number($growth.value),
+            baseR: Number($baseR.value),
+            thick: Number($thick.value),
+            rot: Number($rot.value),
+            cx: Number($cx.value),
+            cy: Number($cy.value),
+            samp: Number($samp.value),
+            olw: Number($olw.value),
+            olc: String($olc.value),
+            fillA: Number($fillA.value),
+            h0: Number($h0.value),
+            hD: Number($hD.value),
+            sat: Number($sat.value),
+            lit: Number($lit.value),
+            tbg: Boolean($tbg.checked),
+            bgc: String($bgc.value),
+            monoOn: Boolean($monoOn && $monoOn.checked),
+            planesOn: Boolean($planesOn && $planesOn.checked),
+            planeOffDeg: Number($planeOff && $planeOff.value || 0),
+            p1Color: String($p1Color && $p1Color.value || ''),
+            p2Color: String($p2Color && $p2Color.value || ''),
+            p1x: Number($p1x && $p1x.value || 0),
+            p1y: Number($p1y && $p1y.value || 0),
+            p1z: Number($p1z && $p1z.value || 0),
+            p2x: Number($p2x && $p2x.value || 0),
+            p2y: Number($p2y && $p2y.value || 0),
+            p2z: Number($p2z && $p2z.value || 0),
+            p1ModA: Number($p1ModA && $p1ModA.value || 0),
+            p1ModF: Number($p1ModF && $p1ModF.value || 0),
+            p2ModA: Number($p2ModA && $p2ModA.value || 0),
+            p2ModF: Number($p2ModF && $p2ModF.value || 0),
+            p1Spin: Number($p1Spin && $p1Spin.value || 0),
+            p2Spin: Number($p2Spin && $p2Spin.value || 0),
+            ringsOn: Boolean($ringsOn.checked),
+            ringC: Number($ringC.value),
+            ringA: Number($ringA.value),
+            perspOn: Boolean($perspOn.checked),
+            persp: Number($persp.value),
+            projMode: String($projMode && $projMode.value || 'classic'),
+            spinOn: Boolean($spinOn.checked),
+            spin: Number($spin.value),
+            evo: Number($evo.value),
+            chOn: Boolean($chOn.checked),
+            chBoth: Boolean($chBoth && $chBoth.checked),
+            chSteps: Number($chSteps.value),
+            chLineW: Number($chLineW.value),
+            smoothCurves: Boolean($smoothCurves && $smoothCurves.checked),
+            smoothAmt: Number($smoothAmt && $smoothAmt.value),
+            chLabels: Boolean($chLabels.checked),
+            fibSpOn: Boolean($fibSpOn && $fibSpOn.checked),
+            fibSpTurns: Number($fibTurns && $fibTurns.value || 1),
+            fibSpScale: Number($fibScale && $fibScale.value || 12),
+            fibSpGrow: Number($fibGrow && $fibGrow.value || 1.25),
+            fibSpLW: Number($fibLW && $fibLW.value || 1),
+            fibSpArms: Number($fibArms && $fibArms.value || 1),
+            fibSpSpin: Number($fibSpin && $fibSpin.value || 0),
+            enochOn: Boolean($enochOn && $enochOn.checked),
+            enochScale: Number($enochScale && $enochScale.value || 18),
+            dividers: Number($dividers.value),
+            hatch: Number($hatch.value),
+            divMode: String(($divMode && $divMode.value) || 'even'),
+            divArcsOn: Boolean($divArcsOn && $divArcsOn.checked),
+            divArcCount: Number($divArcCount && $divArcCount.value || 3),
+            divArcDeg: Number($divArcDeg && $divArcDeg.value),
+            divArcBend: Number($divArcBend && $divArcBend.value),
+            divArcEnd: Number($divArcEnd && $divArcEnd.value),
+            shellCount: Number($('shellCount')?.value || 1),
+            shellOffsetDeg: Number($('shellOffset')?.value || 0),
+            shellScalePct: Number($('shellScale')?.value || 100),
+            shellHueDelta: Number($('shellHueDelta')?.value || 0)
+          }
+        }
+
+        function applySettings(s) {
+          if (!s) return
+          if (typeof s.turns === 'number') $turns.value = s.turns
+          if (typeof s.growth === 'number') $growth.value = s.growth
+          if (typeof s.baseR === 'number') $baseR.value = s.baseR
+          if (typeof s.thick === 'number') $thick.value = s.thick
+          if (typeof s.rot === 'number') $rot.value = s.rot
+          if (typeof s.cx === 'number') $cx.value = s.cx
+          if (typeof s.cy === 'number') $cy.value = s.cy
+          if (typeof s.samp === 'number') $samp.value = s.samp
+          if (typeof s.olw === 'number') $olw.value = s.olw
+          if (typeof s.olc === 'string') $olc.value = s.olc
+          if (typeof s.fillA === 'number') $fillA.value = s.fillA
+          if (typeof s.h0 === 'number') $h0.value = s.h0
+          if (typeof s.hD === 'number') $hD.value = s.hD
+          if (typeof s.sat === 'number') $sat.value = s.sat
+          if (typeof s.lit === 'number') $lit.value = s.lit
+          if (typeof s.tbg === 'boolean') $tbg.checked = s.tbg
+          if (typeof s.bgc === 'string') $bgc.value = s.bgc
+          if (typeof s.monoOn === 'boolean' && $monoOn) $monoOn.checked = s.monoOn
+          if (typeof s.planesOn === 'boolean' && $planesOn) $planesOn.checked = s.planesOn
+          if (typeof s.planeOffDeg === 'number' && $planeOff) $planeOff.value = s.planeOffDeg
+          if (typeof s.p1Color === 'string' && $p1Color) $p1Color.value = s.p1Color
+          if (typeof s.p2Color === 'string' && $p2Color) $p2Color.value = s.p2Color
+          if (typeof s.p1x === 'number' && $p1x) $p1x.value = s.p1x
+          if (typeof s.p1y === 'number' && $p1y) $p1y.value = s.p1y
+          if (typeof s.p1z === 'number' && $p1z) $p1z.value = s.p1z
+          if (typeof s.p2x === 'number' && $p2x) $p2x.value = s.p2x
+          if (typeof s.p2y === 'number' && $p2y) $p2y.value = s.p2y
+          if (typeof s.p2z === 'number' && $p2z) $p2z.value = s.p2z
+          if (typeof s.p1ModA === 'number' && $p1ModA) $p1ModA.value = s.p1ModA
+          if (typeof s.p1ModF === 'number' && $p1ModF) $p1ModF.value = s.p1ModF
+          if (typeof s.p2ModA === 'number' && $p2ModA) $p2ModA.value = s.p2ModA
+          if (typeof s.p2ModF === 'number' && $p2ModF) $p2ModF.value = s.p2ModF
+          if (typeof s.p1Spin === 'number' && $p1Spin) $p1Spin.value = s.p1Spin
+          if (typeof s.p2Spin === 'number' && $p2Spin) $p2Spin.value = s.p2Spin
+          if (typeof s.ringsOn === 'boolean') $ringsOn.checked = s.ringsOn
+          if (typeof s.ringC === 'number') $ringC.value = s.ringC
+          if (typeof s.ringA === 'number') $ringA.value = s.ringA
+          if (typeof s.perspOn === 'boolean') $perspOn.checked = s.perspOn
+          if (typeof s.persp === 'number') $persp.value = s.persp
+          if (typeof s.projMode === 'string' && $projMode) $projMode.value = s.projMode
+          if (typeof s.spinOn === 'boolean') $spinOn.checked = s.spinOn
+          if (typeof s.spin === 'number') $spin.value = s.spin
+          if (typeof s.evo === 'number') $evo.value = s.evo
+          if (typeof s.chOn === 'boolean') $chOn.checked = s.chOn
+          if (typeof s.chBoth === 'boolean' && $chBoth) $chBoth.checked = s.chBoth
+          if (typeof s.chSteps === 'number') $chSteps.value = s.chSteps
+          if (typeof s.chLineW === 'number') $chLineW.value = s.chLineW
+          if (typeof s.smoothCurves === 'boolean' && $smoothCurves) $smoothCurves.checked = s.smoothCurves
+          if (typeof s.smoothAmt === 'number' && $smoothAmt) $smoothAmt.value = s.smoothAmt
+          if (typeof s.chLabels === 'boolean') $chLabels.checked = s.chLabels
+          if (typeof s.fibSpOn === 'boolean' && $fibSpOn) $fibSpOn.checked = s.fibSpOn
+          if (typeof s.fibSpTurns === 'number' && $fibTurns) $fibTurns.value = s.fibSpTurns
+          if (typeof s.fibSpScale === 'number' && $fibScale) $fibScale.value = s.fibSpScale
+          if (typeof s.fibSpGrow === 'number' && $fibGrow) $fibGrow.value = s.fibSpGrow
+          if (typeof s.fibSpLW === 'number' && $fibLW) $fibLW.value = s.fibSpLW
+          if (typeof s.fibSpArms === 'number' && $fibArms) $fibArms.value = s.fibSpArms
+          if (typeof s.fibSpSpin === 'number' && $fibSpin) $fibSpin.value = s.fibSpSpin
+          if (typeof s.enochOn === 'boolean' && $enochOn) $enochOn.checked = s.enochOn
+          if (typeof s.enochScale === 'number' && $enochScale) $enochScale.value = s.enochScale
+          if (typeof s.dividers === 'number') $dividers.value = s.dividers
+          if (typeof s.hatch === 'number') $hatch.value = s.hatch
+          if (typeof s.divMode === 'string' && $divMode) $divMode.value = s.divMode
+          if (typeof s.divArcsOn === 'boolean' && $divArcsOn) $divArcsOn.checked = s.divArcsOn
+          if (typeof s.divArcCount === 'number' && $divArcCount) $divArcCount.value = s.divArcCount
+          if (typeof s.divArcDeg === 'number' && $divArcDeg) $divArcDeg.value = s.divArcDeg
+          if (typeof s.divArcBend === 'number' && $divArcBend) $divArcBend.value = s.divArcBend
+          if (typeof s.divArcEnd === 'number' && $divArcEnd) $divArcEnd.value = s.divArcEnd
+          // Multi-shell
+          const $shellCount = $('shellCount')
+          const $shellOffset = $('shellOffset')
+          const $shellScale = $('shellScale')
+          const $shellHueDelta = $('shellHueDelta')
+          if (typeof s.shellCount === 'number' && $shellCount) $shellCount.value = s.shellCount
+          if (typeof s.shellOffsetDeg === 'number' && $shellOffset) $shellOffset.value = s.shellOffsetDeg
+          if (typeof s.shellScalePct === 'number' && $shellScale) $shellScale.value = s.shellScalePct
+          if (typeof s.shellHueDelta === 'number' && $shellHueDelta) $shellHueDelta.value = s.shellHueDelta
+          turnsCurr = Number($turns.value)
+          render()
+        }
+
+        // Init preset select and wire up
+        $presetSelect.addEventListener('change', () => {
+          const key = $presetSelect.value
+          if (key === 'custom') return
+          const p = presets[key]
+          if (p) applySettings(p)
+        })
+
+        $saveJson.addEventListener('click', () => {
+          const json = JSON.stringify(getSettings(), null, 2)
+          // Try clipboard first; fallback to prompt
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(json).then(
+              () => alert('Settings JSON copied to clipboard'),
+              () => prompt('Copy settings JSON:', json)
+            )
+          } else {
+            prompt('Copy settings JSON:', json)
+          }
+        })
+
+        $loadJson.addEventListener('click', async () => {
+          const text = prompt('Paste settings JSON:')
+          if (!text) return
+          try {
+            const obj = JSON.parse(text)
+            applySettings(obj)
+            $presetSelect.value = 'custom'
+          } catch (e) {
+            alert('Invalid JSON')
+          }
+        })
+
+        // Info Overlay: load ./log.md if present
+        async function openInfo() {
+          $logContent.textContent = 'Loading log.md...'
+          $overlay.style.display = 'flex'
+          try {
+            const res = await fetch('log.md', { cache: 'no-store' })
+            if (!res.ok) throw new Error('Missing log.md')
+            const text = await res.text()
+            $logContent.textContent = text
+          } catch (err) {
+            $logContent.textContent =
+              'No log.md found next to this file. Create fern/log.md to show content.'
+          }
+        }
+        $infoBtn.addEventListener('click', openInfo)
+        $closeOverlay.addEventListener(
+          'click',
+          () => ($overlay.style.display = 'none')
+        )
+        $overlay.addEventListener('click', e => {
+          if (e.target === $overlay) $overlay.style.display = 'none'
+        })
+
+        render()
+        requestAnimationFrame(tick)
+      })()
+    </script>
+  </body>
+</html>

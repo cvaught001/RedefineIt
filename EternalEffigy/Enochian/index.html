@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Enochian Magic Square — Canvas</title>
+    <style>
+      :root {
+        color-scheme: dark light;
+      }
+      body {
+        margin: 0;
+        font: 14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        background: #0b0f13;
+        color: #e7efff;
+      }
+      .wrap {
+        display: grid;
+        grid-template-columns: 320px 1fr;
+        gap: 12px;
+        min-height: 100vh;
+      }
+      .panel {
+        padding: 14px;
+        background: rgba(14, 18, 26, 0.6);
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(120, 160, 220, 0.25);
+        border-radius: 10px;
+        margin: 12px;
+      }
+      label {
+        display: block;
+        margin: 10px 0 4px;
+        opacity: 0.85;
+      }
+      select,
+      input[type='number'],
+      button {
+        width: 100%;
+        padding: 10px 12px;
+        border-radius: 10px;
+        border: 1px solid rgba(120, 160, 220, 0.35);
+        background: rgba(18, 24, 34, 0.6);
+        color: #e7efff;
+      }
+      button {
+        cursor: pointer;
+      }
+      .row {
+        display: flex;
+        gap: 8px;
+      }
+      .muted {
+        opacity: 0.7;
+        font-size: 12px;
+        margin-top: 8px;
+      }
+      canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+        background: #0b0f13;
+      }
+      .canvasWrap {
+        margin: 12px;
+        border-radius: 10px;
+        overflow: hidden;
+        border: 1px solid rgba(120, 160, 220, 0.25);
+      }
+      .hint {
+        font-size: 12px;
+        opacity: 0.8;
+        margin-top: 6px;
+      }
+      .ok {
+        color: #8ef19a;
+      }
+      .warn {
+        color: #ffcd6b;
+      }
+    </style>
+
+    <!-- Webfont: Enochian (personal-use only).
+     For production, download from FontSpace and self-host, or ensure license compliance. -->
+    <link
+      href="https://db.onlinewebfonts.com/c/d130dcf578cce8a2cf5353aa3394b278?family=Enochian+Regular"
+      rel="stylesheet"
+    />
+    <style>
+      @font-face {
+        font-family: 'Enochian';
+        src: url('https://db.onlinewebfonts.com/t/d130dcf578cce8a2cf5353aa3394b278.woff2')
+            format('woff2'),
+          url('https://db.onlinewebfonts.com/t/d130dcf578cce8a2cf5353aa3394b278.woff')
+            format('woff');
+        font-display: swap;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="panel">
+        <h2 style="margin: 0 0 8px">Enochian Magic Square</h2>
+        <div class="hint">
+          Uses the Enochian font; toggle numbers vs glyphs.
+        </div>
+
+        <label for="order">Order (odd only)</label>
+        <select id="order">
+          <option>3</option>
+          <option selected>5</option>
+          <option>7</option>
+          <option>9</option>
+        </select>
+
+        <label for="mode">Cell content</label>
+        <select id="mode">
+          <option value="glyphs" selected>Enochian glyphs</option>
+          <option value="numbers">Original numbers</option>
+        </select>
+
+        <label for="padding">Inner padding (px)</label>
+        <input id="padding" type="number" min="0" max="60" value="10" />
+
+        <label for="gridW">Canvas size (px)</label>
+        <div class="row">
+          <input id="gridW" type="number" min="200" max="3000" value="900" />
+          <input id="gridH" type="number" min="200" max="3000" value="900" />
+        </div>
+
+        <label for="lineWidth">Grid line width</label>
+        <input id="lineWidth" type="number" min="1" max="12" value="2" />
+
+        <label for="strokeAlpha">Line opacity (0–1)</label>
+        <input
+          id="strokeAlpha"
+          type="number"
+          step="0.05"
+          min="0"
+          max="1"
+          value="0.65"
+        />
+
+        <label for="fontScale">Font scale (relative)</label>
+        <input
+          id="fontScale"
+          type="number"
+          step="0.05"
+          min="0.4"
+          max="1.4"
+          value="0.85"
+        />
+
+        <div class="row" style="margin-top: 10px">
+          <button id="redraw">Redraw</button>
+          <button id="save">Download PNG</button>
+        </div>
+
+        <p class="muted">
+          Font: “Enochian” by Digital Type Foundry (personal-use only). For
+          commercial use, contact the designer via FontSpace or self-host the
+          file you download. <span class="warn">License matters.</span>
+        </p>
+        <p class="muted">
+          Source: FontSpace font page (license/details) and a public webfont
+          embed snippet for demo convenience.
+          :contentReference[oaicite:1]{index=1}
+        </p>
+        <div id="fontStatus" class="hint">Loading font…</div>
+      </div>
+
+      <div class="canvasWrap">
+        <canvas id="cnv" width="900" height="900"></canvas>
+      </div>
+    </div>
+
+    <script>
+      ;(async function () {
+        const canvas = document.getElementById('cnv')
+        const ctx = canvas.getContext('2d')
+
+        // Controls
+        const orderSel = document.getElementById('order')
+        const modeSel = document.getElementById('mode')
+        const padInput = document.getElementById('padding')
+        const wInput = document.getElementById('gridW')
+        const hInput = document.getElementById('gridH')
+        const lwInput = document.getElementById('lineWidth')
+        const saInput = document.getElementById('strokeAlpha')
+        const fsInput = document.getElementById('fontScale')
+        const redrawBtn = document.getElementById('redraw')
+        const saveBtn = document.getElementById('save')
+        const fontStatus = document.getElementById('fontStatus')
+
+        // The Enochian font maps Latin letters to Enochian glyphs. We'll cycle A..Z.
+        const LATIN = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+
+        // Load font before first draw
+        try {
+          // Try both family names some hosts expose
+          await Promise.any([
+            document.fonts.load('48px "Enochian"'),
+            document.fonts.load('48px "Enochian Regular"')
+          ])
+          fontStatus.textContent = 'Font loaded. ✅'
+          fontStatus.className = 'hint ok'
+        } catch (e) {
+          fontStatus.textContent =
+            'Font may not have loaded; glyphs might fall back. (Try reloading or self-hosting the font.)'
+          fontStatus.className = 'hint warn'
+        }
+
+        function isOdd(n) {
+          return n % 2 === 1
+        }
+
+        // Generate an odd-order magic square (Siamese method)
+        function magicSquare(n) {
+          if (!isOdd(n))
+            throw new Error('Magic square generator supports odd sizes only')
+          const grid = Array.from({ length: n }, () => Array(n).fill(0))
+          let i = 0,
+            j = Math.floor(n / 2)
+          for (let k = 1; k <= n * n; k++) {
+            grid[i][j] = k
+            let ni = (i - 1 + n) % n
+            let nj = (j + 1) % n
+            if (grid[ni][nj] !== 0) {
+              i = (i + 1) % n // move down
+            } else {
+              i = ni
+              j = nj
+            }
+          }
+          return grid
+        }
+
+        function mapNumberToEnochian(num) {
+          // Map 1..N to A..Z cyclically; the font replaces Latin letters with Enochian glyphs
+          return LATIN[(num - 1) % LATIN.length]
+        }
+
+        function resizeCanvas(w, h) {
+          canvas.width = w
+          canvas.height = h
+        }
+
+        function drawGridAndGlyphs(
+          n,
+          mode,
+          pad,
+          lineWidth,
+          strokeAlpha,
+          fontScale
+        ) {
+          const W = canvas.width,
+            H = canvas.height
+          const cellW = W / n,
+            cellH = H / n
+
+          // Background
+          ctx.clearRect(0, 0, W, H)
+          ctx.fillStyle = '#0b0f13'
+          ctx.fillRect(0, 0, W, H)
+
+          // Elegant grid lines
+          ctx.save()
+          ctx.globalAlpha = Math.max(0, Math.min(1, strokeAlpha))
+          ctx.strokeStyle = '#9fb6ff'
+          ctx.lineWidth = lineWidth
+          ctx.beginPath()
+
+          for (let r = 0; r <= n; r++) {
+            const y = Math.round(r * cellH) + 0.5
+            ctx.moveTo(0, y)
+            ctx.lineTo(W, y)
+          }
+          for (let c = 0; c <= n; c++) {
+            const x = Math.round(c * cellW) + 0.5
+            ctx.moveTo(x, 0)
+            ctx.lineTo(x, H)
+          }
+          ctx.stroke()
+          ctx.restore()
+
+          // Magic square numbers
+          const msq = magicSquare(n)
+
+          // Text render
+          const fontSize = Math.floor(Math.min(cellW, cellH) * fontScale)
+          // Prefer the Enochian family, fall back to generic sans
+          ctx.font = `${fontSize}px "Enochian","Enochian Regular",system-ui,sans-serif`
+          ctx.textAlign = 'center'
+          ctx.textBaseline = 'middle'
+          // Text fill with a subtle glow
+          for (let r = 0; r < n; r++) {
+            for (let c = 0; c < n; c++) {
+              const num = msq[r][c]
+              const text =
+                mode === 'numbers' ? String(num) : mapNumberToEnochian(num)
+
+              const cx = c * cellW + cellW / 2
+              const cy = r * cellH + cellH / 2
+
+              // Glow
+              ctx.save()
+              ctx.fillStyle = 'rgba(180,210,255,0.20)'
+              ctx.shadowColor = 'rgba(150,190,255,0.55)'
+              ctx.shadowBlur = Math.max(4, fontSize * 0.2)
+              ctx.fillText(text, cx, cy)
+              ctx.restore()
+
+              // Solid core
+              ctx.fillStyle = '#e7efff'
+              ctx.fillText(text, cx, cy)
+            }
+          }
+
+          // Thin inner cell borders (optional aesthetic)
+          if (pad > 0) {
+            ctx.save()
+            ctx.strokeStyle = 'rgba(200,220,255,0.18)'
+            ctx.lineWidth = 1
+            for (let r = 0; r < n; r++) {
+              for (let c = 0; c < n; c++) {
+                const x = c * cellW + pad
+                const y = r * cellH + pad
+                ctx.strokeRect(x, y, cellW - pad * 2, cellH - pad * 2)
+              }
+            }
+            ctx.restore()
+          }
+        }
+
+        function redraw() {
+          const n = parseInt(orderSel.value, 10)
+          const mode = modeSel.value
+          const pad = +padInput.value || 0
+          const W = Math.max(200, Math.min(3000, +wInput.value || 900))
+          const H = Math.max(200, Math.min(3000, +hInput.value || 900))
+          const lw = Math.max(1, Math.min(12, +lwInput.value || 2))
+          const sa = Math.max(0, Math.min(1, +saInput.value || 0.65))
+          const fs = Math.max(0.4, Math.min(1.4, +fsInput.value || 0.85))
+
+          if (n % 2 === 0) {
+            alert(
+              'Even orders aren’t supported by this generator. Pick 3, 5, 7, or 9.'
+            )
+            return
+          }
+          resizeCanvas(W, H)
+          drawGridAndGlyphs(n, mode, pad, lw, sa, fs)
+        }
+
+        redrawBtn.addEventListener('click', redraw)
+        saveBtn.addEventListener('click', () => {
+          const link = document.createElement('a')
+          link.download = `enochian-magic-square-${orderSel.value}.png`
+          link.href = canvas.toDataURL('image/png')
+          link.click()
+        })
+
+        // Initial draw
+        redraw()
+      })()
+    </script>
+  </body>
+</html>
