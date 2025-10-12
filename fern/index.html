@@ -118,6 +118,32 @@
 
       <!-- NEW: growth controls -->
       <div class="row">
+        <label>Variety</label>
+        <select id="variety" class="sel">
+          <option value="custom">Custom</option>
+          <option value="bracken">Bracken</option>
+          <option value="maidenhair">Maidenhair</option>
+          <option value="boston">Boston</option>
+          <option value="staghorn">Staghorn</option>
+          <option value="ostrich">Ostrich</option>
+        </select>
+      </div>
+
+      <div class="row">
+        <label>Transparent BG</label>
+        <input id="transparentBg" type="checkbox" />
+      </div>
+
+      <div class="row">
+        <label>Perspective</label>
+        <input id="perspOn" type="checkbox" />
+      </div>
+      <div class="row">
+        <label>Foreshortening <small id="perspVal"></small></label>
+        <input id="persp" type="range" min="0" max="100" value="40" />
+      </div>
+
+      <div class="row">
         <button id="toggleGrow" class="btn">▶ Grow</button>
         <button id="resetGrow" class="btn">⟲ Reset</button>
       </div>
@@ -155,6 +181,21 @@
         const $fill = document.getElementById('fill')
         const $olwVal = document.getElementById('olwVal')
         const $fillVal = document.getElementById('fillVal')
+
+        const $variety = document.getElementById('variety')
+        const $transparentBg = document.getElementById('transparentBg')
+        const $perspOn = document.getElementById('perspOn')
+        const $persp = document.getElementById('persp')
+        const $perspVal = document.getElementById('perspVal')
+
+        // Complexity controls
+        const $serrFreq = document.getElementById('serrFreq')
+        const $serrAmp = document.getElementById('serrAmp')
+        const $pinnulesOn = document.getElementById('pinnulesOn')
+        const $pinCount = document.getElementById('pinCount')
+        const $pinScale = document.getElementById('pinScale')
+        const $pinAngle = document.getElementById('pinAngle')
+        const $pinBend = document.getElementById('pinBend')
 
         const $toggleGrow = document.getElementById('toggleGrow')
         const $resetGrow = document.getElementById('resetGrow')
@@ -213,14 +254,17 @@
           fillRGBA,
           strokeRGBA,
           lineW,
-          partial = 1
+          partial = 1,
+          projector = null,
+          serrFreq = 0,
+          serrAmp = 0
         ) {
           // partial 0..1 scales the leaflet's revealed portion (for per-leaf growth)
           const STEPS = 28
           const revealSteps = Math.max(2, Math.floor(STEPS * partial))
 
+          const P = projector || ((x, y) => [x, y])
           ctx.save()
-          ctx.translate(x, y)
 
           const upper = []
           const lower = []
@@ -232,18 +276,24 @@
             const localAngle = theta + bend * Math.sin(u * Math.PI * 0.9)
 
             // Position along midrib
-            const px = L * u * Math.cos(localAngle)
-            const py = L * u * Math.sin(localAngle)
+            const px = x + L * u * Math.cos(localAngle)
+            const py = y + L * u * Math.sin(localAngle)
 
-            // Width tapers by sin(pi*u)^pow
-            const width = W * Math.pow(Math.sin(Math.PI * u), taperPow)
+            // Width tapers by sin(pi*u)^pow with optional serration
+            const baseWidth = W * Math.pow(Math.sin(Math.PI * u), taperPow)
+            const serr = 1 + (serrAmp * 0.01) * Math.sin(2 * Math.PI * serrFreq * u) * Math.pow(u, 0.6)
+            const width = baseWidth * serr
 
             // Normal
             const nx = -Math.sin(localAngle)
             const ny = Math.cos(localAngle)
 
-            upper.push([px + nx * width, py + ny * width])
-            lower.push([px - nx * width * 0.9, py - ny * width * 0.9])
+            const ux = px + nx * width
+            const uy = py + ny * width
+            const lx = px - nx * width * 0.9
+            const ly = py - ny * width * 0.9
+            upper.push(P(ux, uy))
+            lower.push(P(lx, ly))
           }
 
           // Closed shape
@@ -263,10 +313,12 @@
 
           // Midrib hint
           ctx.beginPath()
-          ctx.moveTo(0, 0)
-          const midX = L * Math.cos(theta + bend * 0.5) * partial
-          const midY = L * Math.sin(theta + bend * 0.5) * partial
-          ctx.lineTo(midX, midY)
+          const [ox, oy] = P(x, y)
+          ctx.moveTo(ox, oy)
+          const midX = x + L * Math.cos(theta + bend * 0.5) * partial
+          const midY = y + L * Math.sin(theta + bend * 0.5) * partial
+          const [mx, my] = P(midX, midY)
+          ctx.lineTo(mx, my)
           ctx.strokeStyle = 'rgba(235,255,245,0.15)'
           ctx.lineWidth = Math.max(0.6, lineW * 0.6)
           ctx.stroke()
@@ -284,7 +336,17 @@
             outlineWidth,
             outlineColor,
             fillOpacity, // 0..1
-            growth // 0..1 (global growth)
+            growth, // 0..1 (global growth)
+            transparentBg,
+            perspectiveOn,
+            perspective,
+            serrFreq,
+            serrAmp,
+            pinnulesOn,
+            pinCount,
+            pinScale,
+            pinAngleDeg,
+            pinBend
           } = opts
 
           // Use CSS pixel coordinates; DPI is handled via context transform
@@ -293,24 +355,38 @@
 
           ctx.clearRect(0, 0, W, H)
 
-          // Background vignette
-          const g = ctx.createRadialGradient(
-            W * 0.5,
-            H * 0.7,
-            Math.min(W, H) * 0.08,
-            W * 0.5,
-            H * 0.7,
-            Math.max(W, H) * 0.85
-          )
-          g.addColorStop(0, '#07130b')
-          g.addColorStop(1, '#0b0f13')
-          ctx.fillStyle = g
-          ctx.fillRect(0, 0, W, H)
+          // Background vignette (unless transparent requested)
+          if (!transparentBg) {
+            const g = ctx.createRadialGradient(
+              W * 0.5,
+              H * 0.7,
+              Math.min(W, H) * 0.08,
+              W * 0.5,
+              H * 0.7,
+              Math.max(W, H) * 0.85
+            )
+            g.addColorStop(0, '#07130b')
+            g.addColorStop(1, '#0b0f13')
+            ctx.fillStyle = g
+            ctx.fillRect(0, 0, W, H)
+          }
 
           ctx.save()
           const originX = W * 0.5
           const originY = H * 0.86
-          ctx.translate(originX, originY)
+
+          // Perspective projector (toward base/origin)
+          const P = perspectiveOn && perspective > 0
+            ? (x, y) => {
+                const stemLen = Math.min(W, H) * 0.7
+                const depth = clamp(-(y - originY) / stemLen, 0, 1)
+                const k = perspective * 2
+                const f = 1 / (1 + k * depth)
+                const xp = originX + (x - originX) * f
+                const yp = originY + (y - originY) * f
+                return [xp, yp]
+              }
+            : null
 
           // Stem path (parametric)
           const stemLen = Math.min(W, H) * 0.7
@@ -327,9 +403,16 @@
           // Draw stem up to growth
           const gIdx = Math.max(1, Math.floor(STEPS * growth))
           ctx.beginPath()
-          ctx.moveTo(stemPts[0][0], stemPts[0][1])
-          for (let i = 1; i <= gIdx; i++)
-            ctx.lineTo(stemPts[i][0], stemPts[i][1])
+          const p0 = P
+            ? P(originX + stemPts[0][0], originY + stemPts[0][1])
+            : [originX + stemPts[0][0], originY + stemPts[0][1]]
+          ctx.moveTo(p0[0], p0[1])
+          for (let i = 1; i <= gIdx; i++) {
+            const xi = originX + stemPts[i][0]
+            const yi = originY + stemPts[i][1]
+            const pi = P ? P(xi, yi) : [xi, yi]
+            ctx.lineTo(pi[0], pi[1])
+          }
           ctx.strokeStyle = outlineColor
           ctx.lineWidth = Math.max(1, outlineWidth * 0.9) // stem slightly thicker than leaf outline
           ctx.stroke()
@@ -353,6 +436,9 @@
 
           // Colors
           const fillRGBA = a => `rgba(40,125,75,${a.toFixed(3)})`
+
+          // Collect draw items for depth sorting
+          const items = []
 
           let side = 1
           for (let i = firstIdx; i <= lastIdx; i += step) {
@@ -383,20 +469,57 @@
             const Wd = baseWid * reveal
             const bend = leafletBend * (0.7 + 0.3 * (1 - tStem)) * reveal
 
-            drawLeaflet(
-              ctx,
-              sx,
-              sy,
+            // Queue primary leaflet
+            items.push({
+              type: 'leaf',
+              x: originX + sx,
+              y: originY + sy,
               theta,
               L,
-              Wd,
+              W: Wd,
               bend,
-              taperPowExp,
-              fillRGBA(fillOpacity),
-              outlineColor,
-              outlineWidth,
-              reveal // partial draw along midrib
-            )
+              taper: taperPowExp,
+              fill: fillRGBA(fillOpacity),
+              stroke: outlineColor,
+              lw: outlineWidth,
+              partial: reveal,
+              serrFreq,
+              serrAmp,
+              depthY: originY + sy
+            })
+
+            // Queue pinnules if enabled
+            if (pinnulesOn && pinCount > 0 && L > 0) {
+              for (let j = 1; j <= pinCount; j++) {
+                const u = j / (pinCount + 1)
+                if (u < 0.18 || u > 0.96) continue
+                const localAngle = theta + bend * Math.sin(u * Math.PI * 0.9)
+                const px = originX + sx + L * u * Math.cos(localAngle)
+                const py = originY + sy + L * u * Math.sin(localAngle)
+                const side2 = j % 2 === 0 ? 1 : -1
+                const theta2 = localAngle + deg(pinAngleDeg) * side2
+                const L2 = L * (pinScale / 100) * reveal
+                const W2 = L2 * 0.22
+                const bend2 = leafletBend * (pinBend / 100) * reveal
+                items.push({
+                  type: 'pinnule',
+                  x: px,
+                  y: py,
+                  theta: theta2,
+                  L: L2,
+                  W: W2,
+                  bend: bend2,
+                  taper: Math.max(0.5, taperPowExp * 0.95),
+                  fill: fillRGBA(fillOpacity),
+                  stroke: outlineColor,
+                  lw: Math.max(0.7, outlineWidth * 0.9),
+                  partial: reveal,
+                  serrFreq,
+                  serrAmp,
+                  depthY: py
+                })
+              }
+            }
 
             side *= -1
           }
@@ -407,19 +530,47 @@
             const [tipX, tipY] = stemPts[tipIdx]
             const thetaTip = tanAt(tipIdx)
             const tipReveal = smoothstep(0, 0.05, growth - 0.95)
+            items.push({
+              type: 'tip',
+              x: originX + tipX,
+              y: originY + tipY,
+              theta: thetaTip,
+              L: stemLen * 0.18 * tipReveal,
+              W: stemLen * 0.035 * tipReveal,
+              bend: leafletBend * 0.6 * tipReveal,
+              taper: taperPowExp,
+              fill: fillRGBA(fillOpacity),
+              stroke: outlineColor,
+              lw: outlineWidth,
+              partial: tipReveal,
+              serrFreq,
+              serrAmp,
+              depthY: originY + tipY
+            })
+          }
+
+          // Depth sort (back to front by world Y)
+          items.sort((a, b) => a.depthY - b.depthY)
+
+          // Draw items
+          for (const it of items) {
+            if (it.L <= 0 || it.W <= 0) continue
             drawLeaflet(
               ctx,
-              tipX,
-              tipY,
-              thetaTip,
-              stemLen * 0.18 * tipReveal,
-              stemLen * 0.035 * tipReveal,
-              leafletBend * 0.6 * tipReveal,
-              taperPowExp,
-              fillRGBA(fillOpacity),
-              outlineColor,
-              outlineWidth,
-              tipReveal
+              it.x,
+              it.y,
+              it.theta,
+              it.L,
+              it.W,
+              it.bend,
+              it.taper,
+              it.fill,
+              it.stroke,
+              it.lw,
+              it.partial,
+              P,
+              serrFreq,
+              serrAmp
             )
           }
 
@@ -440,7 +591,17 @@
             outlineWidth: Number($olw.value),
             outlineColor: $olc.value.replace('#', '#'), // hex -> canvas will handle
             fillOpacity: Number($fill.value) / 100,
-            growth: growth
+            growth: growth,
+            transparentBg: $transparentBg.checked,
+            perspectiveOn: $perspOn.checked,
+            perspective: Number($persp.value) / 100,
+            serrFreq: Number($serrFreq ? $serrFreq.value : 0),
+            serrAmp: Number($serrAmp ? $serrAmp.value : 0),
+            pinnulesOn: $pinnulesOn ? $pinnulesOn.checked : false,
+            pinCount: Number($pinCount ? $pinCount.value : 0),
+            pinScale: Number($pinScale ? $pinScale.value : 28),
+            pinAngleDeg: Number($pinAngle ? $pinAngle.value : 70),
+            pinBend: Number($pinBend ? $pinBend.value : 65)
           }
 
           // labels
@@ -454,6 +615,7 @@
           $fillVal.textContent = o.fillOpacity.toFixed(2)
           $gSpeedVal.textContent = Number($gSpeed.value)
           $gVal.textContent = Math.round(growth * 100) + '%'
+          $perspVal.textContent = Number($persp.value)
 
           return o
         }
@@ -472,6 +634,68 @@
         }
         requestAnimationFrame(tick)
 
+        // Variety presets
+        const VARIETIES = {
+          bracken: {
+            leafletCount: 28,
+            baseAngle: 48,
+            curv: 42,
+            bend: 22,
+            taper: 140,
+            olw: 1.2,
+            fill: 60
+          },
+          maidenhair: {
+            leafletCount: 46,
+            baseAngle: 24,
+            curv: 18,
+            bend: 18,
+            taper: 90,
+            olw: 0.8,
+            fill: 45
+          },
+          boston: {
+            leafletCount: 38,
+            baseAngle: 34,
+            curv: 30,
+            bend: 30,
+            taper: 110,
+            olw: 1.0,
+            fill: 55
+          },
+          staghorn: {
+            leafletCount: 22,
+            baseAngle: 56,
+            curv: 22,
+            bend: 14,
+            taper: 75,
+            olw: 1.1,
+            fill: 50
+          },
+          ostrich: {
+            leafletCount: 34,
+            baseAngle: 18,
+            curv: 8,
+            bend: 20,
+            taper: 130,
+            olw: 1.1,
+            fill: 58
+          }
+        }
+
+        function applyVariety(name) {
+          const v = VARIETIES[name]
+          if (!v) return
+          $leafletCount.value = String(v.leafletCount)
+          $baseAngle.value = String(v.baseAngle)
+          $curv.value = String(v.curv)
+          $bend.value = String(v.bend)
+          $taper.value = String(v.taper)
+          $olw.value = String(v.olw)
+          $fill.value = String(v.fill)
+          render()
+        }
+
         // Wire up UI
         ;[
           $leafletCount,
@@ -483,14 +707,40 @@
           $olc,
           $fill,
           $gManual,
-          $gSpeed
-        ].forEach(el => {
+          $gSpeed,
+          $serrFreq,
+          $serrAmp,
+          $pinnulesOn,
+          $pinCount,
+          $pinScale,
+          $pinAngle,
+          $pinBend
+        ].filter(Boolean).forEach(el => {
           el.addEventListener('input', () => {
             if (el === $gManual) {
               growth = Number($gManual.value) / 100
             }
+            // Any manual change sets variety to custom
+            if ($variety.value !== 'custom') $variety.value = 'custom'
             render()
           })
+        })
+
+        $variety.addEventListener('change', () => {
+          if ($variety.value === 'custom') return render()
+          // Auto-reset and animate on preset select
+          growth = 0
+          $gManual.value = 0
+          animOn = true
+          $toggleGrow.textContent = '⏸ Pause'
+          applyVariety($variety.value)
+        })
+
+        $transparentBg.addEventListener('change', render)
+        $perspOn.addEventListener('change', render)
+        $persp.addEventListener('input', () => {
+          if ($variety.value !== 'custom') $variety.value = 'custom'
+          render()
         })
 
         $toggleGrow.addEventListener('click', () => {
@@ -516,3 +766,34 @@
     </script>
   </body>
 </html>
+      <hr style="border-color: rgba(160, 220, 170, 0.25)" />
+
+      <!-- NEW: complexity controls -->
+      <div class="row">
+        <label>Serration Freq</label>
+        <input id="serrFreq" type="range" min="0" max="6" step="0.1" value="3" />
+      </div>
+      <div class="row">
+        <label>Serration Amp (%)</label>
+        <input id="serrAmp" type="range" min="0" max="60" step="1" value="18" />
+      </div>
+      <div class="row">
+        <label>Pinnules</label>
+        <input id="pinnulesOn" type="checkbox" />
+      </div>
+      <div class="row">
+        <label>Pinnule Count</label>
+        <input id="pinCount" type="range" min="0" max="18" value="8" />
+      </div>
+      <div class="row">
+        <label>Pinnule Scale (%)</label>
+        <input id="pinScale" type="range" min="10" max="50" value="28" />
+      </div>
+      <div class="row">
+        <label>Pinnule Angle (°)</label>
+        <input id="pinAngle" type="range" min="45" max="100" value="70" />
+      </div>
+      <div class="row">
+        <label>Pinnule Bend (%)</label>
+        <input id="pinBend" type="range" min="0" max="120" value="65" />
+      </div>
