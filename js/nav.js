@@ -313,6 +313,7 @@
       '<text x="50%" y="50%" fill="#688" font-size="24" dominant-baseline="middle" text-anchor="middle" font-family="system-ui, sans-serif">No Thumbnail</text>\n' +
       '</svg>'
     )
+    var fallbackThumb = '/images/thumbnails/redefineit_thumb.png'
     anchors.forEach(function (a) {
       var img = a.querySelector('img')
       if (!img) return
@@ -331,9 +332,10 @@
       var thumb = '/images/thumbnails/' + folder + '.png'
       if (img.src !== thumb) {
         img.onerror = function () {
-          this.onerror = null
-          var fb = this.dataset.fallback
-          this.src = fb || placeholder
+          // Try site-wide fallback first, then inline placeholder
+          var self = this
+          self.onerror = function () { self.onerror = null; self.src = placeholder }
+          self.src = fallbackThumb
         }
         img.src = thumb
       }
