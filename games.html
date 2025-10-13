@@ -6,9 +6,10 @@
     <title>Games — RedefineIt</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
     <meta name="theme-color" content="#0b0f13" />
+    <link href="css/index.css" rel="stylesheet" />
     <style>
-      :root { --bg:#0b0f13; --surface:rgba(15,22,34,0.72); --surface-strong:rgba(15,22,34,0.9); --outline:rgba(39,64,95,0.6); --accent:#8cc8ff; --accent-2:#b2e0ff; }
-      html, body { height: 100%; overflow: hidden; }
+      :root { --bg:#0b0f13; --surface:rgba(15,22,34,0.72); --surface-strong:rgba(15,22,34,0.9); --outline:rgba(39,64,95,0.6); --accent:#8cc8ff; --accent-2:#b2e0ff; --header-h:56px; }
+      html, body { min-height: 100%; overflow-x: hidden; }
       body { font-family: system-ui, sans-serif; background: var(--bg); color: #d9e7ff; padding: 2rem; line-height: 1.7; }
       h1 { margin: 0 0 8px; color: var(--accent); }
       .desc { margin-top: 8px; font-size: 14px; opacity: .9; }
@@ -20,7 +21,7 @@
       #bgWrap { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
       #bgCanvas { width: 100%; height: 100%; display: block; }
       #bgScrim { position: absolute; inset: 0; background: radial-gradient(ellipse at center, rgba(0,0,0,.18), rgba(0,0,0,.6)); }
-      .content { position: relative; z-index: 1; width: min(50vw, 980px); margin: 2rem auto; }
+      .content { position: relative; z-index: 1; width: min(50vw, 980px); margin: calc(2rem + var(--header-h)) auto 2rem; }
       @media (max-width: 1000px) { .content { width: 92vw; } }
       #slideArrow { position: fixed; right: 12px; top: 50%; transform: translateY(-50%); z-index: 4; width: 66px; height: 66px; border-radius: 50%; border: 1px solid var(--outline); background: rgba(15,22,34,0.75); color: #cfe8ff; display: grid; place-items: center; cursor: pointer; box-shadow: 0 8px 24px rgba(0,0,0,0.35); }
       #slideArrow:active { transform: translateY(-50%) scale(0.98); }
@@ -29,9 +30,18 @@
       #slideArrowLeft:active { transform: translateY(-50%) scale(0.98); }
       #slideArrowLeft svg { width: 28px; height: 28px; fill: #cfe8ff; }
       .panel { background: var(--surface); border: 1px solid var(--outline); border-radius: 16px; padding: 20px; box-shadow: 0 12px 40px rgba(0,0,0,0.45); }
-    </style>
+
+      /* Fixed Site Header */
+      .site-header { position: fixed; inset: 0 0 auto 0; height: var(--header-h); z-index: 4; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; background: rgba(15,22,34,0.72); border-bottom: 1px solid var(--outline); backdrop-filter: blur(8px); padding: 0 12px; }
+      .site-header .brand { justify-self: start; font-family: "SF Mono", "Roboto Mono", Menlo, Consolas, "Liberation Mono", monospace; font-weight: 800; letter-spacing: 1px; color: var(--accent-2); text-transform: uppercase; font-size: 14px; }
+      .site-header .site-nav { justify-self: center; display: flex; gap: 16px; }
+      .site-header .site-nav a { color: #cfe8ff; text-decoration: none; font-weight: 600; font-size: 13px; padding: 6px 8px; border-radius: 8px; transition: background-color 160ms ease, color 160ms ease; }
+      .site-header .site-nav a:hover { background: rgba(255,255,255,0.06); color: var(--accent-2); }
+      .site-header .spacer { justify-self: end; }
+  </style>
   </head>
   <body>
+    <div data-include="partials/header.html"></div>
     <div id="bgWrap" aria-hidden="true">
       <canvas id="bgCanvas"></canvas>
       <div id="bgScrim"></div>
@@ -55,6 +65,8 @@
       </div>
     </main>
 
+    <div data-include="partials/footer.html"></div>
+    <script src="js/includes.js"></script>
     <script src="js/nav.js"></script>
     <script src="js/starspinner.js"></script>
     <script>

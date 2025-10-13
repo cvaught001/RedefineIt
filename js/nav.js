@@ -64,6 +64,7 @@
     window.setTimeout(function () {
       content.classList.remove(outClass)
       content.innerHTML = newHTML
+      try { window.scrollTo({ top: 0, behavior: 'auto' }) } catch (e) { window.scrollTo(0, 0) }
       var preClass = dir === 'right' ? 'pre-enter-from-right' : 'pre-enter-from-left'
       content.classList.add(preClass)
       // Next frame: remove pre-enter to slide in
@@ -150,5 +151,15 @@
         swapContent(res.html, dir)
       })
       .catch(function () { /* ignore */ })
+  })
+
+  // Header nav: intercept clicks on data-nav-to
+  document.addEventListener('click', function (e) {
+    var link = e.target && e.target.closest && e.target.closest('a[data-nav-to]')
+    if (!link) return
+    var to = link.getAttribute('data-nav-to')
+    if (!to) return
+    e.preventDefault()
+    performTransition('right', to)
   })
 })()
