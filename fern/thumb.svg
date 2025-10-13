@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="420" viewBox="0 0 800 420">
+  <rect width="800" height="420" fill="#0d131a"/>
+  <text x="400" y="210" fill="#99e0b3" font-family="system-ui, sans-serif" font-size="44" text-anchor="middle" font-weight="700">Fern</text>
+  <text x="400" y="255" fill="#7fd6a1" font-family="system-ui, sans-serif" font-size="18" text-anchor="middle">Canvas Controls</text>
+</svg>
+

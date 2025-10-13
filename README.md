@@ -2,6 +2,52 @@
 
 Experiments with interactive multimedia using JS and Canvas
 
+## Project Thumbnails
+
+<table>
+  <tr>
+    <td align="center">
+      <a href="Fibonacci/index.html"><img src="Fibonacci/thumb.svg" alt="Fibonacci" width="320"/></a><br/>Fibonacci — Shell
+    </td>
+    <td align="center">
+      <a href="FibonacciRemix/index.html"><img src="FibonacciRemix/thumb.svg" alt="Fibonacci Remix" width="320"/></a><br/>Fibonacci Remix — Shell
+    </td>
+    <td align="center">
+      <a href="fern/index.html"><img src="fern/thumb.svg" alt="Fern" width="320"/></a><br/>Canvas Fern
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <a href="winamp-waves/index.html"><img src="winamp-waves/thumb.svg" alt="Winamp Waves" width="320"/></a><br/>Winamp Waves
+    </td>
+    <td align="center">
+      <a href="brickedin/index.html"><img src="brickedin/thumb.svg" alt="Blocked In" width="320"/></a><br/>Blocked In (Beta)
+    </td>
+    <td align="center">
+      <a href="evolvenine/index.html"><img src="evolvenine/thumb.svg" alt="Evolve Nine" width="320"/></a><br/>Evolve Nine Bounce
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <a href="frequency-spinner/dist/index.html"><img src="frequency-spinner/thumb.svg" alt="Frequency Spinner" width="320"/></a><br/>Frequency Spinner
+    </td>
+    <td align="center">
+      <a href="sodoku/dist/index.html"><img src="sodoku/thumb.svg" alt="Sudoku" width="320"/></a><br/>Sudoku
+    </td>
+    <td align="center">
+      <a href="sphere-vortex/dist/index.html"><img src="sphere-vortex/thumb.svg" alt="Sphere Vortex" width="320"/></a><br/>Sphere Vortex
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <a href="wave-anim-generator/dist/index.html"><img src="wave-anim-generator/thumb.svg" alt="Wave Anim Generator" width="320"/></a><br/>Wave Anim Generator
+    </td>
+    <td align="center">
+      <a href="EternalEffigy/Enochian/index.html"><img src="EternalEffigy/Enochian/thumb.svg" alt="Enochian" width="320"/></a><br/>Enochian — Magic Square
+    </td>
+  </tr>
+</table>
+
 ### 🧱 Bricked In
 
 https://redefineit.net/BrickedIn.html

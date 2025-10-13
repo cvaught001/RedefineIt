@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="420" viewBox="0 0 800 420">
+  <rect width="800" height="420" fill="#12161e"/>
+  <text x="400" y="210" fill="#f2d28a" font-family="system-ui, sans-serif" font-size="42" text-anchor="middle" font-weight="700">Blocked In</text>
+  <text x="400" y="252" fill="#e6c36b" font-family="system-ui, sans-serif" font-size="18" text-anchor="middle">Beta</text>
+</svg>
+

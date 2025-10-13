@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="420" viewBox="0 0 800 420">
+  <rect width="800" height="420" fill="#0c0f18"/>
+  <text x="400" y="210" fill="#c9d9ff" font-family="system-ui, sans-serif" font-size="42" text-anchor="middle" font-weight="700">Sphere Vortex</text>
+  <text x="400" y="252" fill="#a9c3ff" font-family="system-ui, sans-serif" font-size="18" text-anchor="middle">Dist Build</text>
+</svg>
+

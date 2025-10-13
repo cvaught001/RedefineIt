@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="420" viewBox="0 0 800 420">
+  <rect width="800" height="420" fill="#0c1418"/>
+  <text x="400" y="210" fill="#97e5ff" font-family="system-ui, sans-serif" font-size="40" text-anchor="middle" font-weight="700">Frequency Spinner</text>
+  <text x="400" y="250" fill="#b0f0ff" font-family="system-ui, sans-serif" font-size="18" text-anchor="middle">Dist Build</text>
+</svg>
+
