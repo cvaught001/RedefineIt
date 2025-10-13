@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+
+# Disallow private or build paths if needed
+# Disallow: /redefineit/
+
+Sitemap: https://redefineit.net/sitemap.xml
+

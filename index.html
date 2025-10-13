@@ -4,6 +4,46 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1.0" />
     <title>Project Index</title>
+    <!-- Site Icon -->
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="mask-icon" href="favicon.svg" color="#0b0f13" />
+    <!-- SEO meta -->
+    <meta name="description" content="RedefineIt — the personal site of Christopher M. Vaught: polymath full‑stack mobile web developer and award‑winning interactive multimedia designer exploring kinetic art with JavaScript, Canvas, and Web Audio." />
+    <meta name="keywords" content="Christopher M. Vaught, RedefineIt, kinetic art, interactive art, generative art, JavaScript, Canvas, Web Audio, motion graphics, full stack developer, mobile web, healthcare, fitness, marketing, hospitality, fulfillment systems" />
+    <meta name="author" content="Christopher M. Vaught" />
+    <meta name="robots" content="index,follow" />
+    <link rel="canonical" href="https://redefineit.net/" />
+
+    <!-- Open Graph / Twitter -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="RedefineIt" />
+    <meta property="og:title" content="RedefineIt — Kinetic Art & Interactive Systems" />
+    <meta property="og:description" content="Polymathic experiments by Christopher M. Vaught — full‑stack mobile web developer and award‑winning interactive multimedia designer." />
+    <meta property="og:url" content="https://redefineit.net/" />
+    <meta property="og:image" content="https://redefineit.net/starspawn/thumb.svg" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="RedefineIt — Kinetic Art & Interactive Systems" />
+    <meta name="twitter:description" content="Interactive experiments in JavaScript, Canvas, and Web Audio by Christopher M. Vaught." />
+    <meta name="twitter:image" content="https://redefineit.net/starspawn/thumb.svg" />
+    <meta name="theme-color" content="#0b0f13" />
+
+    <!-- JSON-LD: Person + Website -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "RedefineIt",
+      "url": "https://redefineit.net/",
+      "publisher": {
+        "@type": "Person",
+        "name": "Christopher M. Vaught",
+        "url": "https://redefineit.net/",
+        "sameAs": [
+          "https://www.linkedin.com/in/christopher-vaught-2981516/"
+        ]
+      }
+    }
+    </script>
     <!-- Template (Bootstrap) CSS for hybrid look -->
     <link
       href="websiteTemplate/css/bootstrap.min.css"
@@ -81,7 +121,10 @@
         padding: 10px 6px;
       }
       /* Ensure cards align to the left margin and consume available width */
-      #projectCarousel .item .card { min-width: 0; width: 100%; }
+      #projectCarousel .item .card {
+        min-width: 0;
+        width: 100%;
+      }
       .card {
         background: var(--surface-strong);
         border: 1px solid var(--outline);
@@ -201,36 +244,40 @@
 
     <div class="content container">
       <section id="about" class="intro">
-        <h1>Welcome to RedefineIt</h1>
+        <h1>Welcome to RedefineIt - Christopher M. Vaught</h1>
         <h2>
           Full-Stack Creator — Building Apps, Experiences & Interactive Art
         </h2>
         <p>
-          I’m Christopher M. Vaught — a polymath, Full-Stack Systems Engineer,
-          creative technologist, and award-winning interactive multimedia
-          designer, kinetic artist, and photographer.
+          I’m a <strong>Full-Stack Systems Engineer</strong>,
+          <strong>creative technologist</strong>, and
+          <strong>award-winning interactive multimedia designer</strong>,
+          <strong>kinetic artist</strong>, and <strong>photographer</strong>.
         </p>
+
         <p>
-          This is my playground for turning code into motion — where JavaScript,
-          Canvas, and Web Audio weave together into living, touchable canvases
-          that blur the line between art and technology.
+          This is my playground for turning code into motion — where
+          <strong>JavaScript</strong>, <strong>Canvas</strong>, and
+          <strong>Web Audio</strong> intertwine into
+          <em>living, touchable canvases</em> that blur the boundary between art
+          and technology.
         </p>
+
         <p>
-          Professionally, I’m a professional Full‑Stack Mobile Web developer who
-          has delivered cutting‑edge enterprise applications and solutions
-          across Healthcare, Fitness, Marketing, Hospitality, and Fulfillment
-          systems — architecting secure, scalable platforms. Here, I push pixels
-          and physics — layering engineering precision with creative expression
-          to explore the edges of kinetic art.
+          As a <strong>Full-Stack Mobile and Web Developer</strong>, I’ve
+          delivered secure, scalable enterprise applications across
+          <strong>Healthcare, Fitness, Marketing, Hospitality,</strong> and
+          <strong>Fulfillment</strong> — architecting platforms that unite
+          engineering precision with creative expression to explore the
+          frontiers of kinetic art.
         </p>
+
         <p>
-          A polymath at heart, I bridge engineering, design, sound, and
-          image‑making to craft playful, high‑performance experiences.
+          I bridge engineering, design, sound, and imagery to craft playful,
+          high-performance experiences, teach artists and game developers, and
+          build retro-inspired interactive games for web and mobile.
         </p>
-        <p>
-          I’ve also taught graphic artists and game developers, and I write my
-          own retro interactive games for the web and mobile apps.
-        </p>
+
         <p>
           Curious about my background? Connect on
           <a
@@ -415,7 +462,7 @@
     <script src="js/starspinner.js"></script>
     <script>
       // Initialize background starspinner
-      initStarspinner('#bgCanvas', { })
+      initStarspinner('#bgCanvas', {})
     </script>
     <!-- Template JS (optional for navbar toggle on small screens) -->
     <script src="websiteTemplate/js/jquery.js"></script>
