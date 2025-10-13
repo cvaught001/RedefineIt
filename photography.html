@@ -5,7 +5,33 @@
     <meta name="viewport" content="width=device-width,initial-scale=1.0" />
     <title>Photography — RedefineIt</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="mask-icon" href="favicon.svg" color="#0b0f13" />
     <meta name="theme-color" content="#0b0f13" />
+    <meta name="description" content="Selected photography exploring light, texture, and narrative by Christopher Vaught." />
+    <meta name="keywords" content="photography, art, visual narrative, Christopher Vaught, RedefineIt" />
+    <meta name="author" content="Christopher Vaught" />
+    <meta name="robots" content="index,follow" />
+    <link rel="canonical" href="https://redefineit.net/photography.html" />
+    <!-- Open Graph / Twitter -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="RedefineIt" />
+    <meta property="og:title" content="Photography — RedefineIt" />
+    <meta property="og:description" content="Selected photography exploring light, texture, and narrative." />
+    <meta property="og:url" content="https://redefineit.net/photography.html" />
+    <meta property="og:image" content="https://redefineit.net/starspawn/thumb.svg" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Photography — RedefineIt" />
+    <meta name="twitter:description" content="Selected photography exploring light, texture, and narrative." />
+    <meta name="twitter:image" content="https://redefineit.net/starspawn/thumb.svg" />
+    <!-- JSON-LD: WebPage -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "name": "Photography — RedefineIt",
+        "url": "https://redefineit.net/photography.html"
+      }
+    </script>
     <link href="css/index.css" rel="stylesheet" />
     <style>
       :root { --bg:#0b0f13; --surface:rgba(15,22,34,0.72); --surface-strong:rgba(15,22,34,0.9); --outline:rgba(39,64,95,0.6); --accent:#8cc8ff; --accent-2:#b2e0ff; --header-h:56px; }
@@ -62,6 +88,32 @@
       <div class="panel">
         <h1>Photography</h1>
         <p class="desc">Selected works in light, texture, and narrative — a visual counterpoint to interactive systems.</p>
+      </div>
+
+      <div class="panel">
+        <h2 class="section-title">Gallery</h2>
+        <div class="photo-grid" id="photoGrid">
+          <noscript>
+            <a class="photo-item" href="images/photography/image1.jpg" target="_blank" rel="noopener">
+              <img src="images/photography/image1.jpg" alt="Photograph 1" />
+            </a>
+            <a class="photo-item" href="images/photography/image2.jpg" target="_blank" rel="noopener">
+              <img src="images/photography/image2.jpg" alt="Photograph 2" />
+            </a>
+          </noscript>
+        </div>
+        <p class="note">Click any image to view larger and navigate.</p>
+      </div>
+
+      <!-- Lightbox overlay -->
+      <div class="lightbox" id="lightbox" aria-hidden="true" role="dialog" aria-modal="true">
+        <div class="lightbox-inner">
+          <img id="lightboxImg" class="lightbox-img enter" alt="Expanded photograph" />
+          <div id="lightboxCaption" class="lightbox-caption"></div>
+        </div>
+        <button id="lbPrev" class="lb-btn lb-prev" aria-label="Previous">&#x2039;</button>
+        <button id="lbNext" class="lb-btn lb-next" aria-label="Next">&#x203A;</button>
+        <button id="lbClose" class="lb-btn lb-close" aria-label="Close">&#x2715;</button>
       </div>
     </main>
 

@@ -87,16 +87,28 @@
             settings[k] = partial[k]
           }
         }
+      },
+      clear: function () {
+        // Force-clear the canvas so new colors show immediately
+        ctx.clearRect(0, 0, canvas.width, canvas.height)
+      },
+      setTheme: function (partial) {
+        this.update(partial)
+        this.clear()
       }
     }
     // Expose the latest instance for global updates
     global.__starspinner = instance
     // Also expose a convenience updater
-    global.updateStarspinner = function (partial) {
-      if (global.__starspinner && typeof global.__starspinner.update === 'function') {
-        global.__starspinner.update(partial)
-      }
+    global.updateStarspinner = function (partial, opts) {
+      var inst = global.__starspinner
+      if (!inst) return
+      if (opts && opts.reset && typeof inst.clear === 'function') inst.clear()
+      if (typeof inst.update === 'function') inst.update(partial)
     }
+
+    // Notify listeners that starspinner is ready
+    try { window.dispatchEvent(new CustomEvent('starspinner:ready')) } catch (e) {}
 
     return instance
   }

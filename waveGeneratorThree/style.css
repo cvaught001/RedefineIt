@@ -1,0 +1,21 @@
+html, body { margin:0; padding:0; overflow:hidden; width:100%; height:100%; background:black; font-family:Arial; }
+canvas { display:block; width:100vw; height:100vh; }
+
+#controlPanel {
+  position: fixed; bottom:10px; right:10px; width:280px; max-height:80vh; overflow-y:auto;
+  background: rgba(255,255,255,0.9); border-radius:8px; padding:10px; display:flex; flex-direction:column; gap:10px;
+  transition: transform 0.3s ease, opacity 0.3s ease; z-index:999;
+}
+#controlPanel.hidden { transform: translateX(100%); opacity:0; pointer-events:none; }
+#controlPanel.visible { transform: translateX(0); opacity:1; pointer-events:auto; }
+
+#panelToggleBtn, #soundToggleBtn {
+  position: fixed; bottom:20px; z-index:1000; padding:10px 14px; font-size:18px;
+  background: rgba(255,255,255,0.8); border:none; border-radius:50%; cursor:pointer;
+}
+#panelToggleBtn { right:20px; }
+#soundToggleBtn { right:70px; }
+
+.button-group, .slider-group, .text-group { display:flex; flex-direction:column; gap:8px; }
+.slider-group label > select, .slider-group label > input, .text-group label > textarea { width:100%; margin-top:4px; }
+.text-group textarea { resize: vertical; font-family: monospace; }

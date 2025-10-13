@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="UTF-8">
+    <title>Day 3 _FunctionalOscillatiorViz</title>
+    <link rel="stylesheet" href="./style.css">
+
+  </head>
+    
+  <body>
+  <canvas id="canvas"></canvas>
+
+<div id="controlPanel" class="hidden">
+  <div class="button-group">
+    <button id="toggleButton">Letters / Circles / Off</button>
+  </div>
+  <div class="slider-group">
+    <label>Waveform:
+      <select id="oscTypeSelect">
+        <option value="sine">Sine</option>
+        <option value="triangle">Triangle</option>
+        <option value="square">Square</option>
+        <option value="sawtooth">Sawtooth</option>
+      </select>
+    </label>
+    <label>LFO Amount:
+      <input type="range" id="lfoSlider" min="0" max="10" step="0.1" value="0">
+      <span id="lfoValue">0</span>
+    </label>
+    <label>Resonance:
+      <input type="range" id="resonanceSlider" min="0" max="20" step="0.1" value="1">
+      <span id="resonanceValue">1</span>
+    </label>
+    <label>Cutoff:
+      <input type="range" id="cutoffSlider" min="100" max="2000" step="1" value="1000">
+      <span id="cutoffValue">1000</span>
+    </label>
+    <label>Wave Amplitude:
+      <input type="range" id="amplitudeSlider" min="50" max="400" step="1" value="120">
+      <span id="amplitudeValue">120</span>
+    </label>
+  </div>
+  <div class="text-group">
+    <label>Display Text:
+      <textarea id="textInput" rows="3"></textarea>
+    </label>
+    <button id="applyTextBtn">Apply</button>
+  </div>
+</div>
+
+<button id="panelToggleBtn">⚙︎</button>
+<button id="soundToggleBtn">🔊</button>
+    <script  src="./script.js"></script>
+
+  </body>
+  
+</html>

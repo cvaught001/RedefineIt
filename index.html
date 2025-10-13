@@ -3,7 +3,9 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-    <title>Project Index</title>
+    <title>
+      RedefineIt — Software Engineering and Interactive Art by Christopher Vaught
+    </title>
     <!-- Site Icon -->
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
     <link rel="mask-icon" href="favicon.svg" color="#0b0f13" />
@@ -66,418 +68,8 @@
         }
       }
     </script>
-    <!-- Template (Bootstrap) CSS for hybrid look -->
+    <!-- Site styles -->
     <link href="css/index.css" rel="stylesheet" />
-    <link
-      href="websiteTemplate/css/bootstrap.min.css"
-      rel="stylesheet"
-      media="screen"
-    />
-    <link
-      href="websiteTemplate/css/style.css"
-      rel="stylesheet"
-      media="screen"
-    />
-    <link
-      href="websiteTemplate/color/default.css"
-      rel="stylesheet"
-      media="screen"
-    />
-    <style>
-      :root {
-        --bg: #0b0f13;
-        --surface: rgba(15, 22, 34, 0.72);
-        --surface-strong: rgba(15, 22, 34, 0.9);
-        --outline: rgba(39, 64, 95, 0.6);
-        --accent: #8cc8ff;
-        --accent-2: #b2e0ff;
-        --header-h: 56px;
-      }
-      html,
-      body {
-        min-height: 100%;
-        overflow-x: hidden;
-      }
-      body {
-        font-family: system-ui, sans-serif;
-        background: var(--bg);
-        color: #d9e7ff;
-        padding: 2rem;
-        line-height: 1.7; /* easier reading across site */
-        word-spacing: 0.02em; /* subtle breathing room between words */
-      }
-      h1 {
-        margin: 0 0 8px;
-        color: var(--accent);
-      }
-      .section-title {
-        margin-top: 18px;
-      }
-      h2 {
-        margin: 0 0 12px;
-        font-weight: 600;
-        color: var(--accent-2);
-        font-size: 18px;
-        letter-spacing: 0.5px;
-        text-transform: uppercase;
-      }
-      .intro {
-        background: var(--surface);
-        border: 1px solid var(--outline);
-        border-radius: 16px;
-        padding: 18px;
-        margin-bottom: 18px;
-        backdrop-filter: blur(8px);
-        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
-      }
-      .intro p {
-        margin: 12px 0; /* add space between sentences/paragraphs */
-      }
-      .intro a {
-        color: var(--accent-2);
-        font-weight: 700;
-      }
-      .carousel {
-        position: relative;
-        margin-top: 10px;
-      }
-      #projectCarousel .item {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-        gap: 14px;
-        align-items: start;
-        justify-items: stretch;
-        padding: 10px 6px;
-      }
-      /* Ensure cards align to the left margin and consume available width */
-      #projectCarousel .item .card {
-        min-width: 0;
-        width: 100%;
-      }
-      .card {
-        background: var(--surface-strong);
-        border: 1px solid var(--outline);
-        border-radius: 14px;
-        padding: 14px;
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
-        transition: box-shadow 160ms ease;
-        backdrop-filter: blur(6px);
-        min-width: 320px;
-        flex: 0 0 320px;
-        scroll-snap-align: center;
-        will-change: transform;
-      }
-      .card:hover {
-        box-shadow: 0 14px 36px rgba(0, 0, 0, 0.45);
-      }
-      .thumb {
-        display: block;
-        border-radius: 10px;
-        overflow: hidden;
-        border: 1px solid var(--outline);
-        background: #0f1622;
-        aspect-ratio: 16/9;
-        margin-bottom: 10px;
-      }
-      .thumb img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        display: block;
-      }
-      /* removed old custom .nav styles to avoid conflict with Bootstrap */
-      .card a {
-        color: #9fd6ff;
-        text-decoration: none;
-        font-weight: 700;
-        letter-spacing: 0.2px;
-      }
-      .desc {
-        margin-top: 8px;
-        font-size: 13px;
-        line-height: 1.6;
-        opacity: 0.88;
-      }
-      .desc a {
-        color: var(--accent-2);
-        font-weight: 600;
-      }
-      .note {
-        margin-top: 18px;
-        font-size: 12px;
-        opacity: 0.8;
-      }
-      /* Slide panel + arrow */
-      #slideArrow {
-        position: fixed;
-        right: 12px;
-        top: 50%;
-        transform: translateY(-50%);
-        z-index: 4;
-        width: 66px;
-        height: 66px;
-        border-radius: 50%;
-        border: 1px solid var(--outline);
-        background: rgba(15, 22, 34, 0.75);
-        color: #cfe8ff;
-        display: grid;
-        place-items: center;
-        cursor: pointer;
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
-      }
-      #slideArrow:active {
-        transform: translateY(-50%) scale(0.98);
-      }
-      #slideArrow svg {
-        width: 28px;
-        height: 28px;
-        fill: #cfe8ff;
-        transition: transform 240ms ease;
-      }
-      #slideArrow svg.flip {
-        transform: scaleX(-1);
-      }
-      #slideArrowLeft {
-        position: fixed;
-        left: 12px;
-        top: 50%;
-        transform: translateY(-50%);
-        z-index: 4;
-        width: 66px;
-        height: 66px;
-        border-radius: 50%;
-        border: 1px solid var(--outline);
-        background: rgba(15, 22, 34, 0.75);
-        color: #cfe8ff;
-        display: grid;
-        place-items: center;
-        cursor: pointer;
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
-      }
-      #slideArrowLeft:active {
-        transform: translateY(-50%) scale(0.98);
-      }
-      #slideArrowLeft svg {
-        width: 28px;
-        height: 28px;
-        fill: #cfe8ff;
-        transition: transform 240ms ease;
-      }
-      /* Left defaults to pointing left */
-      #slideArrowLeft svg.flip {
-        transform: scaleX(-1);
-      }
-      /* Carousel control arrow styling */
-      .carousel-control {
-        width: 66px;
-        height: 66px;
-        top: 50%;
-        transform: translateY(-50%);
-        background: rgba(15, 22, 34, 0.75);
-        border: 1px solid var(--outline);
-        border-radius: 50%;
-        text-shadow: none;
-        opacity: 0.95;
-        display: grid;
-        place-items: center;
-      }
-      .carousel-control:hover,
-      .carousel-control:focus {
-        opacity: 1;
-      }
-      .carousel-control .sr-only + span[aria-hidden='true'] {
-        display: none;
-      }
-      .carousel-control span[aria-hidden='true'] {
-        display: none;
-      }
-      .left.carousel-control:after,
-      .right.carousel-control:after {
-        content: '';
-        display: block;
-        width: 0;
-        height: 0;
-        border-top: 12px solid transparent;
-        border-bottom: 12px solid transparent;
-      }
-      .right.carousel-control:after {
-        border-left: 18px solid #cfe8ff;
-      }
-      .left.carousel-control:after {
-        border-right: 18px solid #cfe8ff;
-      }
-      /* removed bottom arrow */
-      #bgWrap,
-      .content {
-        transition: transform 480ms ease;
-        will-change: transform;
-      }
-      .slide-out {
-        transform: translateX(-100vw);
-      }
-      .slide-out-right {
-        transform: translateX(100vw);
-      }
-      .pre-enter-from-right {
-        transform: translateX(100vw);
-      }
-      .pre-enter-from-left {
-        transform: translateX(-100vw);
-      }
-      #rightPanel {
-        position: fixed;
-        inset: 0;
-        z-index: 3;
-        background: rgba(15, 22, 34, 0.92);
-        border-left: 1px solid var(--outline);
-        transform: translateX(100vw);
-        transition: transform 480ms ease;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 2rem;
-      }
-      #rightPanel.show {
-        transform: translateX(0);
-      }
-      #rightPanel .panel-inner {
-        max-width: 900px;
-        width: min(70vw, 900px);
-        background: var(--surface);
-        border: 1px solid var(--outline);
-        border-radius: 16px;
-        padding: 24px;
-        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
-        text-align: center;
-      }
-      #leftPanel {
-        position: fixed;
-        inset: 0;
-        z-index: 3;
-        background: rgba(15, 22, 34, 0.92);
-        border-right: 1px solid var(--outline);
-        transform: translateX(-100vw);
-        transition: transform 480ms ease;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 2rem;
-      }
-      #leftPanel.show {
-        transform: translateX(0);
-      }
-      #leftPanel .panel-inner {
-        max-width: 900px;
-        width: min(70vw, 900px);
-        background: var(--surface);
-        border: 1px solid var(--outline);
-        border-radius: 16px;
-        padding: 24px;
-        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
-        text-align: center;
-      }
-      #bgWrap {
-        position: fixed;
-        inset: 0;
-        z-index: 0;
-        pointer-events: none;
-      }
-      #bgCanvas {
-        width: 100%;
-        height: 100%;
-        display: block;
-      }
-      #bgScrim {
-        position: absolute;
-        inset: 0;
-        background: radial-gradient(
-          ellipse at center,
-          rgba(0, 0, 0, 0.18),
-          rgba(0, 0, 0, 0.6)
-        );
-      }
-      .content {
-        position: relative;
-        z-index: 1;
-        width: min(50vw, 980px);
-        margin: calc(2rem + var(--header-h)) auto 2rem;
-      }
-      @media (max-width: 1000px) {
-        .content {
-          width: 92vw;
-        }
-      }
-      /* Hybrid navbar styling */
-      .navbar {
-        position: sticky;
-        top: 12px;
-        z-index: 3;
-        background: rgba(15, 22, 34, 0.75) !important;
-        border: 1px solid var(--outline);
-        border-radius: 12px;
-        backdrop-filter: blur(8px);
-      }
-      .navbar .navbar-brand,
-      .navbar-nav > li > a {
-        color: #cfe8ff !important;
-      }
-      .navbar .navbar-brand {
-        font-weight: 800;
-        letter-spacing: 0.4px;
-      }
-      .navbar .navbar-toggle {
-        border-color: var(--outline);
-      }
-      .navbar .icon-bar {
-        background: #cfe8ff;
-      }
-
-      /* Fixed Site Header */
-      .site-header {
-        position: fixed;
-        inset: 0 0 auto 0;
-        height: var(--header-h);
-        z-index: 4;
-        display: grid;
-        grid-template-columns: 1fr auto 1fr;
-        align-items: center;
-        background: rgba(15, 22, 34, 0.72);
-        border-bottom: 1px solid var(--outline);
-        backdrop-filter: blur(8px);
-        padding: 0 12px;
-      }
-      .site-header .brand {
-        justify-self: start;
-        font-family: 'SF Mono', 'Roboto Mono', Menlo, Consolas,
-          'Liberation Mono', monospace;
-        font-weight: 800;
-        letter-spacing: 1px;
-        color: var(--accent-2);
-        text-transform: uppercase;
-        font-size: 14px;
-      }
-      .site-header .site-nav {
-        justify-self: center;
-        display: flex;
-        gap: 16px;
-      }
-      .site-header .site-nav a {
-        color: #cfe8ff;
-        text-decoration: none;
-        font-weight: 600;
-        font-size: 13px;
-        padding: 6px 8px;
-        border-radius: 8px;
-        transition: background-color 160ms ease, color 160ms ease;
-      }
-      .site-header .site-nav a:hover {
-        background: rgba(255, 255, 255, 0.06);
-        color: var(--accent-2);
-      }
-      .site-header .spacer {
-        justify-self: end;
-      }
-    </style>
   </head>
   <body>
     <div data-include="partials/header.html"></div>
@@ -507,67 +99,42 @@
         <polygon points="8,5 18,12 8,19" />
       </svg>
     </button>
-    <div id="rightPanel" aria-hidden="true">
-      <div class="panel-inner">
-        <h1>Empty Content page</h1>
-        <p class="desc">
-          This space is ready for new content. Use this panel to showcase
-          Photography, Professional Work, or any focused story.
-        </p>
-      </div>
-    </div>
-    <div id="leftPanel" aria-hidden="true">
-      <div class="panel-inner">
-        <h1>Empty Content page</h1>
-        <p class="desc">
-          Left panel placeholder — add narratives, galleries, or additional
-          navigation.
-        </p>
-      </div>
-    </div>
 
-    <div class="content container">
-      <section id="about" class="intro">
-        <h1>RedefineIt — Interactive Art & Engineering</h1>
-        <p class="subheader">by Christopher Vaught</p>
+    <div class="content">
+      <div class="panel">
+        <section id="intro" class="site-intro">
+        <h1>Software Engineering & Interactive Art</h1>
+        <p class="subtitle">by Christopher Vaught</p>
+
         <p>
-          I’m Christopher Vaught — a Full-Stack Systems Engineer, creative
-          technologist, and award-winning interactive multimedia designer,
-          kinetic artist, and photographer.
+          I’m — a Full-Stack Systems Engineer and creative technologist who
+          builds secure, scalable software and explores how code can also become
+          art.
         </p>
 
         <p>
-          I’m a <strong>Full-Stack Systems Engineer</strong>,
-          <strong>creative technologist</strong>, and
-          <strong>award-winning interactive multimedia designer</strong>,
-          <strong>kinetic artist</strong>, and <strong>photographer</strong>.
+          <strong>RedefineIt</strong> is my workshop for combining
+          <strong>engineering precision</strong> with
+          <strong>creative exploration</strong> — transforming JavaScript,
+          Canvas, and Web Audio into living, reactive compositions.
         </p>
 
         <p>
-          This is my playground for turning code into motion — where
-          <strong>JavaScript</strong>, <strong>Canvas</strong>, and
-          <strong>Web Audio</strong> intertwine into
-          <em>living, touchable canvases</em> that blur the boundary between art
-          and technology.
+          I’ve developed enterprise-grade applications across healthcare,
+          fitness, marketing, and fulfillment — platforms built for performance,
+          reliability, and design integrity.
         </p>
 
         <p>
-          As a <strong>Full-Stack Mobile and Web Developer</strong>, I’ve
-          delivered secure, scalable enterprise applications across
-          <strong>Healthcare, Fitness, Marketing, Hospitality,</strong> and
-          <strong>Fulfillment</strong> — architecting platforms that unite
-          engineering precision with creative expression to explore the
-          frontiers of kinetic art.
+          Here, I bridge
+          <strong>software engineering, design, and sound</strong> to create
+          high-performance experiences and
+          <strong>retro-inspired experiments</strong> that celebrate the playful
+          side of technology.
         </p>
 
         <p>
-          I bridge engineering, design, sound, and imagery to craft playful,
-          high-performance experiences, teach artists and game developers, and
-          build retro-inspired interactive games for web and mobile.
-        </p>
-
-        <p>
-          Curious about my background? Connect on
+          Curious about my work? Connect on
           <a
             href="https://www.linkedin.com/in/christopher-vaught-2981516/"
             target="_blank"
@@ -577,10 +144,12 @@
           or reach out at
           <a href="mailto:cmvaught@redefineit.net">cmvaught@redefineit.net</a>.
         </p>
-      </section>
-      <h1 id="experiments" class="section-title">
+        </section>
+      </div>
+
+      <h2 id="experiments" class="section-title">
         Experiments in Kinetic Form, Light, and Interactive Design
-      </h1>
+      </h2>
       <div
         id="projectCarousel"
         class="carousel slide"
@@ -679,8 +248,6 @@
         glow: 22
       })
     </script>
-    <!-- Template JS (optional for navbar toggle on small screens) -->
-    <script src="websiteTemplate/js/jquery.js"></script>
-    <script src="websiteTemplate/js/bootstrap.min.js"></script>
+    
   </body>
 </html>

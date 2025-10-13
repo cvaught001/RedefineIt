@@ -5,40 +5,235 @@
     <meta name="viewport" content="width=device-width,initial-scale=1.0" />
     <title>Blogs — RedefineIt</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="mask-icon" href="favicon.svg" color="#0b0f13" />
     <meta name="theme-color" content="#0b0f13" />
+    <meta
+      name="description"
+      content="Notes on engineering, design systems, and the creative process by Christopher Vaught."
+    />
+    <meta
+      name="keywords"
+      content="blogs, articles, engineering, design systems, creative process, RedefineIt"
+    />
+    <meta name="author" content="Christopher Vaught" />
+    <meta name="robots" content="index,follow" />
+    <link rel="canonical" href="https://redefineit.net/blogs.html" />
+    <!-- Open Graph / Twitter -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="RedefineIt" />
+    <meta property="og:title" content="Blogs — RedefineIt" />
+    <meta
+      property="og:description"
+      content="Notes on engineering, design systems, and the creative process."
+    />
+    <meta property="og:url" content="https://redefineit.net/blogs.html" />
+    <meta
+      property="og:image"
+      content="https://redefineit.net/starspawn/thumb.svg"
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Blogs — RedefineIt" />
+    <meta
+      name="twitter:description"
+      content="Notes on engineering, design systems, and the creative process."
+    />
+    <meta
+      name="twitter:image"
+      content="https://redefineit.net/starspawn/thumb.svg"
+    />
+    <!-- JSON-LD: WebPage -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "name": "Blogs — RedefineIt",
+        "url": "https://redefineit.net/blogs.html"
+      }
+    </script>
     <link href="css/index.css" rel="stylesheet" />
     <style>
-      :root { --bg:#0b0f13; --surface:rgba(15,22,34,0.72); --surface-strong:rgba(15,22,34,0.9); --outline:rgba(39,64,95,0.6); --accent:#8cc8ff; --accent-2:#b2e0ff; --header-h:56px; }
-      html, body { min-height: 100%; overflow-x: hidden; }
-      body { font-family: system-ui, sans-serif; background: var(--bg); color: #d9e7ff; padding: 2rem; line-height: 1.7; }
-      h1 { margin: 0 0 8px; color: var(--accent); }
-      .desc { margin-top: 8px; font-size: 14px; opacity: .9; }
-      #bgWrap, .content { transition: transform 480ms ease; will-change: transform; }
-      .slide-out { transform: translateX(-100vw); }
-      .slide-out-right { transform: translateX(100vw); }
-      .pre-enter-from-right { transform: translateX(100vw); }
-      .pre-enter-from-left { transform: translateX(-100vw); }
-      #bgWrap { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
-      #bgCanvas { width: 100%; height: 100%; display: block; }
-      #bgScrim { position: absolute; inset: 0; background: radial-gradient(ellipse at center, rgba(0,0,0,.18), rgba(0,0,0,.6)); }
-      .content { position: relative; z-index: 1; width: min(50vw, 980px); margin: calc(2rem + var(--header-h)) auto 2rem; }
-      @media (max-width: 1000px) { .content { width: 92vw; } }
-      #slideArrow { position: fixed; right: 12px; top: 50%; transform: translateY(-50%); z-index: 4; width: 66px; height: 66px; border-radius: 50%; border: 1px solid var(--outline); background: rgba(15,22,34,0.75); color: #cfe8ff; display: grid; place-items: center; cursor: pointer; box-shadow: 0 8px 24px rgba(0,0,0,0.35); }
-      #slideArrow:active { transform: translateY(-50%) scale(0.98); }
-      #slideArrow svg { width: 28px; height: 28px; fill: #cfe8ff; }
-      #slideArrowLeft { position: fixed; left: 12px; top: 50%; transform: translateY(-50%); z-index: 4; width: 66px; height: 66px; border-radius: 50%; border: 1px solid var(--outline); background: rgba(15,22,34,0.75); color: #cfe8ff; display: grid; place-items: center; cursor: pointer; box-shadow: 0 8px 24px rgba(0,0,0,0.35); }
-      #slideArrowLeft:active { transform: translateY(-50%) scale(0.98); }
-      #slideArrowLeft svg { width: 28px; height: 28px; fill: #cfe8ff; }
-      .panel { background: var(--surface); border: 1px solid var(--outline); border-radius: 16px; padding: 20px; box-shadow: 0 12px 40px rgba(0,0,0,0.45); }
+      :root {
+        --bg: #0b0f13;
+        --surface: rgba(15, 22, 34, 0.72);
+        --surface-strong: rgba(15, 22, 34, 0.9);
+        --outline: rgba(39, 64, 95, 0.6);
+        --accent: #8cc8ff;
+        --accent-2: #b2e0ff;
+        --header-h: 56px;
+      }
+      html,
+      body {
+        min-height: 100%;
+        overflow-x: hidden;
+      }
+      body {
+        font-family: system-ui, sans-serif;
+        background: var(--bg);
+        color: #d9e7ff;
+        padding: 2rem;
+        line-height: 1.7;
+      }
+      h1 {
+        margin: 0 0 8px;
+        color: var(--accent);
+      }
+      .desc {
+        margin-top: 8px;
+        font-size: 14px;
+        opacity: 0.9;
+      }
+      #bgWrap,
+      .content {
+        transition: transform 480ms ease;
+        will-change: transform;
+      }
+      .slide-out {
+        transform: translateX(-100vw);
+      }
+      .slide-out-right {
+        transform: translateX(100vw);
+      }
+      .pre-enter-from-right {
+        transform: translateX(100vw);
+      }
+      .pre-enter-from-left {
+        transform: translateX(-100vw);
+      }
+      #bgWrap {
+        position: fixed;
+        inset: 0;
+        z-index: 0;
+        pointer-events: none;
+      }
+      #bgCanvas {
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+      #bgScrim {
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(
+          ellipse at center,
+          rgba(0, 0, 0, 0.18),
+          rgba(0, 0, 0, 0.6)
+        );
+      }
+      .content {
+        position: relative;
+        z-index: 1;
+        width: min(50vw, 980px);
+        margin: calc(2rem + var(--header-h)) auto 2rem;
+      }
+      @media (max-width: 1000px) {
+        .content {
+          width: 92vw;
+        }
+      }
+      #slideArrow {
+        position: fixed;
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        z-index: 4;
+        width: 66px;
+        height: 66px;
+        border-radius: 50%;
+        border: 1px solid var(--outline);
+        background: rgba(15, 22, 34, 0.75);
+        color: #cfe8ff;
+        display: grid;
+        place-items: center;
+        cursor: pointer;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+      }
+      #slideArrow:active {
+        transform: translateY(-50%) scale(0.98);
+      }
+      #slideArrow svg {
+        width: 28px;
+        height: 28px;
+        fill: #cfe8ff;
+      }
+      #slideArrowLeft {
+        position: fixed;
+        left: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        z-index: 4;
+        width: 66px;
+        height: 66px;
+        border-radius: 50%;
+        border: 1px solid var(--outline);
+        background: rgba(15, 22, 34, 0.75);
+        color: #cfe8ff;
+        display: grid;
+        place-items: center;
+        cursor: pointer;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+      }
+      #slideArrowLeft:active {
+        transform: translateY(-50%) scale(0.98);
+      }
+      #slideArrowLeft svg {
+        width: 28px;
+        height: 28px;
+        fill: #cfe8ff;
+      }
+      .panel {
+        background: var(--surface);
+        border: 1px solid var(--outline);
+        border-radius: 16px;
+        padding: 20px;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+      }
 
       /* Fixed Site Header */
-      .site-header { position: fixed; inset: 0 0 auto 0; height: var(--header-h); z-index: 4; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; background: rgba(15,22,34,0.72); border-bottom: 1px solid var(--outline); backdrop-filter: blur(8px); padding: 0 12px; }
-      .site-header .brand { justify-self: start; font-family: "SF Mono", "Roboto Mono", Menlo, Consolas, "Liberation Mono", monospace; font-weight: 800; letter-spacing: 1px; color: var(--accent-2); text-transform: uppercase; font-size: 14px; }
-      .site-header .site-nav { justify-self: center; display: flex; gap: 16px; }
-      .site-header .site-nav a { color: #cfe8ff; text-decoration: none; font-weight: 600; font-size: 13px; padding: 6px 8px; border-radius: 8px; transition: background-color 160ms ease, color 160ms ease; }
-      .site-header .site-nav a:hover { background: rgba(255,255,255,0.06); color: var(--accent-2); }
-      .site-header .spacer { justify-self: end; }
-  </style>
+      .site-header {
+        position: fixed;
+        inset: 0 0 auto 0;
+        height: var(--header-h);
+        z-index: 4;
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        align-items: center;
+        background: rgba(15, 22, 34, 0.72);
+        border-bottom: 1px solid var(--outline);
+        backdrop-filter: blur(8px);
+        padding: 0 12px;
+      }
+      .site-header .brand {
+        justify-self: start;
+        font-family: 'SF Mono', 'Roboto Mono', Menlo, Consolas,
+          'Liberation Mono', monospace;
+        font-weight: 800;
+        letter-spacing: 1px;
+        color: var(--accent-2);
+        text-transform: uppercase;
+        font-size: 14px;
+      }
+      .site-header .site-nav {
+        justify-self: center;
+        display: flex;
+        gap: 16px;
+      }
+      .site-header .site-nav a {
+        color: #cfe8ff;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 13px;
+        padding: 6px 8px;
+        border-radius: 8px;
+        transition: background-color 160ms ease, color 160ms ease;
+      }
+      .site-header .site-nav a:hover {
+        background: rgba(255, 255, 255, 0.06);
+        color: var(--accent-2);
+      }
+      .site-header .spacer {
+        justify-self: end;
+      }
+    </style>
   </head>
   <body>
     <div data-include="partials/header.html"></div>
@@ -61,7 +256,118 @@
     <main class="content">
       <div class="panel">
         <h1>Blogs</h1>
-        <p class="desc">Notes on engineering, design systems, and the creative process — essays and snippets to come.</p>
+        <p class="desc">
+          Notes on engineering, design systems, and the creative process —
+          essays and snippets to come.
+        </p>
+      </div>
+
+      <div class="panel">
+        <h2 class="section-title">CodePen Sketchbook</h2>
+        <p>
+          I share quick studies and micro‑experiments on CodePen — small loops,
+          motion sketches, and UI ideas. Browse and follow here:
+          <a href="https://codepen.io/cmvaught" target="_blank" rel="noopener"
+            >codepen.io/cmvaught</a
+          >.
+        </p>
+      </div>
+
+      <div id="blogList"></div>
+
+      <div id="blogStatic">
+        <article class="panel blog-post">
+          <h2 class="post-title"><a href="blog/agentic-ai.html">Building Smarter Content Workflows with Agentic AI and Visual Studio</a></h2>
+          <div class="post-meta">By Christopher Vaught • Oct 2025 • 5 min read</div>
+          <a class="post-cover" href="blog/agentic-ai.html">
+            <img src="/images/blog/WaverThree.png" alt="Agentic AI workflows cover" />
+          </a>
+          <p>
+            Use Agentic AI (with Codex in Visual Studio) to proof links,
+            write robots.txt and meta tags, and accelerate content workflows —
+            used thoughtfully to amplify judgment, not replace it.
+          </p>
+          <div class="post-tags">
+            <span class="post-tag">Agentic AI</span>
+            <span class="post-tag">Content</span>
+            <span class="post-tag">Visual Studio</span>
+          </div>
+          <p class="note">
+            Read more: <a href="blog/agentic-ai.html">Full post</a>
+          </p>
+        </article>
+
+        <article class="panel blog-post">
+          <h2 class="post-title">
+            <a href="blog/fibonacci-flow.html"
+              >Fibonacci Flow — Spirals in Motion</a
+            >
+          </h2>
+          <div class="post-meta">
+            By Christopher Vaught • Oct 2025 • 6 min read
+          </div>
+          <a class="post-cover" href="blog/fibonacci-flow.html">
+            <img src="/images/blog/Fibonacci.png" alt="Fibonacci spiral cover" />
+          </a>
+          <p>
+            I’ve always been fascinated by the <em>Fibonacci sequence</em> — the
+            way simple ratios appear in shells, plants, and galaxies. This study
+            turns that math into motion: drawing arcs, rectangles, and golden
+            angle steps to reveal living patterns.
+          </p>
+          <p>
+            The first prototype mapped squares to a growing grid and animated
+            bezier arcs between them. The remix focused on smoothing the camera
+            and using subtle color drift to better suggest depth. Audio hooks let
+            the rhythm lock to growth steps and create a meditative pace.
+          </p>
+          <p>
+            The fun part is how tiny changes ripple: adjust the angle a few
+            degrees, add easing to radius growth, or modulate hue by step — and a
+            new family of spirals appears.
+          </p>
+          <div class="post-tags">
+            <span class="post-tag">Fibonacci</span>
+            <span class="post-tag">Generative Art</span>
+            <span class="post-tag">Canvas</span>
+            <span class="post-tag">Creative Coding</span>
+          </div>
+          <p class="note">
+            Read more: <a href="blog/fibonacci-flow.html">Full post</a> — Demos:
+            <a href="Fibonacci/index.html">Fibonacci</a> ·
+            <a href="FibonacciRemix/index.html">Fibonacci Remix</a>
+          </p>
+        </article>
+
+        <article class="panel blog-post">
+          <h2 class="post-title">
+            <a href="blog/sound-experiment.html"
+              >Shaping Sound — An Interactive Audio Sketch</a
+            >
+          </h2>
+          <div class="post-meta">
+            By Christopher Vaught • Oct 2025 • 4 min read
+          </div>
+          <a class="post-cover" href="blog/sound-experiment.html">
+            <img
+              src="/images/blog/soundExperiment.png"
+              alt="Sound Experiment cover"
+            />
+          </a>
+          <p>
+            A playful Web Audio + Canvas study where oscillators, filters, and
+            visuals respond to live tweaks for synesthetic feedback.
+          </p>
+          <div class="post-tags">
+            <span class="post-tag">Web Audio</span>
+            <span class="post-tag">Generative Visuals</span>
+            <span class="post-tag">Creative Coding</span>
+          </div>
+          <p class="note">
+            Read more: <a href="blog/sound-experiment.html">Full post</a> — Try
+            it: <a href="SoundExperiment/index.html">Sound Experiment</a>
+          </p>
+        </article>
       </div>
     </main>
 
@@ -77,4 +383,4 @@
       })
     </script>
   </body>
-  </html>
+</html>

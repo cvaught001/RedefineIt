@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Shaping Sound — An Interactive Audio Sketch</title>
+    <link rel="icon" href="../favicon.svg" type="image/svg+xml" />
+    <link rel="mask-icon" href="../favicon.svg" color="#0b0f13" />
+    <meta name="theme-color" content="#0b0f13" />
+    <meta
+      name="description"
+      content="A playful Web Audio + Canvas study where oscillators, filters, and visuals respond to live tweaks for synesthetic feedback."
+    />
+    <meta
+      name="keywords"
+      content="Web Audio, interactive audio, generative visuals, Canvas, creative coding, RedefineIt"
+    />
+    <meta name="author" content="Christopher Vaught" />
+    <meta name="robots" content="index,follow" />
+    <link
+      rel="canonical"
+      href="https://redefineit.net/blog/sound-experiment.html"
+    />
+    <meta property="og:type" content="article" />
+    <meta property="og:site_name" content="RedefineIt" />
+    <meta
+      property="og:title"
+      content="Shaping Sound — An Interactive Audio Sketch"
+    />
+    <meta
+      property="og:description"
+      content="Oscillators, filters, and visuals responding to live tweaks — a playful audio+visual study."
+    />
+    <meta
+      property="og:url"
+      content="https://redefineit.net/blog/sound-experiment.html"
+    />
+    <meta
+      property="og:image"
+      content="https://redefineit.net/SoundExperiment/thumb.svg"
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta
+      name="twitter:title"
+      content="Shaping Sound — An Interactive Audio Sketch"
+    />
+    <meta
+      name="twitter:description"
+      content="Oscillators, filters, and visuals responding to live tweaks — a playful audio+visual study."
+    />
+    <meta
+      name="twitter:image"
+      content="https://redefineit.net/SoundExperiment/thumb.svg"
+    />
+    <link href="../css/index.css" rel="stylesheet" />
+  </head>
+  <body>
+    <div data-include="../partials/header.html"></div>
+    <div id="bgWrap" aria-hidden="true">
+      <canvas id="bgCanvas"></canvas>
+      <div id="bgScrim"></div>
+    </div>
+
+    <main class="content">
+      <article class="panel blog-post">
+        <h1 class="post-title">Shaping Sound — An Interactive Audio Sketch</h1>
+        <div class="post-meta">
+          By Christopher Vaught • Oct 2025 • 4 min read
+        </div>
+        <a class="post-cover" href="../SoundExperiment/index.html">
+          <img
+            src="/images/blog/soundExperiment.png"
+            alt="Sound Experiment cover"
+          />
+        </a>
+        <p>
+          This sketch explores the <strong>Web Audio API</strong> as an
+          instrument. Oscillators and filters route through a simple graph while
+          visuals mirror amplitude and frequency changes for quick, intuitive
+          feedback.
+        </p>
+        <p>
+          It’s designed for play: toggle audio, tweak parameters, and watch the
+          system respond. Small UI constraints keep it approachable while still
+          hinting at the expressive depth behind signal routing.
+        </p>
+        <div class="post-tags">
+          <span class="post-tag">Web Audio</span>
+          <span class="post-tag">Generative Visuals</span>
+          <span class="post-tag">Creative Coding</span>
+        </div>
+        <p class="note">
+          Try it here:
+          <a href="../SoundExperiment/index.html">Sound Experiment</a>
+        </p>
+      </article>
+    </main>
+
+    <div data-include="../partials/footer.html"></div>
+    <script src="../js/includes.js"></script>
+    <script src="../js/nav.js"></script>
+    <script src="../js/starspinner.js"></script>
+    <script>
+      initStarspinner('#bgCanvas', {
+        lineColor: 'rgba(139, 255, 196, 0.9)',
+        trail: 0.23,
+        glow: 20
+      })
+    </script>
+  </body>
+</html>

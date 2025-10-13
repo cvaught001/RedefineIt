@@ -5,40 +5,217 @@
     <meta name="viewport" content="width=device-width,initial-scale=1.0" />
     <title>Kinetic Art — RedefineIt</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="mask-icon" href="favicon.svg" color="#0b0f13" />
     <meta name="theme-color" content="#0b0f13" />
+    <meta name="description" content="Kinetic art, interactive animation, and generative visuals — where math becomes motion." />
+    <meta name="keywords" content="kinetic art, generative art, interactive animation, creative coding, RedefineIt" />
+    <meta name="author" content="Christopher Vaught" />
+    <meta name="robots" content="index,follow" />
+    <link rel="canonical" href="https://redefineit.net/kinetic-art.html" />
+    <!-- Open Graph / Twitter -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="RedefineIt" />
+    <meta property="og:title" content="Kinetic Art — RedefineIt" />
+    <meta property="og:description" content="Kinetic art, interactive animation, and generative visuals." />
+    <meta property="og:url" content="https://redefineit.net/kinetic-art.html" />
+    <meta property="og:image" content="https://redefineit.net/starspawn/thumb.svg" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Kinetic Art — RedefineIt" />
+    <meta name="twitter:description" content="Kinetic art, interactive animation, and generative visuals." />
+    <meta name="twitter:image" content="https://redefineit.net/starspawn/thumb.svg" />
+    <!-- JSON-LD: WebPage -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "name": "Kinetic Art — RedefineIt",
+        "url": "https://redefineit.net/kinetic-art.html"
+      }
+    </script>
     <link href="css/index.css" rel="stylesheet" />
     <style>
-      :root { --bg:#0b0f13; --surface:rgba(15,22,34,0.72); --surface-strong:rgba(15,22,34,0.9); --outline:rgba(39,64,95,0.6); --accent:#8cc8ff; --accent-2:#b2e0ff; --header-h:56px; }
-      html, body { min-height: 100%; overflow-x: hidden; }
-      body { font-family: system-ui, sans-serif; background: var(--bg); color: #d9e7ff; padding: 2rem; line-height: 1.7; }
-      h1 { margin: 0 0 8px; color: var(--accent); }
-      .desc { margin-top: 8px; font-size: 14px; opacity: .9; }
-      #bgWrap, .content { transition: transform 480ms ease; will-change: transform; }
-      .slide-out { transform: translateX(-100vw); }
-      .slide-out-right { transform: translateX(100vw); }
-      .pre-enter-from-right { transform: translateX(100vw); }
-      .pre-enter-from-left { transform: translateX(-100vw); }
-      #bgWrap { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
-      #bgCanvas { width: 100%; height: 100%; display: block; }
-      #bgScrim { position: absolute; inset: 0; background: radial-gradient(ellipse at center, rgba(0,0,0,.18), rgba(0,0,0,.6)); }
-      .content { position: relative; z-index: 1; width: min(50vw, 980px); margin: calc(2rem + var(--header-h)) auto 2rem; }
-      @media (max-width: 1000px) { .content { width: 92vw; } }
-      #slideArrow { position: fixed; right: 12px; top: 50%; transform: translateY(-50%); z-index: 4; width: 66px; height: 66px; border-radius: 50%; border: 1px solid var(--outline); background: rgba(15,22,34,0.75); color: #cfe8ff; display: grid; place-items: center; cursor: pointer; box-shadow: 0 8px 24px rgba(0,0,0,0.35); }
-      #slideArrow:active { transform: translateY(-50%) scale(0.98); }
-      #slideArrow svg { width: 28px; height: 28px; fill: #cfe8ff; }
-      #slideArrowLeft { position: fixed; left: 12px; top: 50%; transform: translateY(-50%); z-index: 4; width: 66px; height: 66px; border-radius: 50%; border: 1px solid var(--outline); background: rgba(15,22,34,0.75); color: #cfe8ff; display: grid; place-items: center; cursor: pointer; box-shadow: 0 8px 24px rgba(0,0,0,0.35); }
-      #slideArrowLeft:active { transform: translateY(-50%) scale(0.98); }
-      #slideArrowLeft svg { width: 28px; height: 28px; fill: #cfe8ff; }
-      .panel { background: var(--surface); border: 1px solid var(--outline); border-radius: 16px; padding: 20px; box-shadow: 0 12px 40px rgba(0,0,0,0.45); }
+      :root {
+        --bg: #0b0f13;
+        --surface: rgba(15, 22, 34, 0.72);
+        --surface-strong: rgba(15, 22, 34, 0.9);
+        --outline: rgba(39, 64, 95, 0.6);
+        --accent: #8cc8ff;
+        --accent-2: #b2e0ff;
+        --header-h: 56px;
+      }
+      html,
+      body {
+        min-height: 100%;
+        overflow-x: hidden;
+      }
+      body {
+        font-family: system-ui, sans-serif;
+        background: var(--bg);
+        color: #d9e7ff;
+        padding: 2rem;
+        line-height: 1.7;
+      }
+      h1 {
+        margin: 0 0 8px;
+        color: var(--accent);
+      }
+      .desc {
+        margin-top: 8px;
+        font-size: 14px;
+        opacity: 0.9;
+      }
+      #bgWrap,
+      .content {
+        transition: transform 480ms ease;
+        will-change: transform;
+      }
+      .slide-out {
+        transform: translateX(-100vw);
+      }
+      .slide-out-right {
+        transform: translateX(100vw);
+      }
+      .pre-enter-from-right {
+        transform: translateX(100vw);
+      }
+      .pre-enter-from-left {
+        transform: translateX(-100vw);
+      }
+      #bgWrap {
+        position: fixed;
+        inset: 0;
+        z-index: 0;
+        pointer-events: none;
+      }
+      #bgCanvas {
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+      #bgScrim {
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(
+          ellipse at center,
+          rgba(0, 0, 0, 0.18),
+          rgba(0, 0, 0, 0.6)
+        );
+      }
+      .content {
+        position: relative;
+        z-index: 1;
+        width: min(50vw, 980px);
+        margin: calc(2rem + var(--header-h)) auto 2rem;
+      }
+      @media (max-width: 1000px) {
+        .content {
+          width: 92vw;
+        }
+      }
+      #slideArrow {
+        position: fixed;
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        z-index: 4;
+        width: 66px;
+        height: 66px;
+        border-radius: 50%;
+        border: 1px solid var(--outline);
+        background: rgba(15, 22, 34, 0.75);
+        color: #cfe8ff;
+        display: grid;
+        place-items: center;
+        cursor: pointer;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+      }
+      #slideArrow:active {
+        transform: translateY(-50%) scale(0.98);
+      }
+      #slideArrow svg {
+        width: 28px;
+        height: 28px;
+        fill: #cfe8ff;
+      }
+      #slideArrowLeft {
+        position: fixed;
+        left: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        z-index: 4;
+        width: 66px;
+        height: 66px;
+        border-radius: 50%;
+        border: 1px solid var(--outline);
+        background: rgba(15, 22, 34, 0.75);
+        color: #cfe8ff;
+        display: grid;
+        place-items: center;
+        cursor: pointer;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+      }
+      #slideArrowLeft:active {
+        transform: translateY(-50%) scale(0.98);
+      }
+      #slideArrowLeft svg {
+        width: 28px;
+        height: 28px;
+        fill: #cfe8ff;
+      }
+      .panel {
+        background: var(--surface);
+        border: 1px solid var(--outline);
+        border-radius: 16px;
+        padding: 20px;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+      }
 
       /* Fixed Site Header */
-      .site-header { position: fixed; inset: 0 0 auto 0; height: var(--header-h); z-index: 4; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; background: rgba(15,22,34,0.72); border-bottom: 1px solid var(--outline); backdrop-filter: blur(8px); padding: 0 12px; }
-      .site-header .brand { justify-self: start; font-family: "SF Mono", "Roboto Mono", Menlo, Consolas, "Liberation Mono", monospace; font-weight: 800; letter-spacing: 1px; color: var(--accent-2); text-transform: uppercase; font-size: 14px; }
-      .site-header .site-nav { justify-self: center; display: flex; gap: 16px; }
-      .site-header .site-nav a { color: #cfe8ff; text-decoration: none; font-weight: 600; font-size: 13px; padding: 6px 8px; border-radius: 8px; transition: background-color 160ms ease, color 160ms ease; }
-      .site-header .site-nav a:hover { background: rgba(255,255,255,0.06); color: var(--accent-2); }
-      .site-header .spacer { justify-self: end; }
-  </style>
+      .site-header {
+        position: fixed;
+        inset: 0 0 auto 0;
+        height: var(--header-h);
+        z-index: 4;
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        align-items: center;
+        background: rgba(15, 22, 34, 0.72);
+        border-bottom: 1px solid var(--outline);
+        backdrop-filter: blur(8px);
+        padding: 0 12px;
+      }
+      .site-header .brand {
+        justify-self: start;
+        font-family: 'SF Mono', 'Roboto Mono', Menlo, Consolas,
+          'Liberation Mono', monospace;
+        font-weight: 800;
+        letter-spacing: 1px;
+        color: var(--accent-2);
+        text-transform: uppercase;
+        font-size: 14px;
+      }
+      .site-header .site-nav {
+        justify-self: center;
+        display: flex;
+        gap: 16px;
+      }
+      .site-header .site-nav a {
+        color: #cfe8ff;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 13px;
+        padding: 6px 8px;
+        border-radius: 8px;
+        transition: background-color 160ms ease, color 160ms ease;
+      }
+      .site-header .site-nav a:hover {
+        background: rgba(255, 255, 255, 0.06);
+        color: var(--accent-2);
+      }
+      .site-header .spacer {
+        justify-self: end;
+      }
+    </style>
   </head>
   <body>
     <div data-include="partials/header.html"></div>
@@ -60,8 +237,96 @@
 
     <main class="content">
       <div class="panel">
-        <h1>Kinetic Art</h1>
-        <p class="desc">Generative motion, light, and interaction — explorations in Canvas, WebGL, and audio‑reactive systems.</p>
+        <h2>
+          Kinetic Art and Animation
+          <span class="subtitle">— Where Math Becomes Motion</span>
+        </h2>
+
+        <p>
+          <em>A Beautiful Mind</em> (2001) is a biographical drama about
+          mathematician <strong>John Nash</strong>, a man who saw patterns
+          hidden within the chaos of everyday life. That idea has always
+          resonated with me. I’ve long been fascinated by the symmetry of
+          geometry, the rhythm of trigonometry, and the beauty that appears when
+          mathematics becomes visual.
+        </p>
+
+        <p>
+          When my father brought home an <strong>IBM PC</strong> with a
+          monochrome monitor, I spent hours trying to make something move on the
+          screen. Then came the <strong>Commodore 64</strong>, and everything
+          changed. The <strong>Commodore 64 demo scene</strong> revealed what
+          creativity through constraint could be — glowing <em>raster bars</em>,
+          <em>scrolling text</em>, and <em>sprite multiplexers</em> that felt
+          like pure magic.
+        </p>
+
+        <p>
+          It was art built from timing, math, and imagination — code as
+          performance — and it shaped how I think about creation to this day.
+          That same fascination still drives me: exploring
+          <strong>kinetic art</strong>, <strong>interactive animation</strong>,
+          and <strong>generative visuals</strong>
+          where geometry, sound, and code move as one.
+        </p>
+      </div>
+      <div id="projectCarousel" class="carousel">
+        <div class="item">
+          <div class="card">
+            <a class="thumb" href="frequency-spinner/dist/index.html">
+              <img src="frequency-spinner/thumb.svg" alt="Frequency Spinner" />
+            </a>
+            <a href="frequency-spinner/dist/index.html">Frequency Spinner</a>
+            <div class="desc">Harmonic wave spinner — dist build.</div>
+          </div>
+          <div class="card">
+            <a class="thumb" href="sphere-vortex/dist/index.html">
+              <img src="sphere-vortex/thumb.svg" alt="Sphere Vortex" />
+            </a>
+            <a href="sphere-vortex/dist/index.html">Sphere Vortex</a>
+            <div class="desc">Spiral motion field — dist build.</div>
+          </div>
+          <div class="card">
+            <a class="thumb" href="wave-anim-generator/dist/index.html">
+              <img
+                src="wave-anim-generator/thumb.svg"
+                alt="Wave Anim Generator"
+              />
+            </a>
+            <a href="wave-anim-generator/dist/index.html"
+              >Wave Anim Generator</a
+            >
+            <div class="desc">Procedural wave patterns — dist build.</div>
+          </div>
+          <div class="card">
+            <a class="thumb" href="starspawn/index.html">
+              <img src="starspawn/thumb.svg" alt="Starspawn" />
+            </a>
+            <a href="starspawn/index.html">Starspawn</a>
+            <div class="desc">Neon rings demo.</div>
+          </div>
+          <div class="card">
+            <a class="thumb" href="SoundExperiment/index.html">
+              <img src="SoundExperiment/thumb.svg" alt="Sound Experiment" />
+            </a>
+            <a href="SoundExperiment/index.html">Sound Experiment</a>
+            <div class="desc">
+              Interactive audio + visuals with tweakable parameters.
+            </div>
+          </div>
+          <div class="card">
+            <a class="thumb" href="EternalEffigy/Enochian/index.html">
+              <img
+                src="EternalEffigy/Enochian/thumb.svg"
+                alt="Enochian — Magic Square"
+              />
+            </a>
+            <a href="EternalEffigy/Enochian/index.html"
+              >Enochian — Magic Square</a
+            >
+            <div class="desc">Canvas layout with Enochian font.</div>
+          </div>
+        </div>
       </div>
     </main>
 
@@ -77,4 +342,4 @@
       })
     </script>
   </body>
-  </html>
+</html>

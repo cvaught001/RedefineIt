@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Fibonacci Flow — Spirals in Motion</title>
+    <link rel="icon" href="../favicon.svg" type="image/svg+xml" />
+    <link rel="mask-icon" href="../favicon.svg" color="#0b0f13" />
+    <meta name="theme-color" content="#0b0f13" />
+    <meta name="description" content="Turning the Fibonacci sequence into motion — spirals, arcs, and golden‑angle growth studies with Canvas and audio hooks." />
+    <meta name="keywords" content="Fibonacci, golden ratio, generative art, Canvas, creative coding, RedefineIt" />
+    <meta name="author" content="Christopher Vaught" />
+    <meta name="robots" content="index,follow" />
+    <link rel="canonical" href="https://redefineit.net/blog/fibonacci-flow.html" />
+    <meta property="og:type" content="article" />
+    <meta property="og:site_name" content="RedefineIt" />
+    <meta property="og:title" content="Fibonacci Flow — Spirals in Motion" />
+    <meta property="og:description" content="Turning the Fibonacci sequence into motion — spirals, arcs, and golden‑angle growth studies." />
+    <meta property="og:url" content="https://redefineit.net/blog/fibonacci-flow.html" />
+    <meta property="og:image" content="https://redefineit.net/images/blog/Fibonacci.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Fibonacci Flow — Spirals in Motion" />
+    <meta name="twitter:description" content="Turning the Fibonacci sequence into motion — spirals, arcs, and golden‑angle growth studies." />
+    <meta name="twitter:image" content="https://redefineit.net/images/blog/Fibonacci.png" />
+    <link href="../css/index.css" rel="stylesheet" />
+    <style>
+      .hero { margin-bottom: 12px; }
+    </style>
+  </head>
+  <body>
+    <div data-include="../partials/header.html"></div>
+    <div id="bgWrap" aria-hidden="true">
+      <canvas id="bgCanvas"></canvas>
+      <div id="bgScrim"></div>
+    </div>
+
+    <main class="content">
+      <article class="panel blog-post">
+        <h1 class="post-title">Fibonacci Flow — Spirals in Motion</h1>
+        <div class="post-meta">By Christopher Vaught • Oct 2025 • 6 min read</div>
+        <a class="post-cover hero" href="../Fibonacci/index.html">
+          <img src="/images/blog/Fibonacci.png" alt="Fibonacci spiral cover" />
+        </a>
+        <p>
+          The <em>Fibonacci sequence</em> shows up everywhere — in pinecones,
+          nautilus shells, seed heads, and galaxies. This project turns those
+          numbers into motion: squares accumulate, arcs connect, and a spiral
+          unfurls with each step.
+        </p>
+        <p>
+          In the first prototype, I placed squares on a growing grid and
+          animated bezier arcs between their corners. The remix smoothed camera
+          motion and applied gentle hue drift to suggest depth. Audio hooks let
+          the rhythm lock to growth steps for a quiet, meditative pace.
+        </p>
+        <p>
+          Small variations create whole new families of patterns: tweak the
+          golden angle, add easing to radius growth, or modulate hue per step —
+          the spiral changes character while staying rooted in the same math.
+        </p>
+        <div class="post-tags">
+          <span class="post-tag">Fibonacci</span>
+          <span class="post-tag">Generative Art</span>
+          <span class="post-tag">Canvas</span>
+          <span class="post-tag">Creative Coding</span>
+        </div>
+        <p class="note">
+          Explore the demos:
+          <a href="../Fibonacci/index.html">Fibonacci</a> ·
+          <a href="../FibonacciRemix/index.html">Fibonacci Remix</a>
+        </p>
+      </article>
+    </main>
+
+    <div data-include="../partials/footer.html"></div>
+    <script src="../js/includes.js"></script>
+    <script src="../js/nav.js"></script>
+    <script src="../js/starspinner.js"></script>
+    <script>
+      initStarspinner('#bgCanvas', {
+        lineColor: 'rgba(159, 214, 255, 0.9)',
+        trail: 0.23,
+        glow: 20
+      })
+    </script>
+  </body>
+</html>
+

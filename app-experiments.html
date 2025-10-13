@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>App Experiments — RedefineIt</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="mask-icon" href="favicon.svg" color="#0b0f13" />
+    <meta name="theme-color" content="#0b0f13" />
+    <meta name="description" content="Small tools, prototypes, and UI concepts — quick app experiments by Christopher Vaught." />
+    <meta name="keywords" content="app experiments, prototypes, UI concepts, tools, RedefineIt" />
+    <meta name="author" content="Christopher Vaught" />
+    <meta name="robots" content="index,follow" />
+    <link rel="canonical" href="https://redefineit.net/app-experiments.html" />
+    <!-- Open Graph / Twitter -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="RedefineIt" />
+    <meta property="og:title" content="App Experiments — RedefineIt" />
+    <meta property="og:description" content="Small tools, prototypes, and UI concepts — quick app experiments." />
+    <meta property="og:url" content="https://redefineit.net/app-experiments.html" />
+    <meta property="og:image" content="https://redefineit.net/starspawn/thumb.svg" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="App Experiments — RedefineIt" />
+    <meta name="twitter:description" content="Small tools, prototypes, and UI concepts — quick app experiments." />
+    <meta name="twitter:image" content="https://redefineit.net/starspawn/thumb.svg" />
+    <!-- JSON-LD: WebPage -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "name": "App Experiments — RedefineIt",
+        "url": "https://redefineit.net/app-experiments.html"
+      }
+    </script>
+    <link href="css/index.css" rel="stylesheet" />
+    <style>
+      .apps-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 14px;
+        margin-top: 10px;
+      }
+      .app-card { background: var(--surface-strong); border: 1px solid var(--outline); border-radius: 14px; padding: 14px; box-shadow: 0 8px 24px rgba(0,0,0,0.35); }
+      .app-card h3 { margin: 0 0 6px; color: var(--accent-2); font-size: 14px; text-transform: uppercase; letter-spacing: 0.3px; font-family: var(--tech-font); }
+      .app-card .desc { margin: 6px 0 0; font-size: 13px; opacity: 0.9; }
+    </style>
+  </head>
+  <body>
+    <div data-include="partials/header.html"></div>
+    <div id="bgWrap" aria-hidden="true">
+      <canvas id="bgCanvas"></canvas>
+      <div id="bgScrim"></div>
+    </div>
+
+    <main class="content">
+      <div class="panel">
+        <h2>
+          App Experiments <span class="subtitle">— Small Tools and UI Concepts</span>
+        </h2>
+        <p>
+          A rotating set of quick studies: tiny utilities, micro‑prototypes, and
+          interface ideas that test ergonomics, speed, or delight. Some grow
+          into projects; others stay sketches.
+        </p>
+      </div>
+
+      <div class="panel">
+        <div class="apps-grid">
+          <div class="app-card">
+            <h3>Timer Palette</h3>
+            <div class="desc">Keyboard‑first countdown timer with color cues. (Coming soon)</div>
+          </div>
+          <div class="app-card">
+            <h3>Note Fragments</h3>
+            <div class="desc">Sticky bits for quick capture and grouping. (Coming soon)</div>
+          </div>
+          <div class="app-card">
+            <h3>Sequence Sketch</h3>
+            <div class="desc">Grid‑based stepper for sound or animation. (Coming soon)</div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <div data-include="partials/footer.html"></div>
+    <script src="js/includes.js"></script>
+    <script src="js/nav.js"></script>
+    <script src="js/starspinner.js"></script>
+    <script>
+      initStarspinner('#bgCanvas', {
+        lineColor: 'rgba(64, 255, 240, 0.95)',
+        trail: 0.22,
+        glow: 24
+      })
+    </script>
+  </body>
+</html>
+
