@@ -5,10 +5,14 @@
       "title": "Building Smarter Content Workflows with Agentic AI and Visual Studio",
       "date": "2025-10-13",
       "readTime": 5,
-      "cover": "/images/blog/WaverThree.png",
+      "cover": "/images/blog/agentic-ai.png",
       "coverAlt": "Agentic AI workflows cover",
       "excerpt": "Use Agentic AI (with Codex in Visual Studio) to proof links, write robots.txt/meta tags, and accelerate content management — thoughtfully.",
-      "tags": ["Agentic AI", "Content", "Visual Studio"]
+      "tags": [
+        "Agentic AI",
+        "Content",
+        "Visual Studio"
+      ]
     },
     {
       "slug": "fibonacci-flow",
@@ -18,7 +22,12 @@
       "cover": "/images/blog/Fibonacci.png",
       "coverAlt": "Fibonacci spiral cover",
       "excerpt": "Turning the Fibonacci sequence into motion — arcs, rectangles, and golden-angle growth reveal living patterns.",
-      "tags": ["Fibonacci", "Generative Art", "Canvas", "Creative Coding"]
+      "tags": [
+        "Fibonacci",
+        "Generative Art",
+        "Canvas",
+        "Creative Coding"
+      ]
     },
     {
       "slug": "sound-experiment",
@@ -28,8 +37,11 @@
       "cover": "/images/blog/soundExperiment.png",
       "coverAlt": "Sound Experiment cover",
       "excerpt": "A playful Web Audio + Canvas study where oscillators, filters, and visuals respond to live tweaks.",
-      "tags": ["Web Audio", "Generative Visuals", "Creative Coding"]
+      "tags": [
+        "Web Audio",
+        "Generative Visuals",
+        "Creative Coding"
+      ]
     }
   ]
 }
-
