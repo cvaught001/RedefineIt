@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="UTF-8">
+    <title>Canvas Synth</title>
+    <link rel="stylesheet" href="./style.css">
+
+  </head>
+    
+  <body>
+  <canvas id="canvas"></canvas>
+
+<!-- Buttons -->
+<button id="toggleButton">Letters / Circles / Off</button>
+<button id="toggleSine">Toggle Sine</button>
+<button id="toggleSound">Toggle Sound</button>
+
+<!-- Controls -->
+<label>Oscillator Type:
+  <select id="oscTypeSelect">
+    <option value="sine">Sine</option>
+    <option value="square">Square</option>
+    <option value="triangle">Triangle</option>
+    <option value="sawtooth">Sawtooth</option>
+  </select>
+</label>
+
+<label>LFO Amount:
+  <input type="range" id="lfoSlider" min="0" max="10" step="0.1" value="0">
+  <span id="lfoValue">0</span>
+</label>
+
+<label>Resonance:
+  <input type="range" id="resonanceSlider" min="0" max="20" step="0.1" value="1">
+  <span id="resonanceValue">1</span>
+</label>
+
+<label>Cutoff:
+  <input type="range" id="cutoffSlider" min="100" max="2000" step="1" value="1000">
+  <span id="cutoffValue">1000</span>
+</label>
+    <script  src="./script.js"></script>
+
+  </body>
+  
+</html>

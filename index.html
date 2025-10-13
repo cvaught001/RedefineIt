@@ -4,19 +4,189 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1.0" />
     <title>Project Index</title>
+    <!-- Template (Bootstrap) CSS for hybrid look -->
+    <link
+      href="websiteTemplate/css/bootstrap.min.css"
+      rel="stylesheet"
+      media="screen"
+    />
+    <link
+      href="websiteTemplate/css/style.css"
+      rel="stylesheet"
+      media="screen"
+    />
+    <link
+      href="websiteTemplate/color/default.css"
+      rel="stylesheet"
+      media="screen"
+    />
     <style>
-      body { font-family: system-ui, sans-serif; background: #0b0f13; color: #d9e7ff; padding: 2rem; }
-      h1 { margin-top: 0; color: #8cc8ff; }
-      .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; margin-top: 16px; }
-      .card { background: #0f1622; border: 1px solid #27405f; border-radius: 10px; padding: 14px; }
-      .card a { color: #9fd6ff; text-decoration: none; font-weight: 600; }
-      .desc { margin-top: 6px; font-size: 13px; opacity: 0.85; }
-      .desc a { color: #b2e0ff; font-weight: 500; }
-      .note { margin-top: 18px; font-size: 12px; opacity: 0.8; }
-      #bgWrap { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
-      #bgCanvas { width: 100%; height: 100%; display: block; }
-      #bgScrim { position: absolute; inset: 0; background: radial-gradient(ellipse at center, rgba(0,0,0,0.15), rgba(0,0,0,0.55)); }
-      .content { position: relative; z-index: 1; }
+      :root {
+        --bg: #0b0f13;
+        --surface: rgba(15, 22, 34, 0.72);
+        --surface-strong: rgba(15, 22, 34, 0.9);
+        --outline: rgba(39, 64, 95, 0.6);
+        --accent: #8cc8ff;
+        --accent-2: #b2e0ff;
+      }
+      body {
+        font-family: system-ui, sans-serif;
+        background: var(--bg);
+        color: #d9e7ff;
+        padding: 2rem;
+      }
+      h1 {
+        margin: 0 0 8px;
+        color: var(--accent);
+      }
+      .section-title {
+        margin-top: 18px;
+      }
+      h2 {
+        margin: 0 0 12px;
+        font-weight: 600;
+        color: var(--accent-2);
+        font-size: 18px;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+      }
+      .intro {
+        background: var(--surface);
+        border: 1px solid var(--outline);
+        border-radius: 16px;
+        padding: 18px;
+        margin-bottom: 18px;
+        backdrop-filter: blur(8px);
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+      }
+      .intro p {
+        margin: 8px 0;
+      }
+      .intro a {
+        color: var(--accent-2);
+        font-weight: 700;
+      }
+      .carousel {
+        position: relative;
+        margin-top: 10px;
+      }
+      #projectCarousel .item {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        gap: 14px;
+        align-items: start;
+        justify-items: stretch;
+        padding: 10px 6px;
+      }
+      /* Ensure cards align to the left margin and consume available width */
+      #projectCarousel .item .card { min-width: 0; width: 100%; }
+      .card {
+        background: var(--surface-strong);
+        border: 1px solid var(--outline);
+        border-radius: 14px;
+        padding: 14px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+        transition: box-shadow 160ms ease;
+        backdrop-filter: blur(6px);
+        min-width: 320px;
+        flex: 0 0 320px;
+        scroll-snap-align: center;
+        will-change: transform;
+      }
+      .card:hover {
+        box-shadow: 0 14px 36px rgba(0, 0, 0, 0.45);
+      }
+      .thumb {
+        display: block;
+        border-radius: 10px;
+        overflow: hidden;
+        border: 1px solid var(--outline);
+        background: #0f1622;
+        aspect-ratio: 16/9;
+        margin-bottom: 10px;
+      }
+      .thumb img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+      /* removed old custom .nav styles to avoid conflict with Bootstrap */
+      .card a {
+        color: #9fd6ff;
+        text-decoration: none;
+        font-weight: 700;
+        letter-spacing: 0.2px;
+      }
+      .desc {
+        margin-top: 6px;
+        font-size: 13px;
+        opacity: 0.88;
+      }
+      .desc a {
+        color: var(--accent-2);
+        font-weight: 600;
+      }
+      .note {
+        margin-top: 18px;
+        font-size: 12px;
+        opacity: 0.8;
+      }
+      #bgWrap {
+        position: fixed;
+        inset: 0;
+        z-index: 0;
+        pointer-events: none;
+      }
+      #bgCanvas {
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+      #bgScrim {
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(
+          ellipse at center,
+          rgba(0, 0, 0, 0.18),
+          rgba(0, 0, 0, 0.6)
+        );
+      }
+      .content {
+        position: relative;
+        z-index: 1;
+        width: min(50vw, 980px);
+        margin: 2rem auto;
+      }
+      @media (max-width: 1000px) {
+        .content {
+          width: 92vw;
+        }
+      }
+      /* Hybrid navbar styling */
+      .navbar {
+        position: sticky;
+        top: 12px;
+        z-index: 3;
+        background: rgba(15, 22, 34, 0.75) !important;
+        border: 1px solid var(--outline);
+        border-radius: 12px;
+        backdrop-filter: blur(8px);
+      }
+      .navbar .navbar-brand,
+      .navbar-nav > li > a {
+        color: #cfe8ff !important;
+      }
+      .navbar .navbar-brand {
+        font-weight: 800;
+        letter-spacing: 0.4px;
+      }
+      .navbar .navbar-toggle {
+        border-color: var(--outline);
+      }
+      .navbar .icon-bar {
+        background: #cfe8ff;
+      }
     </style>
   </head>
   <body>
@@ -26,76 +196,137 @@
       <div id="bgScrim"></div>
     </div>
 
-    <div class="content">
-      <h1>Project Index</h1>
-      <div class="grid">
-      <div class="card">
-        <a href="Fibonacci/index.html">Fibonacci — Shell</a>
-        <div class="desc">Original interactive logarithmic spiral.</div>
-      </div>
-      <div class="card">
-        <a href="FibonacciRemix/index.html">Fibonacci Remix — Shell</a>
-        <div class="desc">Remix with planes, modulation, and magic mode.</div>
-      </div>
-      <div class="card">
-        <a href="fern/index.html">Canvas Fern</a>
-        <div class="desc">Trig + growth + outline controls.</div>
-      </div>
-      <div class="card">
-        <a href="winamp-waves/index.html">Winamp Waves</a>
-        <div class="desc">Retro waveform visualizations.</div>
-        <div class="desc">
-          Versions:
-          <a href="winamp-waves/v2.html">v2</a> ·
-          <a href="winamp-waves/v3.html">v3</a> ·
-          <a href="winamp-waves/v4.html">v4</a> ·
-          <a href="winamp-waves/v5.html">v5</a> ·
-          <a href="winamp-waves/v6.html">v6</a> ·
-          <a href="winamp-waves/v7.html">v7</a> ·
-          <a href="winamp-waves/v8.html">v8</a> ·
-          <a href="winamp-waves/v9.html">v9</a> ·
-          <a href="winamp-waves/v10.html">v10</a> ·
-          <a href="winamp-waves/v11.html">v11</a> ·
-          <a href="winamp-waves/v12.html">v12</a>
+    <div class="content container">
+      <section id="about" class="intro">
+        <h1>Welcome to RedefineIt</h1>
+        <h2>
+          Full-Stack Creator — Building Apps, Experiences & Interactive Art
+        </h2>
+        <p>
+          I’m Christopher M. Vaught — a polymath, Full-Stack Systems Engineer,
+          creative technologist, and award-winning interactive multimedia
+          designer, kinetic artist, and photographer.
+        </p>
+        <p>
+          This is my playground for turning code into motion — where JavaScript,
+          Canvas, and Web Audio weave together into living, touchable canvases
+          that blur the line between art and technology.
+        </p>
+        <p>
+          Professionally, I’m a professional Full‑Stack Mobile Web developer who
+          has delivered cutting‑edge enterprise applications and solutions
+          across Healthcare, Fitness, Marketing, Hospitality, and Fulfillment
+          systems — architecting secure, scalable platforms. Here, I push pixels
+          and physics — layering engineering precision with creative expression
+          to explore the edges of kinetic art.
+        </p>
+        <p>
+          A polymath at heart, I bridge engineering, design, sound, and
+          image‑making to craft playful, high‑performance experiences.
+        </p>
+        <p>
+          I’ve also taught graphic artists and game developers, and I write my
+          own retro interactive games for the web and mobile apps.
+        </p>
+        <p>
+          Curious about my background? Connect on
+          <a
+            href="https://www.linkedin.com/in/christopher-vaught-2981516/"
+            target="_blank"
+            rel="noopener"
+            >LinkedIn</a
+          >
+          or reach out at
+          <a href="mailto:cmvaught@redefineit.net">cmvaught@redefineit.net</a>.
+        </p>
+      </section>
+      <h1 id="experiments" class="section-title">
+        Experiments in Kinetic Form, Light, and Interactive Design
+      </h1>
+      <div
+        id="projectCarousel"
+        class="carousel slide"
+        data-ride="carousel"
+        data-interval="0"
+      >
+        <div class="carousel-inner" role="listbox">
+          <div class="item">
+            <div class="card">
+              <a class="thumb" href="brickedin/index.html"
+                ><img src="brickedin/thumb.svg" alt="Blocked In"
+              /></a>
+              <a href="brickedin/index.html">Blocked In (Beta)</a>
+              <div class="desc">A quick block puzzle prototype.</div>
+            </div>
+            <div class="card">
+              <a class="thumb" href="evolvenine/index.html"
+                ><img src="evolvenine/thumb.svg" alt="Evolve Nine"
+              /></a>
+              <a href="evolvenine/index.html">Evolve Nine Bounce</a>
+              <div class="desc">Canvas animation experiment.</div>
+            </div>
+            <div class="card">
+              <a class="thumb" href="frequency-spinner/dist/index.html"
+                ><img src="frequency-spinner/thumb.svg" alt="Frequency Spinner"
+              /></a>
+              <a href="frequency-spinner/dist/index.html">Frequency Spinner</a>
+              <div class="desc">Dist build.</div>
+            </div>
+            <div class="card">
+              <a class="thumb" href="sodoku/dist/index.html"
+                ><img src="sodoku/thumb.svg" alt="Sudoku"
+              /></a>
+              <a href="sodoku/dist/index.html">Sudoku</a>
+              <div class="desc">Dist build.</div>
+            </div>
+            <div class="card">
+              <a class="thumb" href="sphere-vortex/dist/index.html"
+                ><img src="sphere-vortex/thumb.svg" alt="Sphere Vortex"
+              /></a>
+              <a href="sphere-vortex/dist/index.html">Sphere Vortex</a>
+              <div class="desc">Dist build.</div>
+            </div>
+          </div>
+          <div class="item">
+            <div class="card">
+              <a class="thumb" href="wave-anim-generator/dist/index.html"
+                ><img
+                  src="wave-anim-generator/thumb.svg"
+                  alt="Wave Anim Generator"
+              /></a>
+              <a href="wave-anim-generator/dist/index.html"
+                >Wave Anim Generator</a
+              >
+              <div class="desc">Dist build.</div>
+            </div>
+            <div class="card">
+              <a class="thumb" href="starspawn/index.html"
+                ><img src="starspawn/thumb.svg" alt="Starspawn"
+              /></a>
+              <a href="starspawn/index.html">Starspawn</a>
+              <div class="desc">Neon rings demo.</div>
+            </div>
+            <div class="card">
+              <a class="thumb" href="SoundExperiment/index.html"
+                ><img src="SoundExperiment/thumb.svg" alt="Sound Experiment"
+              /></a>
+              <a href="SoundExperiment/index.html">Sound Experiment</a>
+              <div class="desc">
+                Interactive audio + visuals. Toggle audio, tweak parameters.
+              </div>
+            </div>
+            <div class="card">
+              <a class="thumb" href="EternalEffigy/Enochian/index.html"
+                ><img src="EternalEffigy/Enochian/thumb.svg" alt="Enochian"
+              /></a>
+              <a href="EternalEffigy/Enochian/index.html"
+                >Enochian — Magic Square</a
+              >
+              <div class="desc">Canvas layout with Enochian font.</div>
+            </div>
+          </div>
         </div>
-        <div class="desc">
-          Extra: <a href="winamp-waves/13thfoor.html">13th Floor</a>
-        </div>
       </div>
-      <div class="card">
-        <a href="brickedin/index.html">Blocked In (Beta)</a>
-        <div class="desc">A quick block puzzle prototype.</div>
-      </div>
-      <div class="card">
-        <a href="evolvenine/index.html">Evolve Nine Bounce</a>
-        <div class="desc">Canvas animation experiment.</div>
-      </div>
-      <div class="card">
-        <a href="frequency-spinner/dist/index.html">Frequency Spinner</a>
-        <div class="desc">Dist build.</div>
-      </div>
-      <div class="card">
-        <a href="sodoku/dist/index.html">Sudoku</a>
-        <div class="desc">Dist build.</div>
-      </div>
-      <div class="card">
-        <a href="sphere-vortex/dist/index.html">Sphere Vortex</a>
-        <div class="desc">Dist build.</div>
-      </div>
-      <div class="card">
-        <a href="wave-anim-generator/dist/index.html">Wave Anim Generator</a>
-        <div class="desc">Dist build.</div>
-      </div>
-      <div class="card">
-        <a href="starspawn/index.html">Starspawn</a>
-        <div class="desc">Neon rings demo.</div>
-      </div>
-      <div class="card">
-        <a href="EternalEffigy/Enochian/index.html">Enochian — Magic Square</a>
-        <div class="desc">Canvas layout with Enochian font.</div>
-      </div>
-      </div>
-      <div class="note">Missing a link or 404? Some folders may not include an index file — point me to it and I’ll wire it up.</div>
     </div>
 
     <script>
@@ -124,7 +355,7 @@
           resonance: 36,
           modulation: 18,
           lineColor: 'rgba(140,220,255,0.9)',
-          trail: 0.20,
+          trail: 0.2,
           glow: 20,
           lineWidth: 1.2,
           rotSpeed: 0.03,
@@ -133,18 +364,23 @@
 
         function drawWave(cx, cy, baseRadius, timeOffset, rotOffset) {
           const numPoints = 280
-          const amplitude = settings.resonance + Math.sin((time + timeOffset) * 0.1) * settings.modulation
+          const amplitude =
+            settings.resonance +
+            Math.sin((time + timeOffset) * 0.1) * settings.modulation
           ctx.beginPath()
           for (let i = 0; i <= numPoints; i++) {
             const frac = i / numPoints
             const theta = frac * Math.PI * 2
-            const wave = Math.sin(settings.frequency * theta + time + timeOffset) * amplitude
+            const wave =
+              Math.sin(settings.frequency * theta + time + timeOffset) *
+              amplitude
             const jiggle = Math.sin(time * 2 + i * 0.45) * settings.jiggle
             const r = baseRadius + wave + jiggle
             const thetaRot = theta + rot + rotOffset
             const x = cx + Math.cos(thetaRot) * r
             const y = cy + Math.sin(thetaRot) * r
-            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y)
+            if (i === 0) ctx.moveTo(x, y)
+            else ctx.lineTo(x, y)
           }
           ctx.closePath()
           ctx.lineWidth = settings.lineWidth
@@ -173,5 +409,13 @@
         loop()
       })()
     </script>
+    <script src="js/starspinner.js"></script>
+    <script>
+      // Initialize background starspinner
+      initStarspinner('#bgCanvas', { })
+    </script>
+    <!-- Template JS (optional for navbar toggle on small screens) -->
+    <script src="websiteTemplate/js/jquery.js"></script>
+    <script src="websiteTemplate/js/bootstrap.min.js"></script>
   </body>
 </html>
