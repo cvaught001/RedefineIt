@@ -91,6 +91,7 @@
         --accent: #8cc8ff;
         --accent-2: #b2e0ff;
       }
+      html, body { height: 100%; overflow: hidden; }
       body {
         font-family: system-ui, sans-serif;
         background: var(--bg);
@@ -222,6 +223,8 @@
       #bgWrap, .content { transition: transform 480ms ease; will-change: transform; }
       .slide-out { transform: translateX(-100vw); }
       .slide-out-right { transform: translateX(100vw); }
+      .pre-enter-from-right { transform: translateX(100vw); }
+      .pre-enter-from-left { transform: translateX(-100vw); }
       #rightPanel { position: fixed; inset: 0; z-index: 3; background: rgba(15,22,34,0.92); border-left: 1px solid var(--outline); transform: translateX(100vw); transition: transform 480ms ease; display: flex; align-items: center; justify-content: center; padding: 2rem; }
       #rightPanel.show { transform: translateX(0); }
       #rightPanel .panel-inner { max-width: 900px; width: min(70vw, 900px); background: var(--surface); border: 1px solid var(--outline); border-radius: 16px; padding: 24px; box-shadow: 0 12px 40px rgba(0,0,0,0.45); text-align: center; }
@@ -454,65 +457,15 @@
       </div>
     </div>
 
-    <script>
-      // Slide panel interaction for right/left + down scroll
-      ;(() => {
-        const arrowRight = document.getElementById('slideArrow')
-        const arrowLeft = document.getElementById('slideArrowLeft')
-        
-        const bg = document.getElementById('bgWrap')
-        const content = document.querySelector('.content')
-        const panelRight = document.getElementById('rightPanel')
-        const panelLeft = document.getElementById('leftPanel')
-        if (!bg || !content) return
-        let openRight = false, openLeft = false
-        function toggleRight() {
-          openRight = !openRight
-          if (openRight) {
-            if (openLeft) toggleLeft()
-            bg.classList.add('slide-out')
-            content.classList.add('slide-out')
-            panelRight && panelRight.classList.add('show')
-            panelRight && panelRight.setAttribute('aria-hidden', 'false')
-            const svg = arrowRight && arrowRight.querySelector('svg')
-            svg && svg.classList.add('flip')
-          } else {
-            bg.classList.remove('slide-out')
-            content.classList.remove('slide-out')
-            panelRight && panelRight.classList.remove('show')
-            panelRight && panelRight.setAttribute('aria-hidden', 'true')
-            const svg = arrowRight && arrowRight.querySelector('svg')
-            svg && svg.classList.remove('flip')
-          }
-        }
-        function toggleLeft() {
-          openLeft = !openLeft
-          if (openLeft) {
-            if (openRight) toggleRight()
-            bg.classList.add('slide-out-right')
-            content.classList.add('slide-out-right')
-            panelLeft && panelLeft.classList.add('show')
-            panelLeft && panelLeft.setAttribute('aria-hidden', 'false')
-            const svgL = arrowLeft && arrowLeft.querySelector('svg')
-            svgL && svgL.classList.remove('flip')
-          } else {
-            bg.classList.remove('slide-out-right')
-            content.classList.remove('slide-out-right')
-            panelLeft && panelLeft.classList.remove('show')
-            panelLeft && panelLeft.setAttribute('aria-hidden', 'true')
-            const svgL = arrowLeft && arrowLeft.querySelector('svg')
-            svgL && svgL.classList.add('flip')
-          }
-        }
-        arrowRight && arrowRight.addEventListener('click', toggleRight)
-        arrowLeft && arrowLeft.addEventListener('click', toggleLeft)
-        
-      })()
-    </script>
+    <script src="js/nav.js"></script>
     <script src="js/starspinner.js"></script>
     <script>
-      // Initialize background starspinner
-      initStarspinner('#bgCanvas', {})
+      // Initialize background starspinner with subtle home theme
+      initStarspinner('#bgCanvas', {
+        lineColor: 'rgba(140, 200, 255, 0.9)',
+        trail: 0.22,
+        glow: 22
+      })
     </script>
     <!-- Template JS (optional for navbar toggle on small screens) -->
     <script src="websiteTemplate/js/jquery.js"></script>

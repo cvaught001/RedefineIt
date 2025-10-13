@@ -75,14 +75,31 @@
     }
     loop()
 
-    return {
+    var instance = {
       stop: function () {
         if (rafId) cancelAnimationFrame(rafId)
         window.removeEventListener('resize', resize)
+      },
+      update: function (partial) {
+        if (!partial) return
+        for (var k in partial) {
+          if (Object.prototype.hasOwnProperty.call(partial, k)) {
+            settings[k] = partial[k]
+          }
+        }
       }
     }
+    // Expose the latest instance for global updates
+    global.__starspinner = instance
+    // Also expose a convenience updater
+    global.updateStarspinner = function (partial) {
+      if (global.__starspinner && typeof global.__starspinner.update === 'function') {
+        global.__starspinner.update(partial)
+      }
+    }
+
+    return instance
   }
 
   global.initStarspinner = initStarspinner
 })(window)
-
