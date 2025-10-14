@@ -331,7 +331,7 @@
       if (!folder) return
       var thumbPng = '/images/thumbnails/' + folder + '.png'
       var thumbSvg = '/images/thumbnails/' + folder + '.svg'
-      if (img.src !== thumb) {
+      if (img.src !== thumbPng && img.src !== thumbSvg) {
         img.onerror = function () {
           var self = this
           // Try SVG next
