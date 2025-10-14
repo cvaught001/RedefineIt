@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Gear Cog + Arcade Button</title>
+    <style>
+      html, body { margin: 0; height: 100%; overflow: hidden; background: #fff; }
+      canvas { position: absolute; inset: 0; display: block; width: 100vw; height: 100vh; }
+      #bg { background: #fff; }
+      #gear { pointer-events: none; }
+      #ui { pointer-events: auto; touch-action: none; }
+      /* Left instructions panel */
+      #instructions {
+        position: fixed;
+        left: 0; top: 0; bottom: 0;
+        width: min(36vw, 380px);
+        z-index: 20;
+        background: rgba(255,255,255,0.92);
+        color: #111;
+        border-right: 1px solid #d0d7de;
+        box-shadow: 0 8px 28px rgba(0,0,0,0.15);
+        overflow-y: auto;
+        padding: 16px 14px;
+        box-sizing: border-box;
+      }
+      #instructions h2 { margin: 0 0 8px; font: 700 16px/1.3 system-ui, sans-serif; }
+      #instructions h3 { margin: 14px 0 6px; font: 700 14px/1.3 system-ui, sans-serif; }
+      #instructions p, #instructions li { font: 13px/1.6 system-ui, sans-serif; }
+      #instructions code { background: transparent; padding: 0; border-radius: 0; color: inherit; }
+      #instructions pre { background: transparent; color: inherit; padding: 0; border-radius: 0; overflow: auto; font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; }
+    </style>
+  </head>
+  <body>
+    <aside id="instructions" aria-label="Hand-coding Instructions">
+      <h2>Build: White Canvas, Black Gear, Arcade Button</h2>
+      <p>These are the core steps to hand-code this demo with HTML5 Canvas.</p>
+
+      <h3>1) HTML — three stacked canvases</h3>
+      <pre><code>&lt;canvas id="bg"&gt;&lt;/canvas&gt;
+&lt;canvas id="gear"&gt;&lt;/canvas&gt;
+&lt;canvas id="ui"&gt;&lt;/canvas&gt;</code></pre>
+
+      <h3>2) CSS — fill viewport, enable input on UI</h3>
+      <pre><code>html, body { margin:0; height:100%; overflow:hidden; }
+canvas { position:absolute; inset:0; width:100vw; height:100vh; }
+#gear { pointer-events:none; }
+#ui   { pointer-events:auto; touch-action:none; }</code></pre>
+
+      <h3>3) JS — contexts + DPR sizing</h3>
+      <pre><code>const bg = document.getElementById('bg'), ctxB = bg.getContext('2d')
+const gear = document.getElementById('gear'), ctxG = gear.getContext('2d')
+const ui = document.getElementById('ui'),   ctxU = ui.getContext('2d')
+const dpr = window.devicePixelRatio || 1
+function size(c){ c.width=c.clientWidth*dpr; c.height=c.clientHeight*dpr }
+function resize(){ size(bg); size(gear); size(ui); ctxB.fillStyle='#fff'; ctxB.fillRect(0,0,bg.width,bg.height) }
+window.addEventListener('resize', resize); resize()</code></pre>
+
+      <h3>4) Gear — draw teeth around a ring</h3>
+      <pre><code>function drawGear(cx, cy, a, teeth=12){
+  const base = Math.min(gear.width, gear.height)*0.16
+  const rRoot=base, rTip=base*1.25, unit=(Math.PI*2)/teeth, flank=unit*0.25
+  ctxG.save(); ctxG.translate(cx,cy); ctxG.rotate(a); ctxG.beginPath()
+  for(let i=0;i&lt;teeth;i++){
+    const t=i*unit
+    ctxG.lineTo(Math.cos(t)*rRoot, Math.sin(t)*rRoot)
+    ctxG.lineTo(Math.cos(t+flank*.6)*rRoot, Math.sin(t+flank*.6)*rRoot)
+    ctxG.lineTo(Math.cos(t+flank)*rTip, Math.sin(t+flank)*rTip)
+    ctxG.lineTo(Math.cos(t+unit-flank)*rTip, Math.sin(t+unit-flank)*rTip)
+    ctxG.lineTo(Math.cos(t+unit-flank*.6)*rRoot, Math.sin(t+unit-flank*.6)*rRoot)
+  }
+  ctxG.closePath(); ctxG.fillStyle='#000'; ctxG.fill()
+  ctxG.globalCompositeOperation='destination-out'
+  ctxG.beginPath(); ctxG.arc(0,0,base*.45,0,Math.PI*2); ctxG.fill()
+  ctxG.globalCompositeOperation='source-over'; ctxG.restore()
+}</code></pre>
+
+      <h3>5) Arcade button — layout and shading</h3>
+      <pre><code>function uiLayout(){ const r=Math.min(gear.width,gear.height)*0.08; return {x:gear.width/2,y:gear.height-r*1.6,r} }
+let pressed=false, pressT=0, running=false
+function drawButton(){ const {x,y,r}=uiLayout(); ctxU.clearRect(0,0,ui.width,ui.height)
+  ctxU.save(); ctxU.translate(x,y)
+  const depth=r*.28, offset=pressT*depth
+  ctxU.beginPath(); ctxU.arc(0,6, r*1.2, 0, Math.PI*2); ctxU.fillStyle='rgba(0,0,0,.25)'; ctxU.fill()
+  ctxU.beginPath(); ctxU.arc(0,0, r*1.1, 0, Math.PI*2); ctxU.fillStyle='#222'; ctxU.fill()
+  const g=ctxU.createRadialGradient(-r*.3,-r*.3+offset,r*.2, 0,offset,r)
+  g.addColorStop(0,'#ff6b6b'); g.addColorStop(.6,'#e01919'); g.addColorStop(1,'#7a0b0b')
+  ctxU.beginPath(); ctxU.arc(0,offset, r, 0, Math.PI*2); ctxU.fillStyle=g; ctxU.fill()
+  ctxU.restore()
+}</code></pre>
+
+      <h3>6) Input — start/stop toggle</h3>
+      <pre><code>let gearAngle=0, gearSpeed=0, gearSpeedTarget=0
+ui.addEventListener('pointerdown', e=>{ e.preventDefault(); if(!hit(e)) return; pressed=true; armed=true; ui.setPointerCapture(e.pointerId) })
+ui.addEventListener('pointerup',   e=>{ e.preventDefault(); if(armed && hit(e)) { running=!running; gearSpeedTarget = running ? 0.03 : 0 } pressed=false; armed=false; ui.releasePointerCapture(e.pointerId) })
+function hit(e){ const r=ui.getBoundingClientRect(), x=(e.clientX-r.left)*dpr, y=(e.clientY-r.top)*dpr; const {x:X,y:Y,r:R}=uiLayout(); const dx=x-X, dy=y-Y; return dx*dx+dy*dy &lt;= R*R }</code></pre>
+
+      <h3>7) Loop — ease button + rotate gear</h3>
+      <pre><code>function tick(){ pressT += ((pressed?1:0) - pressT)*0.18
+  gearSpeed += (gearSpeedTarget - gearSpeed)*0.05
+  gearAngle += gearSpeed
+  ctxG.clearRect(0,0,gear.width,gear.height); drawGear(gear.width/2, gear.height/2, gearAngle)
+  drawButton(); requestAnimationFrame(tick) }
+requestAnimationFrame(tick)</code></pre>
+
+      <p>That’s it — three canvases, one loop, and some easing.</p>
+    </aside>
+    <!-- White background -->
+    <canvas id="bg"></canvas>
+    <!-- Black gear cog -->
+    <canvas id="gear"></canvas>
+    <!-- UI: Arcade button -->
+    <canvas id="ui"></canvas>
+
+    <script>
+      ;(() => {
+        const bg = document.getElementById('bg')
+        const gear = document.getElementById('gear')
+        const ui = document.getElementById('ui')
+        const ctxB = bg.getContext('2d')
+        const ctxG = gear.getContext('2d')
+        const ctxU = ui.getContext('2d')
+        const dpr = window.devicePixelRatio || 1
+
+        let W = 0, H = 0, CX = 0, CY = 0
+
+        function sizeCanvas(c) {
+          c.width = Math.floor(c.clientWidth * dpr)
+          c.height = Math.floor(c.clientHeight * dpr)
+        }
+
+        function resize() {
+          sizeCanvas(bg); sizeCanvas(gear); sizeCanvas(ui)
+          W = gear.width; H = gear.height; CX = W / 2; CY = H / 2
+          // solid white background
+          ctxB.fillStyle = '#fff'
+          ctxB.fillRect(0, 0, bg.width, bg.height)
+        }
+        window.addEventListener('resize', resize)
+        resize()
+
+        // Gear state
+        let gearAngle = 0
+        let gearSpeed = 0
+        let gearSpeedTarget = 0
+
+        function drawGear(cx, cy, angle, opts) {
+          const teeth = (opts && opts.teeth) || 12
+          const base = Math.min(W, H) * 0.16
+          const rRoot = base
+          const rTip = base * 1.25
+          const toothA = (Math.PI * 2) / teeth
+          const flank = toothA * 0.25
+          ctxG.save()
+          ctxG.translate(cx, cy)
+          ctxG.rotate(angle)
+          ctxG.beginPath()
+          for (let i = 0; i < teeth; i++) {
+            const a = i * toothA
+            // tooth polygon around the ring
+            ctxG.lineTo(Math.cos(a) * rRoot, Math.sin(a) * rRoot)
+            ctxG.lineTo(Math.cos(a + flank * 0.6) * rRoot, Math.sin(a + flank * 0.6) * rRoot)
+            ctxG.lineTo(Math.cos(a + flank) * rTip, Math.sin(a + flank) * rTip)
+            ctxG.lineTo(Math.cos(a + toothA - flank) * rTip, Math.sin(a + toothA - flank) * rTip)
+            ctxG.lineTo(Math.cos(a + toothA - flank * 0.6) * rRoot, Math.sin(a + toothA - flank * 0.6) * rRoot)
+            ctxG.lineTo(Math.cos(a + toothA) * rRoot, Math.sin(a + toothA) * rRoot)
+          }
+          ctxG.closePath()
+          ctxG.fillStyle = '#000'
+          ctxG.shadowColor = 'rgba(0,0,0,0.4)'
+          ctxG.shadowBlur = 12 * dpr
+          ctxG.shadowOffsetY = 2 * dpr
+          ctxG.fill()
+          // center hole
+          ctxG.globalCompositeOperation = 'destination-out'
+          ctxG.beginPath()
+          ctxG.arc(0, 0, base * 0.45, 0, Math.PI * 2)
+          ctxG.fill()
+          ctxG.globalCompositeOperation = 'source-over'
+          ctxG.restore()
+        }
+
+        // Arcade button state/geometry
+        function uiLayout() {
+          const r = Math.min(W, H) * 0.08
+          return { x: W / 2, y: H - r * 1.6, r }
+        }
+        let pressed = false
+        let pressT = 0 // 0..1 animation
+        let running = false // start/stop toggle
+        let armed = false   // only toggle on a valid press-release
+
+        function drawButton() {
+          const { x, y, r } = uiLayout()
+          ctxU.clearRect(0, 0, W, H)
+
+          // base plate
+          ctxU.save()
+          ctxU.translate(x, y)
+          const depth = r * 0.28
+          const offset = pressT * depth
+
+          // base shadow
+          ctxU.beginPath()
+          ctxU.arc(0, 6 * dpr, r * 1.2, 0, Math.PI * 2)
+          ctxU.fillStyle = 'rgba(0,0,0,0.25)'
+          ctxU.fill()
+
+          // bezel
+          ctxU.beginPath()
+          ctxU.arc(0, 0, r * 1.1, 0, Math.PI * 2)
+          ctxU.fillStyle = '#222'
+          ctxU.fill()
+
+          // button body
+          const grd = ctxU.createRadialGradient(-r * 0.3, -r * 0.3 + offset, r * 0.2, 0, offset, r)
+          grd.addColorStop(0, '#ff6b6b')
+          grd.addColorStop(0.6, '#e01919')
+          grd.addColorStop(1, '#7a0b0b')
+          ctxU.beginPath()
+          ctxU.arc(0, offset, r, 0, Math.PI * 2)
+          ctxU.fillStyle = grd
+          ctxU.fill()
+
+          // highlight
+          ctxU.beginPath()
+          ctxU.ellipse(-r * 0.25, offset - r * 0.35, r * 0.5, r * 0.25, 0, 0, Math.PI * 2)
+          ctxU.fillStyle = 'rgba(255,255,255,0.5)'
+          ctxU.fill()
+
+          ctxU.restore()
+        }
+
+        function getPointer(evt) {
+          const rect = ui.getBoundingClientRect()
+          return { x: (evt.clientX - rect.left) * dpr, y: (evt.clientY - rect.top) * dpr }
+        }
+
+        function inButton(px, py) {
+          const { x, y, r } = uiLayout()
+          const dx = px - x, dy = py - y
+          return dx * dx + dy * dy <= r * r
+        }
+
+        ui.addEventListener('pointerdown', (e) => {
+          e.preventDefault()
+          const p = getPointer(e)
+          if (!inButton(p.x, p.y)) return
+          pressed = true
+          armed = true
+          ui.setPointerCapture(e.pointerId)
+        })
+        ui.addEventListener('pointerup', (e) => {
+          e.preventDefault()
+          const p = getPointer(e)
+          if (armed && inButton(p.x, p.y)) {
+            running = !running
+            gearSpeedTarget = running ? 0.03 : 0
+          }
+          pressed = false
+          armed = false
+          ui.releasePointerCapture(e.pointerId)
+        })
+        ui.addEventListener('pointerleave', () => { pressed = false; armed = false })
+        ui.addEventListener('pointercancel', () => { pressed = false; armed = false })
+
+        function tick() {
+          // Animate button press ease
+          const target = pressed ? 1 : 0
+          pressT += (target - pressT) * 0.18
+
+          // Ease gear speed toward target
+          gearSpeed += (gearSpeedTarget - gearSpeed) * 0.05
+          gearAngle += gearSpeed
+
+          // Draw gear
+          ctxG.clearRect(0, 0, W, H)
+          drawGear(CX, CY, gearAngle)
+
+          // Draw button
+          drawButton()
+
+          requestAnimationFrame(tick)
+        }
+        requestAnimationFrame(tick)
+      })()
+    </script>
+  </body>
+  </html>

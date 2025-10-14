@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Arcade Button Invader</title>
+    <style>
+      html, body { margin: 0; height: 100%; overflow: hidden; background: #000; }
+      canvas { position: absolute; inset: 0; display: block; width: 100vw; height: 100vh; }
+      #bg { background: #000; }
+      #game { pointer-events: none; }
+      #ui { pointer-events: auto; touch-action: none; }
+    </style>
+  </head>
+  <body>
+    <canvas id="bg"></canvas>
+    <canvas id="game"></canvas>
+    <canvas id="ui"></canvas>
+
+    <script>
+      ;(() => {
+        const bg = document.getElementById('bg')
+        const game = document.getElementById('game')
+        const ui = document.getElementById('ui')
+        const ctxB = bg.getContext('2d')
+        const ctxG = game.getContext('2d')
+        const ctxU = ui.getContext('2d')
+        const dpr = window.devicePixelRatio || 1
+
+        let W = 0, H = 0
+        function size(c){ c.width = Math.floor(c.clientWidth * dpr); c.height = Math.floor(c.clientHeight * dpr) }
+        function resize(){ size(bg); size(game); size(ui); W=game.width; H=game.height; drawBackground(true) }
+        window.addEventListener('resize', resize); resize()
+
+        function drawBackground(init){
+          ctxB.fillStyle = '#000'; ctxB.fillRect(0,0,bg.width,bg.height)
+          // simple starfield
+          const n = init ? 200 : 30
+          for(let i=0;i<n;i++){
+            ctxB.fillStyle = 'rgba(255,255,255,'+(Math.random()*0.7+0.2)+')'
+            ctxB.fillRect(Math.random()*bg.width, Math.random()*bg.height, 1, 1)
+          }
+        }
+
+        // Layout
+        function shipPos(){ return { x: W*0.18, y: H*0.76 } }
+        function alienPos(){ return { x: W*0.78, y: H*0.28 } }
+
+        // Retro pixel alien (8x8 mask)
+        const ALIEN = [
+          0b00111100,
+          0b01111110,
+          0b11011011,
+          0b11111111,
+          0b11111111,
+          0b10111101,
+          0b00100100,
+          0b01000010
+        ]
+
+        function drawAlien(x, y, scale){
+          const s = Math.floor(4 * dpr * scale)
+          ctxG.save(); ctxG.translate(x, y); ctxG.translate(-ALIEN.length/2*s, -ALIEN.length/2*s)
+          ctxG.fillStyle = '#7effff';
+          for(let r=0;r<ALIEN.length;r++){
+            const row = ALIEN[r]
+            for(let c=0;c<8;c++){
+              if(row & (1 << (7-c))) ctxG.fillRect(c*s, r*s, s, s)
+            }
+          }
+          ctxG.restore()
+        }
+
+        function drawShip(x, y, scale){
+          const s = 12 * dpr * scale
+          ctxG.save(); ctxG.translate(x, y)
+          ctxG.fillStyle = '#fff'
+          // body
+          ctxG.beginPath()
+          ctxG.moveTo(-2*s, s)
+          ctxG.lineTo( 2*s, s)
+          ctxG.lineTo( 3*s, 0)
+          ctxG.lineTo( 2*s,-s)
+          ctxG.lineTo(-2*s,-s)
+          ctxG.closePath(); ctxG.fill()
+          // cannon
+          ctxG.fillRect(2*s, -0.3*s, 1.4*s, 0.6*s)
+          ctxG.restore()
+        }
+
+        // Bullet and explosion
+        let bullet = null // {x,y,vx,vy,alive}
+        let particles = [] // explosion particles
+        let alienAlive = true
+
+        function fire(){
+          if(!alienAlive || bullet) return
+          const s = shipPos(), a = alienPos()
+          const start = { x: s.x + 12*dpr*12*0.3, y: s.y } // from cannon tip approx
+          const dx = a.x - start.x, dy = a.y - start.y
+          const L = Math.max(1, Math.hypot(dx,dy))
+          const speed = 4.0 * dpr
+          bullet = { x: start.x, y: start.y, vx: dx/L*speed, vy: dy/L*speed, r: 3*dpr, alive: true }
+        }
+
+        function reset(){
+          bullet = null; particles.length = 0; alienAlive = true; gearPressed=false; running=false; pressT=0
+          ctxG.clearRect(0,0,W,H); drawBackground(true)
+        }
+
+        function spawnExplosion(x,y){
+          particles.length = 0
+          const n = 80
+          for(let i=0;i<n;i++){
+            const a = Math.random()*Math.PI*2
+            const sp = (Math.random()*2.5 + 0.5) * dpr
+            particles.push({ x,y, vx: Math.cos(a)*sp, vy: Math.sin(a)*sp, life: 1, hue: (i/n*360)|0 })
+          }
+        }
+
+        function stepExplosion(dt){
+          for(const p of particles){
+            p.x += p.vx
+            p.y += p.vy
+            p.vy += 0.02*dpr // slight gravity
+            p.life -= 0.016
+          }
+          particles = particles.filter(p=>p.life>0)
+        }
+
+        function drawExplosion(){
+          for(const p of particles){
+            ctxG.fillStyle = 'hsla('+p.hue+',100%,70%,'+p.life.toFixed(3)+')'
+            ctxG.fillRect(p.x, p.y, 2*dpr, 2*dpr)
+          }
+        }
+
+        // UI Arcade button
+        function uiLayout(){ const r=Math.min(W,H)*0.08; return { x: W/2, y: H - r*1.6, r } }
+        let gearPressed = false, pressT = 0, running = false, armed=false
+
+        function drawButton(){
+          const { x,y,r } = uiLayout()
+          ctxU.clearRect(0,0,ui.width, ui.height)
+          ctxU.save(); ctxU.translate(x,y)
+          const depth=r*.28, offset=pressT*depth
+          // shadow
+          ctxU.beginPath(); ctxU.arc(0, 6*dpr, r*1.2, 0, Math.PI*2); ctxU.fillStyle='rgba(0,0,0,.25)'; ctxU.fill()
+          // bezel
+          ctxU.beginPath(); ctxU.arc(0,0, r*1.1, 0, Math.PI*2); ctxU.fillStyle='#222'; ctxU.fill()
+          // cap gradient
+          const g = ctxU.createRadialGradient(-r*.3, -r*.3+offset, r*.2, 0, offset, r)
+          g.addColorStop(0,'#ff6b6b'); g.addColorStop(.6,'#e01919'); g.addColorStop(1,'#7a0b0b')
+          ctxU.beginPath(); ctxU.arc(0, offset, r, 0, Math.PI*2); ctxU.fillStyle = g; ctxU.fill()
+          // highlight
+          ctxU.beginPath(); ctxU.ellipse(-r*.25, offset - r*.35, r*.5, r*.25, 0, 0, Math.PI*2); ctxU.fillStyle='rgba(255,255,255,.45)'; ctxU.fill()
+          ctxU.restore()
+        }
+
+        function getPointer(evt){ const r=ui.getBoundingClientRect(); return { x:(evt.clientX-r.left)*dpr, y:(evt.clientY-r.top)*dpr } }
+        function inButton(px,py){ const {x,y,r}=uiLayout(); const dx=px-x, dy=py-y; return dx*dx+dy*dy <= r*r }
+        ui.addEventListener('pointerdown', e=>{ e.preventDefault(); const p=getPointer(e); if(!inButton(p.x,p.y)) return; gearPressed=true; armed=true; ui.setPointerCapture(e.pointerId) })
+        ui.addEventListener('pointerup', e=>{ e.preventDefault(); const p=getPointer(e); if(armed && inButton(p.x,p.y)) { running = !running; if(running){ if(alienAlive && !bullet) fire() } else { reset() } } gearPressed=false; armed=false; ui.releasePointerCapture(e.pointerId) })
+        ui.addEventListener('pointerleave', ()=>{ gearPressed=false; armed=false })
+        ui.addEventListener('pointercancel', ()=>{ gearPressed=false; armed=false })
+
+        // Main loop
+        function loop(){
+          // UI anim
+          pressT += ((gearPressed?1:0) - pressT)*0.18
+
+          // Game step
+          ctxG.clearRect(0,0,W,H)
+          // draw entities
+          const s = shipPos(), a = alienPos()
+          if(alienAlive) drawAlien(a.x, a.y, 3)
+          drawShip(s.x, s.y, 1)
+
+          // bullet
+          if(bullet){
+            bullet.x += bullet.vx
+            bullet.y += bullet.vy
+            ctxG.fillStyle = '#ffea00'
+            ctxG.beginPath(); ctxG.arc(bullet.x, bullet.y, bullet.r, 0, Math.PI*2); ctxG.fill()
+            // collision (circle vs alien bbox)
+            const alienSize = 8 * 4 * dpr * 3 // 8 pixels * cell * scale
+            const minX = a.x - alienSize/2, maxX = a.x + alienSize/2
+            const minY = a.y - alienSize/2, maxY = a.y + alienSize/2
+            if(bullet.x + bullet.r > minX && bullet.x - bullet.r < maxX && bullet.y + bullet.r > minY && bullet.y - bullet.r < maxY){
+              // hit
+              alienAlive = false
+              spawnExplosion(a.x, a.y)
+              bullet = null
+            } else if(bullet.x < -20 || bullet.x > W+20 || bullet.y < -20 || bullet.y > H+20){
+              // out of bounds
+              bullet = null
+            }
+          }
+
+          // explosion
+          if(particles.length){ stepExplosion(); drawExplosion() }
+
+          // Occasionally refresh background stars
+          if(Math.random()<0.02) drawBackground(false)
+
+          // UI
+          drawButton()
+          requestAnimationFrame(loop)
+        }
+        requestAnimationFrame(loop)
+      })()
+    </script>
+  </body>
+  </html>
+

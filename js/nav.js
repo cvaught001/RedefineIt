@@ -329,15 +329,20 @@
       }
       if (!folder && parts.length) folder = parts[0]
       if (!folder) return
-      var thumb = '/images/thumbnails/' + folder + '.png'
+      var thumbPng = '/images/thumbnails/' + folder + '.png'
+      var thumbSvg = '/images/thumbnails/' + folder + '.svg'
       if (img.src !== thumb) {
         img.onerror = function () {
-          // Try site-wide fallback first, then inline placeholder
           var self = this
-          self.onerror = function () { self.onerror = null; self.src = placeholder }
-          self.src = fallbackThumb
+          // Try SVG next
+          self.onerror = function () {
+            // Try site-wide fallback PNG, then inline placeholder
+            self.onerror = function () { self.onerror = null; self.src = placeholder }
+            self.src = fallbackThumb
+          }
+          self.src = thumbSvg
         }
-        img.src = thumb
+        img.src = thumbPng
       }
     })
   }

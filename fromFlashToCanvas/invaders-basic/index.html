@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Space Invaders — Basic</title>
+    <style>
+      html, body { margin: 0; height: 100%; overflow: hidden; background: #000; color:#cfe8ff; font-family: system-ui, sans-serif; }
+      #game { position: absolute; inset: 0; width: 100vw; height: 100vh; display: block; background: #000; touch-action: none; user-select: none; }
+      #hint { position: fixed; left: 10px; bottom: 10px; font-size: 12px; opacity: 0.8; }
+      #panel {
+        position: fixed; left: 10px; top: 10px; z-index: 2;
+        background: rgba(15,22,34,0.85); border: 1px solid rgba(140,200,255,0.35);
+        backdrop-filter: blur(6px); border-radius: 10px; padding: 10px 12px;
+        font-size: 12px; color: #cfe8ff;
+        max-height: 90vh; overflow-y: auto; width: 300px;
+      }
+      #panel label { display: grid; grid-template-columns: auto 1fr 52px; align-items: center; gap: 8px; margin: 6px 0; }
+      #panel input[type="range"] { width: 100%; }
+      #panel input, #panel output { font: inherit; }
+      #panel hr { border: 0; border-top: 1px solid rgba(140,200,255,0.25); margin: 10px 0; }
+    </style>
+  </head>
+  <body>
+    <canvas id="game"></canvas>
+    <div id="hint">Controls: ←/→ or A/D to move — Space to shoot — R to restart</div>
+    <div id="panel" aria-label="Game Controls">
+      <div><strong>Controls</strong></div>
+      <label>Player Speed <input id="playerSpeed" type="range" min="1" max="10" step="1" value="3"><output id="outPlayerSpeed">3</output></label>
+      <label>Bullet Speed <input id="bulletSpeed" type="range" min="2" max="12" step="1" value="5"><output id="outBulletSpeed">5</output></label>
+      <label>Alien Speed <input id="alienSpeed" type="range" min="1" max="6" step="1" value="3"><output id="outAlienSpeed">3</output></label>
+      <label>Alien Drop <input id="alienDrop" type="range" min="6" max="36" step="2" value="12"><output id="outAlienDrop">12</output></label>
+      <label>Alien Shots/s <input id="alienRate" type="range" min="0" max="6" step="0.5" value="1"><output id="outAlienRate">1</output></label>
+      <label>Alien Bullet Speed <input id="alienBullet" type="range" min="2" max="10" step="1" value="3"><output id="outAlienBullet">3</output></label>
+      <label>Player Shots/s <input id="playerRate" type="range" min="1" max="15" step="1" value="6"><output id="outPlayerRate">6</output></label>
+      <label>Aliens Rows <input id="invRows" type="range" min="2" max="8" step="1" value="5"><output id="outInvRows">5</output></label>
+      <label>Aliens Cols <input id="invCols" type="range" min="6" max="14" step="1" value="11"><output id="outInvCols">11</output></label>
+      <hr />
+      <div><strong>Alien Designer</strong></div>
+      <label>Type to Randomize <input id="designType" type="range" min="1" max="4" step="1" value="1"><output id="outDesignType">1</output></label>
+      <button id="btnRandomize" type="button">Randomize Selected Type</button>
+      <hr />
+      <div><strong>Boss Settings</strong></div>
+      <label>Boss HP <input id="bossHP" type="range" min="10" max="120" step="5" value="30"><output id="outBossHP">30</output></label>
+      <label>Boss Bombs/s <input id="bossRate" type="range" min="0" max="5" step="0.5" value="1"><output id="outBossRate">1</output></label>
+    </div>
+    <script>
+      ;(() => {
+        const cv = document.getElementById('game')
+        const ctx = cv.getContext('2d')
+        const dpr = window.devicePixelRatio || 1
+
+        let W = 0, H = 0
+        // Ensure canvas always has a non-zero size even during early layout
+        function resize() {
+          const cssW = cv.clientWidth || window.innerWidth
+          const cssH = cv.clientHeight || window.innerHeight
+          cv.width = Math.floor(cssW * dpr)
+          cv.height = Math.floor(cssH * dpr)
+          W = cv.width; H = cv.height
+        }
+        window.addEventListener('resize', resize)
+        // Make canvas focusable to guarantee keyboard input
+        cv.setAttribute('tabindex', '0')
+        resize()
+        // Focus on first interaction
+        document.addEventListener('pointerdown', () => { try { cv.focus() } catch (e) {} }, { once: true })
+
+        // Pixel-sprite helpers
+        function drawMask(maskRows, x, y, cell, color) {
+          // draw centered at x,y
+          const rows = maskRows.length
+          const cols = 8 // 8-bit rows
+          const width = cols * cell
+          const height = rows * cell
+          const left = Math.floor(x - width / 2)
+          const top = Math.floor(y - height / 2)
+          ctx.fillStyle = color
+          for (let r = 0; r < rows; r++) {
+            const row = maskRows[r]
+            for (let c = 0; c < cols; c++) {
+              if (row & (1 << (7 - c))) {
+                ctx.fillRect(left + c * cell, top + r * cell, cell, cell)
+              }
+            }
+          }
+        }
+
+        // Classic-like invader frames (8x8) — four styles with 2-frame animation
+        let INV_FRAMES = [
+          [ // Type A (squid-ish)
+            [0b00111000,0b01111100,0b11111110,0b11011011,0b11111111,0b00111000,0b01000100,0b10000010],
+            [0b00111000,0b01111100,0b11111110,0b11011011,0b11111111,0b00111000,0b00101000,0b01000100]
+          ],
+          [ // Type B (crab-ish)
+            [0b00111100,0b01111110,0b11011011,0b11111111,0b11111111,0b00100100,0b01000010,0b10000001],
+            [0b00111100,0b01111110,0b11011011,0b11111111,0b11111111,0b01000010,0b00100100,0b01000010]
+          ],
+          [ // Type C (octopus-ish)
+            [0b00011000,0b00111100,0b01111110,0b11011011,0b11111111,0b00100100,0b01000010,0b10000001],
+            [0b00011000,0b00111100,0b01111110,0b11011011,0b11111111,0b01000010,0b00100100,0b00011000]
+          ],
+          [ // Type D (diamond-ish)
+            [0b00011000,0b00111100,0b01111110,0b11111111,0b01111110,0b00111100,0b00011000,0b00000000],
+            [0b00000000,0b00011000,0b00111100,0b01111110,0b00111100,0b00011000,0b00000000,0b00011000]
+          ]
+        ]
+
+        const typeColors = ['#7effff', '#ffcc66', '#b28cff', '#66ff99']
+
+        // Random invader generator (mirrored 8x8 mask)
+        function randomMaskRows() {
+          const rows = []
+          for (let r = 0; r < 8; r++) {
+            // build left 4 bits randomly then mirror to right 4
+            let left = 0
+            for (let b = 0; b < 4; b++) {
+              if (Math.random() < 0.5) left |= (1 << (3 - b))
+            }
+            // ensure at least one bit so rows aren't empty
+            if (left === 0) left = 1 << (Math.random() * 4 | 0)
+            const right = ((left & 0b1000) >> 3) | ((left & 0b0100) >> 1) | ((left & 0b0010) << 1) | ((left & 0b0001) << 3)
+            const byte = (left << 4) | right
+            rows.push(byte)
+          }
+          return rows
+        }
+        function randomInvaderFrames() {
+          const base = randomMaskRows()
+          // Create a second frame by toggling border bits
+          const alt = base.map((row, i) => {
+            const edgeMask = (i % 2 === 0) ? 0b10000001 : 0b01000010
+            return row ^ edgeMask
+          })
+          return [base, alt]
+        }
+
+        const PLAYER_MASK = [
+          0b00011000,
+          0b00111100,
+          0b01111110,
+          0b11111111,
+          0b01111110,
+          0b00111100,
+          0b00011000,
+          0b00011000
+        ]
+
+        // Tunable config (UI panel)
+        const config = {
+          playerSpeed: 3 * dpr,
+          playerBulletSpeed: -5 * dpr,
+          playerShotsPerSecond: 6,
+          alienBaseSpeed: 3 * dpr / 5, // map slider 1..6 to px/frame
+          alienDropY: 12 * dpr,
+          alienShotsPerSecond: 1,
+          alienBulletSpeed: 3 * dpr,
+          invRows: 5,
+          invCols: 11,
+          bossHP: 30,
+          bossBombsPerSecond: 1
+        }
+
+        // Bind controls
+        const $ = (id) => document.getElementById(id)
+        function bindRange(id, outId, mapper, deferInit){
+          const el=$(id), out=$(outId)
+          function apply(v){ out.textContent = v; try { mapper(+v) } catch (e) {} }
+          el.addEventListener('input', (e)=> apply(e.target.value))
+          // Initialize output text always; optionally defer calling mapper until later
+          out.textContent = el.value
+          if (!deferInit) apply(el.value)
+        }
+        bindRange('playerSpeed','outPlayerSpeed', v=>config.playerSpeed = v * dpr)
+        bindRange('bulletSpeed','outBulletSpeed', v=>config.playerBulletSpeed = -v * dpr)
+        bindRange('alienSpeed','outAlienSpeed', v=>config.alienBaseSpeed = v * dpr / 5)
+        bindRange('alienDrop','outAlienDrop', v=>config.alienDropY = v * dpr)
+        bindRange('alienRate','outAlienRate', v=>config.alienShotsPerSecond = v)
+        bindRange('alienBullet','outAlienBullet', v=>config.alienBulletSpeed = v * dpr)
+        bindRange('playerRate','outPlayerRate', v=>config.playerShotsPerSecond = Math.max(1, v|0))
+        bindRange('invRows','outInvRows', v=>{ config.invRows = Math.max(2, v|0); layoutWave() }, true)
+        bindRange('invCols','outInvCols', v=>{ config.invCols = Math.max(6, v|0); layoutWave() }, true)
+        bindRange('bossHP','outBossHP', v=>{ config.bossHP = Math.max(1, v|0) })
+        bindRange('bossRate','outBossRate', v=>{ config.bossBombsPerSecond = Math.max(0, +v) })
+        
+        // Designer controls
+        bindRange('designType','outDesignType', v=>{
+          const idx = Math.max(1, Math.min(4, v|0)) - 1
+          INV_FRAMES[idx] = randomInvaderFrames()
+        })
+        $('btnRandomize').addEventListener('click', ()=>{
+          const idx = (+(document.getElementById('designType').value)||1) - 1
+          INV_FRAMES[idx] = randomInvaderFrames()
+        })
+
+        // Game state
+        let frame = 0
+        let lastStep = performance.now()
+        let animTimer = 0
+        let playerFireAcc = 0 // ms accumulated toward next shot
+        let fireAccumulator = 0 // alien firing accumulator (ms)
+
+        const state = {
+          aliens: [], // {x,y,type,alive}
+          dir: 1,
+          speed: config.alienBaseSpeed,
+          dropY: config.alienDropY,
+          player: { x: W/2, y: H*0.88, speed: config.playerSpeed },
+          bullets: [], // player bullets {x,y,vy,r}
+          alienBullets: [], // alien bullets {x,y,vy,r}
+          bossBombs: [], // boss bombs {x,y,vx,vy,r}
+          boss: null, // {x,y,vx,hp,width,height}
+          score: 0,
+          running: true,
+          mode: 'wave', // 'wave' | 'boss'
+          playerAlive: true,
+          level: 1,
+          // Tally state after boss defeat
+          tallyBonusLeft: 0,
+          tallySpeed: 600 // points per second when counting up
+        }
+
+        // Bunker build state (must exist before layoutWave uses it)
+        const bunkerCols = 12, bunkerRows = 4
+        const bunkerCount = bunkerCols * bunkerRows
+        let bunkerBricks = new Array(bunkerCount).fill(false)
+        let nextBrickIndex = 0
+
+        function layoutWave() {
+          state.aliens.length = 0
+          const rows = config.invRows, cols = config.invCols
+          const cell = 6 * dpr // pixel cell for invaders
+          const padX = cell * 2
+          const padY = cell * 2
+          const spriteW = 8 * cell
+          const spriteH = 8 * cell
+          const startX = Math.floor(W * 0.1)
+          const startY = Math.floor(H * 0.12)
+          for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+              const type = r % INV_FRAMES.length
+              const x = startX + c * (spriteW + padX)
+              const y = startY + r * (spriteH + padY)
+              state.aliens.push({ x, y, type, alive: true })
+            }
+          }
+          state.dir = 1
+          state.speed = config.alienBaseSpeed * (1 + 0.12 * (state.level - 1))
+          state.dropY = config.alienDropY
+          state.player.x = W / 2
+          state.player.y = H * 0.88
+          state.playerAlive = true
+          state.bullets = []
+          state.alienBullets = []
+          state.bossBombs = []
+          state.boss = null
+          state.running = true
+          state.mode = 'wave'
+          // reset timers/accumulators
+          animTimer = 0
+          playerFireAcc = 0
+          fireAccumulator = 0
+          // reset bunker build
+          bunkerBricks = new Array(bunkerCount).fill(false)
+          nextBrickIndex = 0
+        }
+
+        function resetGame() {
+          state.level = 1
+          state.score = 0
+          layoutWave()
+        }
+
+        layoutWave()
+
+        // Input
+        const keys = { left: false, right: false, fire: false }
+        // Mobile/touch support
+        let requestFire = false
+        let touchActive = false
+        let touchX = 0
+        let lastTapT = 0
+        let lastTapX = 0
+        let lastTapY = 0
+        window.addEventListener('keydown', (e) => {
+          if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = true
+          else if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = true
+          else if (e.code === 'Space') { keys.fire = true; e.preventDefault() }
+          else if (e.code === 'KeyR') { resetGame() }
+        })
+        window.addEventListener('keyup', (e) => {
+          if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = false
+          else if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = false
+          else if (e.code === 'Space') keys.fire = false
+        })
+
+        // Pointer/touch helpers
+        function getPointer(e){ const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) * dpr, y: (e.clientY - r.top) * dpr } }
+        function clampPlayerX(x){ return Math.max(20*dpr, Math.min(W - 20*dpr, x)) }
+        cv.addEventListener('pointerdown', (e)=>{
+          e.preventDefault()
+          cv.setPointerCapture(e.pointerId)
+          const p = getPointer(e)
+          // Double-tap to fire (within 300ms and ~40px)
+          const dt = e.timeStamp - lastTapT
+          const dx = (p.x - lastTapX), dy = (p.y - lastTapY)
+          if (dt > 0 && dt < 300 && (dx*dx + dy*dy) < (40*40*dpr*dpr)) {
+            requestFire = true
+          }
+          lastTapT = e.timeStamp; lastTapX = p.x; lastTapY = p.y
+          touchActive = true
+          touchX = p.x
+          state.player.x = clampPlayerX(p.x)
+        }, { passive: false })
+        cv.addEventListener('pointermove', (e)=>{
+          if (!touchActive) return
+          const p = getPointer(e)
+          touchX = p.x
+          state.player.x = clampPlayerX(p.x)
+        })
+        function endTouch(e){ try{ cv.releasePointerCapture(e.pointerId) }catch(_){} touchActive = false }
+        cv.addEventListener('pointerup', endTouch)
+        cv.addEventListener('pointercancel', endTouch)
+
+        function fireBullet() {
+          const cell = 6 * dpr
+          const x = state.player.x
+          const y = state.player.y - (8 * cell)/2 - 6 * dpr
+          state.bullets.push({ x, y, vy: config.playerBulletSpeed, r: 2.5 * dpr })
+        }
+
+        // Boss utilities
+        function spawnBoss(){
+          const cell = 6 * dpr
+          const bossCell = Math.floor(8 * dpr + 2 * state.level * dpr)
+          const w = 8 * bossCell, h = 8 * bossCell
+          state.bossFrames = randomInvaderFrames()
+          const maxHp = Math.max(1, Math.round(config.bossHP * (1 + 0.2*(state.level-1))))
+          state.boss = { x: W/2, y: H*0.2, vx: 1.2*dpr, hp: maxHp, maxHp, w, h, cell: bossCell }
+          state.bossBombs = []
+          bossFireAcc = 0
+        }
+        function drawBoss(b){
+          if (!b) return
+          // Draw as a giant random invader
+          drawMask(state.bossFrames[frame & 1], b.x, b.y, b.cell, '#ffffff')
+          // HP bar
+          const barW = Math.min(W*0.6, 300*dpr), barH = 6*dpr
+          const x = (W - barW)/2, y = 14*dpr
+          ctx.fillStyle = 'rgba(255,255,255,0.25)'; ctx.fillRect(x,y,barW,barH)
+          const pct = Math.max(0, b.hp/Math.max(1, b.maxHp || config.bossHP))
+          ctx.fillStyle = '#66ff99'; ctx.fillRect(x,y,barW*pct,barH)
+        }
+        let bossFireAcc = 0
+        // Big explosion for boss defeat
+        let bigExplosion = [] // {x,y,vx,vy,life,clr,sz}
+        function spawnBigExplosion(x,y,scaleW){
+          bigExplosion.length = 0
+          const n = 220
+          for(let i=0;i<n;i++){
+            const a = Math.random()*Math.PI*2
+            const sp = (Math.random()*3.8 + 0.6) * dpr
+            const life = Math.random()*1.0 + 0.6
+            const hue = (i/n*360)|0
+            const sz = Math.random()* (2.5*dpr) + 1
+            bigExplosion.push({ x, y, vx: Math.cos(a)*sp, vy: Math.sin(a)*sp, life, clr: 'hsla('+hue+',100%,60%,'+life+')', sz })
+          }
+        }
+        function drawBigExplosion(){
+          for(let i=0;i<bigExplosion.length;i++){
+            const p = bigExplosion[i]
+            p.x += p.vx
+            p.y += p.vy
+            p.vy += 0.01*dpr
+            p.life -= 0.02
+            if (p.life <= 0) { bigExplosion.splice(i--,1); continue }
+            ctx.fillStyle = p.clr
+            ctx.fillRect(p.x, p.y, p.sz, p.sz)
+          }
+        }
+        function bossTryFire(dt){
+          if (!state.boss) return
+          bossFireAcc += dt
+          const rate = Math.max(0, config.bossBombsPerSecond * (1 + 0.12*(state.level-1)))
+          if (rate <= 0) return
+          const interval = 1000 / rate // ms between bombs
+          if (bossFireAcc >= interval){
+            bossFireAcc = 0
+            // aim slightly toward player
+            const px = state.player.x, py = state.player.y
+            const dx = px - state.boss.x
+            const vx = Math.sign(dx) * Math.min(2*dpr, Math.abs(dx) / 180)
+            state.bossBombs.push({ x: state.boss.x, y: state.boss.y + state.boss.h*0.2, vx, vy: 1.5*dpr, r: 4*dpr })
+          }
+        }
+
+        // Bunker building (brick-by-brick)
+        function bunkerRect(i){
+          // i -> column-major bricks near bottom
+          const bx = W * 0.5
+          const by = H * 0.78
+          const bw = Math.min(W*0.5, 240*dpr)
+          const bh = Math.min(H*0.08, 56*dpr)
+          const cw = bw / bunkerCols
+          const ch = bh / bunkerRows
+          const col = i % bunkerCols
+          const row = Math.floor(i / bunkerCols)
+          const x = bx - bw/2 + col * cw
+          const y = by - bh/2 + row * ch
+          return { x, y, w: cw - 2*dpr, h: ch - 2*dpr }
+        }
+        function drawBunker(){
+          ctx.fillStyle = '#66ff99'
+          for(let i=0;i<bunkerCount;i++){
+            if (!bunkerBricks[i]) continue
+            const r = bunkerRect(i)
+            ctx.fillRect(r.x, r.y, r.w, r.h)
+          }
+        }
+
+        function buildNextBrick(){
+          for (let i = nextBrickIndex; i < bunkerCount; i++) {
+            if (!bunkerBricks[i]) { bunkerBricks[i] = true; nextBrickIndex = i + 1; return }
+          }
+        }
+
+        function bulletHitsRect(b, r){
+          // circle vs AABB
+          const cx = Math.max(r.x, Math.min(b.x, r.x + r.w))
+          const cy = Math.max(r.y, Math.min(b.y, r.y + r.h))
+          const dx = b.x - cx, dy = b.y - cy
+          return dx*dx + dy*dy <= b.r * b.r
+        }
+
+        function collideBulletWithBunker(b, removeOnHit){
+          for (let i=0;i<bunkerCount;i++){
+            if (!bunkerBricks[i]) continue
+            const r = bunkerRect(i)
+            if (bulletHitsRect(b, r)) {
+              bunkerBricks[i] = false
+              if (removeOnHit) return 'removed'
+              // adjust bullet outside and reflect
+              b.y = r.y - b.r - 0.5
+              b.vy = -Math.abs(b.vy)
+              b.reflected = true
+              return 'reflected'
+            }
+          }
+          return null
+        }
+
+        // Alien firing
+        function alienTryFire(dt){
+          fireAccumulator += dt * (config.alienShotsPerSecond/1000)
+          // We interpret shots/sec directly: dt in ms, so scale by /1000
+          const want = fireAccumulator
+          if (want >= 1) {
+            const toSpawn = Math.floor(want)
+            fireAccumulator -= toSpawn
+            for(let n=0;n<toSpawn;n++){
+              // pick random alive alien
+              const alive = state.aliens.filter(a=>a.alive)
+              if (!alive.length) return
+              const a = alive[(Math.random()*alive.length)|0]
+              state.alienBullets.push({ x:a.x, y:a.y, vy: Math.abs(config.alienBulletSpeed), r: 2.5 * dpr })
+            }
+          }
+        }
+
+        function step(dt) {
+          if (!state.running) return
+          const cell = 6 * dpr
+
+          // Player movement
+          let vx = 0
+          if (keys.left) vx -= config.playerSpeed
+          if (keys.right) vx += config.playerSpeed
+          state.player.x = Math.max(20*dpr, Math.min(W - 20*dpr, state.player.x + vx))
+          // Rate-limited fire
+          playerFireAcc += dt
+          const fireCooldown = 1000 / Math.max(1, config.playerShotsPerSecond)
+          if ((keys.fire || requestFire) && playerFireAcc >= fireCooldown) { fireBullet(); playerFireAcc = 0; requestFire = false }
+
+          // Animate invaders (wave mode only)
+          animTimer += dt
+          const swapFrame = animTimer > 400
+          if (swapFrame) { frame ^= 1; animTimer = 0 }
+
+          // Horizontal movement + edge bounce
+          if (state.mode === 'wave') {
+            let minX = Infinity, maxX = -Infinity
+            for (const a of state.aliens) if (a.alive) { minX = Math.min(minX, a.x); maxX = Math.max(maxX, a.x) }
+            if (minX === Infinity) { // all dead -> spawn boss
+              state.mode = 'boss'; spawnBoss()
+            } else {
+              const spriteW = 8 * cell
+              const margin = 24 * dpr
+              if (state.dir > 0 && maxX + spriteW/2 + state.speed > W - margin) {
+                state.dir = -1
+                for (const a of state.aliens) a.y += config.alienDropY
+                state.speed = Math.max(state.speed, config.alienBaseSpeed) * 1.04
+              } else if (state.dir < 0 && minX - spriteW/2 - state.speed < margin) {
+                state.dir = 1
+                for (const a of state.aliens) a.y += config.alienDropY
+                state.speed = Math.max(state.speed, config.alienBaseSpeed) * 1.04
+              }
+              for (const a of state.aliens) if (a.alive) a.x += state.speed * state.dir
+            }
+          } else if (state.mode === 'boss') {
+            // Boss movement
+            if (state.boss) {
+              state.boss.x += state.boss.vx
+              if (state.boss.x - state.boss.w*0.5 < 20*dpr) { state.boss.x = 20*dpr + state.boss.w*0.5; state.boss.vx *= -1 }
+              if (state.boss.x + state.boss.w*0.5 > W - 20*dpr) { state.boss.x = W - 20*dpr - state.boss.w*0.5; state.boss.vx *= -1 }
+            }
+            bossTryFire(dt)
+          }
+
+          // Bullet step
+          if (state.bullets.length){
+            for (const b of state.bullets) b.y += b.vy
+            // collisions
+            outer: for (let i=0;i<state.bullets.length;i++){
+              const b = state.bullets[i]
+              if (b.y < -20) { state.bullets.splice(i--,1); continue }
+              // bunker collision (player bullets destroy bricks)
+              const bunk = collideBulletWithBunker(b, true)
+              if (bunk === 'removed') { state.bullets.splice(i--,1); continue }
+              for (const a of state.aliens) {
+                if (!a.alive) continue
+                const ax=a.x, ay=a.y, half=(8*cell)/2
+                if (b.x + b.r > ax - half && b.x - b.r < ax + half && b.y + b.r > ay - half && b.y - b.r < ay + half) {
+                  a.alive = false
+                  state.bullets.splice(i--,1)
+                  state.score += 10
+                  // build bunker brick by brick
+                  buildNextBrick()
+                  break outer
+                }
+              }
+            }
+          }
+
+          // Alien bullets update
+          if (state.mode === 'wave' && state.playerAlive) alienTryFire(dt)
+          if (state.alienBullets.length){
+            for (const b of state.alienBullets) b.y += b.vy
+            for (let i=0;i<state.alienBullets.length;i++){
+              const b = state.alienBullets[i]
+              if (b.y > H+20 || b.y < -20) { state.alienBullets.splice(i--,1); continue }
+              // bunker collision: reflect upward and mark reflected, or remove if already reflected
+              const res = collideBulletWithBunker(b, false)
+              if (res === 'reflected') {
+                // change color cue by shrinking radius slightly
+                b.r = 2 * dpr
+              }
+              // hit player (circle vs player AABB)
+              const half = (8*cell)/2
+              const px = state.player.x, py = state.player.y
+              if (b.vy > 0 && b.x + b.r > px - half && b.x - b.r < px + half && b.y + b.r > py - half && b.y - b.r < py + half) {
+                state.playerAlive = false
+                state.running = false
+                break
+              }
+              // if reflected upward, allow to destroy aliens
+              if (b.vy < 0) {
+                for (const a of state.aliens) {
+                  if (!a.alive) continue
+                  const ax=a.x, ay=a.y, halfA=(8*cell)/2
+                  if (b.x + b.r > ax - halfA && b.x - b.r < ax + halfA && b.y + b.r > ay - halfA && b.y - b.r < ay + halfA) {
+                    a.alive = false
+                    state.alienBullets.splice(i--,1)
+                    state.score += 10
+                    buildNextBrick()
+                    break
+                  }
+                }
+              }
+            }
+          }
+
+          // Boss bombs update
+          if (state.bossBombs.length){
+            for (let i=0;i<state.bossBombs.length;i++){
+              const b = state.bossBombs[i]
+              b.x += b.vx
+              b.y += b.vy
+              b.vy += 0.035*dpr // gravity
+              if (b.y > H+40 || b.x < -40 || b.x > W+40) { state.bossBombs.splice(i--,1); continue }
+              // bunker collision: remove brick and bomb
+              for (let bi=0; bi<bunkerCount; bi++){
+                if (!bunkerBricks[bi]) continue
+                const r = bunkerRect(bi)
+                if (bulletHitsRect(b, r)) { bunkerBricks[bi] = false; state.bossBombs.splice(i--,1); break }
+              }
+              // hit player
+              if (state.playerAlive) {
+                const cellHalf = (8*cell)/2
+                const px = state.player.x, py = state.player.y
+                if (b.x + b.r > px - cellHalf && b.x - b.r < px + cellHalf && b.y + b.r > py - cellHalf && b.y - b.r < py + cellHalf) {
+                  state.playerAlive = false
+                  state.running = false
+                  break
+                }
+              }
+            }
+          }
+
+          // Player bullets vs boss
+          if (state.mode === 'boss' && state.boss && state.bullets.length) {
+            for (let i=0;i<state.bullets.length;i++){
+              const b = state.bullets[i]
+              const bb = state.boss
+              const rx = bb.x - bb.w*0.5, ry = bb.y - bb.h*0.5, rw = bb.w, rh = bb.h
+              if (b.x + b.r > rx && b.x - b.r < rx+rw && b.y + b.r > ry && b.y - b.r < ry+rh) {
+                state.bullets.splice(i--,1)
+                bb.hp -= 1
+                if (bb.hp <= 0) {
+                  // Big explosion burst
+                  spawnBigExplosion(bb.x, bb.y, bb.w)
+                  // Start tally phase
+                  state.mode = 'tally'
+                  state.tallyBonusLeft = 1000 + 200 * state.level
+                  state.boss = null
+                  // Clear stray projectiles
+                  state.bossBombs = []
+                  state.alienBullets = []
+                  state.bullets = []
+                }
+              }
+            }
+          }
+
+          // Tally phase: count up bonus and then start next level
+          if (state.mode === 'tally') {
+            const add = Math.min(state.tallyBonusLeft, state.tallySpeed * (dt/1000))
+            state.score += Math.round(add)
+            state.tallyBonusLeft -= add
+            if (state.tallyBonusLeft <= 0) {
+              state.level += 1
+              layoutWave()
+            }
+          }
+        }
+
+        function render() {
+          ctx.clearRect(0, 0, W, H)
+          const cell = 6 * dpr
+
+          // Draw player
+          if (state.playerAlive) drawMask(PLAYER_MASK, state.player.x, state.player.y, cell, '#9fd6ff')
+
+          // Draw aliens
+          if (state.mode === 'wave') {
+            for (const a of state.aliens) {
+              if (!a.alive) continue
+              const frames = INV_FRAMES[a.type]
+              drawMask(frames[frame & 1], a.x, a.y, cell, typeColors[a.type % typeColors.length])
+            }
+          }
+
+          // Draw bullet
+          if (state.bullets.length) {
+            ctx.fillStyle = '#ffea00'
+            for (const b of state.bullets) { ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI*2); ctx.fill() }
+          }
+          if (state.alienBullets.length){
+            ctx.fillStyle = '#ff6b6b'
+            for (const b of state.alienBullets) { ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI*2); ctx.fill() }
+          }
+          if (state.bossBombs.length){
+            ctx.fillStyle = '#ffaa33'
+            for (const b of state.bossBombs) { ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI*2); ctx.fill() }
+          }
+
+          // Boss
+          if (state.mode === 'boss' && state.boss) drawBoss(state.boss)
+          // Boss big explosion particles
+          if (bigExplosion.length) drawBigExplosion()
+
+          // Bunker
+          drawBunker()
+
+          // HUD
+          ctx.fillStyle = '#cfe8ff'
+          ctx.font = (14 * dpr) + 'px monospace'
+          ctx.fillText('Score: ' + state.score, 12 * dpr, 20 * dpr)
+
+          if (!state.playerAlive) {
+            let msg = 'You were hit! Press R to restart'
+            ctx.font = (18 * dpr) + 'px monospace'
+            const mW = ctx.measureText(msg).width
+            ctx.fillText(msg, (W - mW) / 2, H * 0.5)
+          } else if (state.mode === 'tally') {
+            const msg = 'Level ' + state.level + ' cleared! Bonus +' + Math.max(0, Math.round(state.tallyBonusLeft))
+            ctx.font = (18 * dpr) + 'px monospace'
+            const mW = ctx.measureText(msg).width
+            ctx.fillText(msg, (W - mW) / 2, H * 0.5)
+          }
+        }
+
+        // Simple on-screen error overlay to surface runtime issues
+        const errBox = document.createElement('div')
+        errBox.style.cssText = 'position:fixed;left:10px;top:10px;z-index:9999;background:rgba(220,40,40,0.9);color:#fff;padding:8px 10px;border-radius:8px;font:12px/1.4 ui-monospace,monospace;max-width:70vw;display:none;'
+        document.body.appendChild(errBox)
+        function showError(msg){ errBox.textContent = String(msg); errBox.style.display = 'block' }
+        window.addEventListener('error', (e)=>{ showError(e.error && e.error.stack ? e.error.stack : e.message) })
+        window.addEventListener('unhandledrejection', (e)=>{ showError(e.reason && e.reason.stack ? e.reason.stack : e.reason) })
+
+        function loop(t) {
+          try {
+            const now = t || performance.now()
+            const dt = now - lastStep
+            lastStep = now
+            step(dt)
+            render()
+          } catch (err) {
+            showError(err && err.stack ? err.stack : err)
+          }
+          requestAnimationFrame(loop)
+        }
+        requestAnimationFrame(loop)
+      })()
+    </script>
+  </body>
+  </html>
