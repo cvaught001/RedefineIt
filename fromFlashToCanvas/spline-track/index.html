@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Spline Racetrack — Editor + Perspective Drive</title>
+    <style>
+      html, body { margin: 0; height: 100%; overflow: hidden; background: #0b0f13; color:#cfe8ff; font-family: system-ui, sans-serif; }
+      #wrap { position: absolute; inset: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+      canvas { width: 100%; height: 100%; display: block; touch-action: none; user-select: none; }
+      #hud { position: fixed; left: 10px; top: 10px; z-index: 2; font-size: 12px; background: rgba(15,22,34,0.85); border:1px solid rgba(140,200,255,0.35); border-radius:10px; padding:8px 10px; backdrop-filter: blur(6px); }
+      #help { position: fixed; left: 10px; bottom: 10px; font-size: 12px; opacity: 0.85; }
+    </style>
+  </head>
+  <body>
+    <div id="wrap">
+      <canvas id="track"></canvas>
+      <canvas id="persp"></canvas>
+    </div>
+    <div id="hud">Speed: <span id="spd">0</span> • Lap: <span id="lap">1</span> • Target Laps: <input id="lapsRange" type="range" min="1" max="10" step="1" value="4"><output id="lapsOut">4</output></div>
+    <div id="help">Left canvas: drag control points to edit spline. Right: drive view. Controls: ←/→ steer offset • ↑ accel • ↓ brake • R reset • Double‑tap to boost</div>
+    <script>
+      ;(() => {
+        const dpr = Math.max(1, window.devicePixelRatio || 1)
+        const cTrack = document.getElementById('track')
+        const cPersp = document.getElementById('persp')
+        const tctx = cTrack.getContext('2d')
+        const pctx = cPersp.getContext('2d')
+        const ui = { spd: document.getElementById('spd'), lap: document.getElementById('lap'), lapsRange: document.getElementById('lapsRange'), lapsOut: document.getElementById('lapsOut') }
+
+        let TW=0, TH=0, PW=0, PH=0
+        function sizeCanvas(c){ c.width = Math.floor(c.clientWidth * dpr); c.height = Math.floor(c.clientHeight * dpr) }
+        function resize(){ sizeCanvas(cTrack); sizeCanvas(cPersp); TW=cTrack.width; TH=cTrack.height; PW=cPersp.width; PH=cPersp.height; buildSamples() }
+        window.addEventListener('resize', resize)
+
+        // Control points (closed loop), initialized as an oval
+        const cp = []
+        function initCP(){
+          cp.length = 0
+          const cx = (TW||800)/2, cy = (TH||600)/2
+          const rx = (TW||800)*0.32, ry = (TH||600)*0.28
+          for (let i=0;i<8;i++){
+            const a = (i/8)*Math.PI*2
+            cp.push({ x: cx + Math.cos(a)*rx, y: cy + Math.sin(a)*ry })
+          }
+        }
+
+        // Catmull-Rom spline sampling
+        const samples = [] // {x,y, s, tx,ty}
+        let totalLen = 1
+        function catmull(p0,p1,p2,p3,t){
+          const t2=t*t, t3=t2*t
+          return {
+            x: 0.5*((2*p1.x) + (-p0.x+p2.x)*t + (2*p0.x-5*p1.x+4*p2.x-p3.x)*t2 + (-p0.x+3*p1.x-3*p2.x+p3.x)*t3),
+            y: 0.5*((2*p1.y) + (-p0.y+p2.y)*t + (2*p0.y-5*p1.y+4*p2.y-p3.y)*t2 + (-p0.y+3*p1.y-3*p2.y+p3.y)*t3)
+          }
+        }
+        function buildSamples(){
+          if (cp.length === 0) initCP()
+          samples.length = 0
+          const N = cp.length
+          const STEPS = 32
+          let prev = null, s=0
+          for (let i=0;i<N;i++){
+            const p0 = cp[(i-1+N)%N], p1 = cp[i], p2 = cp[(i+1)%N], p3 = cp[(i+2)%N]
+            for (let k=0;k<STEPS;k++){
+              const t = k/STEPS
+              const pos = catmull(p0,p1,p2,p3,t)
+              if (prev){ const dx=pos.x-prev.x, dy=pos.y-prev.y; s += Math.hypot(dx,dy) }
+              samples.push({ x: pos.x, y: pos.y, s })
+              prev = pos
+            }
+          }
+          totalLen = s || 1
+          // compute tangents
+          for (let i=0;i<samples.length;i++){
+            const a = samples[(i-1+samples.length)%samples.length]
+            const b = samples[(i+1)%samples.length]
+            const tx = b.x - a.x, ty = b.y - a.y
+            const n = Math.hypot(tx,ty)||1
+            samples[i].tx = tx/n; samples[i].ty = ty/n
+          }
+        }
+
+        function pointAtDist(dist){
+          // binary search by s
+          const target = ((dist % totalLen) + totalLen) % totalLen
+          let lo=0, hi=samples.length-1
+          while (lo<hi){ const mid=(lo+hi)>>1; (samples[mid].s < target) ? lo=mid+1 : hi=mid }
+          return samples[lo]
+        }
+
+        // Player state (heading in radians relative to spline tangent)
+        const player = { dist: 0, speed: 0, accel: 180*dpr, brake: 260*dpr, friction: 90*dpr, max: 520*dpr, offset: 0, heading: 0 }
+        let lapGoal = 4
+        const keys = {left:false,right:false,up:false,down:false}
+        let dragIdx = -1, dragging=false
+        let touchActive=false, lastTapT=0, lastTapX=0, lastTapY=0, requestBoost=false
+
+        function onKey(e,down){
+          const c=e.code
+          if (c==='ArrowLeft'||c==='KeyA') keys.left=down
+          else if (c==='ArrowRight'||c==='KeyD') keys.right=down
+          else if (c==='ArrowUp'||c==='KeyW') keys.up=down
+          else if (c==='ArrowDown'||c==='KeyS') keys.down=down
+          else if (!down && c==='KeyR'){ player.dist=0; player.speed=0; player.offset=0; ui.lap.textContent = '1' }
+        }
+        window.addEventListener('keydown', e=>onKey(e,true))
+        window.addEventListener('keyup', e=>onKey(e,false))
+
+        function getPointer(c,e){ const r=c.getBoundingClientRect(); return { x:(e.clientX-r.left)*dpr, y:(e.clientY-r.top)*dpr } }
+        function pickCP(p){
+          for (let i=0;i<cp.length;i++){ const dx=p.x-cp[i].x, dy=p.y-cp[i].y; if (dx*dx+dy*dy < (16*dpr)*(16*dpr)) return i }
+          return -1
+        }
+        cTrack.addEventListener('pointerdown', e=>{
+          e.preventDefault(); cTrack.setPointerCapture(e.pointerId)
+          const p=getPointer(cTrack,e)
+          const dt=e.timeStamp-lastTapT, dx=p.x-lastTapX, dy=p.y-lastTapY
+          if (dt>0 && dt<300 && (dx*dx+dy*dy)<(44*44*dpr*dpr)) requestBoost=true
+          lastTapT=e.timeStamp; lastTapX=p.x; lastTapY=p.y
+          const idx=pickCP(p); if (idx>=0){ dragIdx=idx; dragging=true }
+        }, {passive:false})
+        cTrack.addEventListener('pointermove', e=>{ if(!dragging) return; const p=getPointer(cTrack,e); cp[dragIdx].x=p.x; cp[dragIdx].y=p.y; buildSamples() })
+        function endDrag(e){ try{cTrack.releasePointerCapture(e.pointerId)}catch(_){ } dragging=false; dragIdx=-1 }
+        cTrack.addEventListener('pointerup', endDrag); cTrack.addEventListener('pointercancel', endDrag)
+
+        // Draw track (left)
+        function drawTrack(){
+          tctx.clearRect(0,0,TW,TH)
+          // background
+          tctx.fillStyle = '#0f1622'; tctx.fillRect(0,0,TW,TH)
+          // spline center
+          tctx.strokeStyle = '#8cc8ff'; tctx.lineWidth = 2*dpr; tctx.beginPath()
+          for (let i=0;i<samples.length;i++){ const p=samples[i]; (i? tctx.lineTo(p.x,p.y) : tctx.moveTo(p.x,p.y)) }
+          tctx.closePath(); tctx.stroke()
+          // start arrow at s=0 pointing along spline tangent
+          const s0 = samples[0]
+          const baseAng = Math.atan2(s0.ty, s0.tx)
+          const startSize = 12*dpr
+          tctx.save()
+          tctx.translate(s0.x, s0.y)
+          tctx.rotate(baseAng)
+          tctx.fillStyle = '#ffd966'
+          tctx.beginPath()
+          tctx.moveTo(startSize, 0)
+          tctx.lineTo(-startSize*0.6, -startSize*0.6)
+          tctx.lineTo(-startSize*0.3, 0)
+          tctx.lineTo(-startSize*0.6, startSize*0.6)
+          tctx.closePath(); tctx.fill()
+          tctx.restore()
+          // edges
+          const roadW = 36*dpr
+          tctx.strokeStyle = '#66ff99'; tctx.lineWidth = 1*dpr; tctx.beginPath()
+          for (let i=0;i<samples.length;i++){
+            const p=samples[i]
+            const nx = -p.ty, ny = p.tx
+            const ex = p.x + nx*roadW, ey = p.y + ny*roadW
+            ;(i? tctx.lineTo(ex,ey) : tctx.moveTo(ex,ey))
+          }
+          tctx.closePath(); tctx.stroke()
+          tctx.beginPath()
+          for (let i=0;i<samples.length;i++){
+            const p=samples[i]
+            const nx = -p.ty, ny = p.tx
+            const ex = p.x - nx*roadW, ey = p.y - ny*roadW
+            ;(i? tctx.lineTo(ex,ey) : tctx.moveTo(ex,ey))
+          }
+          tctx.closePath(); tctx.stroke()
+          // car icon at current dist pointing in heading direction
+          const Pc = pointAtDist(player.dist)
+          const ang = Math.atan2(Pc.ty, Pc.tx) + player.heading
+          const sz = 10*dpr
+          tctx.save()
+          tctx.translate(Pc.x, Pc.y)
+          tctx.rotate(ang)
+          tctx.fillStyle = '#ffd966'
+          tctx.beginPath()
+          tctx.moveTo(sz, 0)
+          tctx.lineTo(-sz*0.6, -sz*0.6)
+          tctx.lineTo(-sz*0.3, 0)
+          tctx.lineTo(-sz*0.6, sz*0.6)
+          tctx.closePath(); tctx.fill()
+          tctx.restore()
+          // control points
+          for (let i=0;i<cp.length;i++){
+            const pt=cp[i]
+            tctx.fillStyle='#ffd966'; tctx.beginPath(); tctx.arc(pt.x,pt.y,6*dpr,0,Math.PI*2); tctx.fill();
+          }
+        }
+
+        // Perspective (right) — simple 3D projection along spline
+        function drawPersp(dt){
+          pctx.clearRect(0,0,PW,PH)
+          // sky & ground
+          const horizon = Math.floor(PH*0.44)
+          const sky=pctx.createLinearGradient(0,0,0,PH); sky.addColorStop(0,'#0a121b'); sky.addColorStop(1,'#0b1722')
+          pctx.fillStyle=sky; pctx.fillRect(0,0,PW,PH)
+          pctx.fillStyle='#10331f'; pctx.fillRect(0,horizon,PW,PH-horizon)
+
+          const K = PW*0.95 // projection scale
+          const centerX = PW/2
+          const roadHalfBase = 26*dpr
+          const maxLook = 1400
+          // Player reference
+          const P0 = pointAtDist(player.dist)
+          const theta0 = Math.atan2(P0.ty, P0.tx) + player.heading
+
+          const SEG = 4*dpr
+          for (let z=0; z<=maxLook; z+=SEG){
+            const Pz = pointAtDist(player.dist + z)
+            const theta = Math.atan2(Pz.ty, Pz.tx)
+            // Center world pos relative to player
+            let dx = Pz.x - P0.x, dy = Pz.y - P0.y
+            // rotate by -theta0 (view direction)
+            const cos=-Math.cos(theta0), sin=-Math.sin(theta0)
+            const rx =  cos*dx - sin*dy
+            const rz =  sin*dx + cos*dy + 1 // ensure positive
+            const scale = K / (rz + 80)
+            const half = roadHalfBase * (1 + z/600)
+
+            // lateral offset from player steering
+            const off = (player.offset||0) * 30*dpr
+            const sx = centerX + (rx + off) * scale
+            const sy = horizon + (K*0.2) / (rz + 40)
+            const hw = half * scale
+            // draw a slice
+            const col = ((z/40|0)%2) ? '#2a3448' : '#313b50'
+            pctx.fillStyle = col
+            pctx.fillRect(sx - hw, sy, hw*2, 3*dpr)
+            // shoulders
+            pctx.fillStyle = ((z/60|0)%2)? '#b23a3a':'#d9d9d9'
+            pctx.fillRect(sx - hw - 5*scale, sy, 5*scale, 3*dpr)
+            pctx.fillRect(sx + hw, sy, 5*scale, 3*dpr)
+            // lane
+            if (((z/120|0)%2)===0){ pctx.fillStyle='#cfe8ff'; pctx.fillRect(sx-2*scale, sy, 4*scale, 3*dpr) }
+          }
+        }
+
+        function step(dt){
+          // speed integrate
+          const lapsDone = Math.floor(player.dist/totalLen)+1
+          if (keys.up || keys.down || requestBoost) {
+            if (keys.up || requestBoost) player.speed = Math.min(player.max, player.speed + player.accel*(dt/1000))
+            else if (keys.down) player.speed = Math.max(0, player.speed - player.brake*(dt/1000))
+            else player.speed = Math.max(0, player.speed - player.friction*(dt/1000))
+          } else {
+            // auto run until lapGoal reached
+            if (lapsDone <= lapGoal) player.speed = Math.min(player.max*0.6, player.speed + player.accel*(dt/1000))
+            else player.speed = Math.max(0, player.speed - player.brake*(dt/1000))
+          }
+          requestBoost=false
+          // heading & steering
+          const steer = (keys.left?-1:0) + (keys.right?1:0)
+          player.heading += steer * 0.02
+          player.heading *= 0.985 // slight centering
+          // translate heading to offset drift
+          player.offset += Math.sin(player.heading) * (player.speed/player.max) * 0.5 * (dt/1000)
+          player.offset = Math.max(-1, Math.min(1, player.offset))
+          // advance along track
+          const prevLap = Math.floor(player.dist/totalLen)
+          player.dist += (player.speed*(dt/1000)) * Math.max(0, Math.cos(player.heading))
+          // lap wrap
+          const newLap = Math.floor(player.dist/totalLen)
+          if (newLap>prevLap){ ui.lap.textContent = String(1+newLap) }
+          // UI
+          ui.spd.textContent = (player.speed/dpr|0)
+          ui.lap.textContent = String(Math.floor(player.dist/totalLen)+1) + '/' + lapGoal
+        }
+
+        // Main loop
+        let last=performance.now()
+        function loop(){
+          const now=performance.now(); let dt=now-last; if (dt>80) dt=80; last=now
+          step(dt); drawTrack(); drawPersp(dt); requestAnimationFrame(loop)
+        }
+
+        // init
+        resize(); initCP(); buildSamples();
+        // bind laps slider
+        ui.lapsRange.addEventListener('input', (e)=>{ lapGoal = Math.max(1, e.target.value|0); ui.lapsOut.textContent = String(lapGoal) })
+        ui.lapsOut.textContent = String(lapGoal)
+        loop()
+      })()
+    </script>
+  </body>
+  </html>
