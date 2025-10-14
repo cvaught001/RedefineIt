@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>AI in Coding — Using ChatGPT and Copilot (Summary)</title>
+    <link rel="icon" href="../favicon.svg" type="image/svg+xml" />
+    <link rel="mask-icon" href="../favicon.svg" color="#0b0f13" />
+    <meta name="theme-color" content="#0b0f13" />
+    <meta name="description" content="A concise summary of key ideas and takeaways on using ChatGPT and GitHub Copilot effectively in software development." />
+    <meta name="keywords" content="AI in coding, ChatGPT, GitHub Copilot, software engineering, productivity, prompt engineering" />
+    <meta name="author" content="Christopher Vaught" />
+    <meta name="robots" content="index,follow" />
+    <link rel="canonical" href="https://redefineit.net/blog/ai-in-coding-using-chatgpt-and-copilot.html" />
+    <meta property="og:type" content="article" />
+    <meta property="og:site_name" content="RedefineIt" />
+    <meta property="og:title" content="AI in Coding — Using ChatGPT and Copilot (Summary)" />
+    <meta property="og:description" content="Summary + key takeaways on using ChatGPT and Copilot: use cases, prompt discipline, code quality, security & licensing considerations." />
+    <meta property="og:url" content="https://redefineit.net/blog/ai-in-coding-using-chatgpt-and-copilot.html" />
+    <meta property="og:image" content="https://redefineit.net/images/blog/ai-in-coding-using-chatgpt-and-copilot.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="AI in Coding — Using ChatGPT and Copilot (Summary)" />
+    <meta name="twitter:description" content="Summary + key takeaways on using ChatGPT and Copilot: use cases, prompt discipline, code quality, security & licensing considerations." />
+    <meta name="twitter:image" content="https://redefineit.net/images/blog/ai-in-coding-using-chatgpt-and-copilot.png" />
+    <link href="../css/index.css" rel="stylesheet" />
+  </head>
+  <body>
+    <div data-include="../partials/header.html"></div>
+    <div id="bgWrap" aria-hidden="true">
+      <canvas id="bgCanvas"></canvas>
+      <div id="bgScrim"></div>
+    </div>
+
+    <main class="content">
+      <article class="panel blog-post">
+        <h1 class="post-title">AI in Coding — Using ChatGPT and Copilot (Summary)</h1>
+        <div class="post-meta">Curated by Christopher Vaught • 5 min read</div>
+
+        <p>
+          Source: <a href="https://keyholesoftware.com/ai-in-coding-using-chatgpt-and-copilot/" target="_blank" rel="noopener">AI in Coding — Using ChatGPT and Copilot</a>
+        </p>
+
+        <p class="note">
+          This is a concise summary and commentary prepared for the RedefineIt
+          blog. If you authored the source, feel free to suggest edits for
+          nuance and emphasis.
+        </p>
+
+        <h3>Why these tools matter</h3>
+        <p>
+          ChatGPT and GitHub Copilot boost <strong>throughput and exploration</strong>.
+          They’re most valuable when used to unstick yourself, scaffold boilerplate,
+          and quickly explore alternative approaches — not to replace judgment.
+        </p>
+
+        <h3>Effective use cases</h3>
+        <ul>
+          <li>Drafting boilerplate, scaffolds, and test harnesses</li>
+          <li>Refactoring suggestions and code review prompts</li>
+          <li>Generating docs, comments, and migration checklists</li>
+          <li>API usage examples and framework‑specific patterns</li>
+          <li>“Rubber‑ducking” complex problems with structured prompts</li>
+        </ul>
+
+        <h3>Prompt discipline</h3>
+        <ul>
+          <li>State the <strong>goal, constraints, and context</strong> (language, framework, versions).</li>
+          <li>Break work into <strong>small, verifiable steps</strong> with examples.</li>
+          <li>Iterate with feedback; keep the conversation anchored to code.</li>
+        </ul>
+
+        <h3>Quality, safety, and licensing</h3>
+        <ul>
+          <li>Always <strong>compile, test, and lint</strong> AI‑assisted code.</li>
+          <li>Guard your secrets and private data; review <strong>privacy settings</strong>.</li>
+          <li>Be mindful of <strong>license compatibility</strong> and attribution policies.</li>
+        </ul>
+
+        <h3>Team patterns</h3>
+        <ul>
+          <li>Use AI as a <strong>pair</strong> — not an authority. Treat output as a draft.</li>
+          <li>Adopt lightweight <strong>guidelines</strong> (where to use, where not to).</li>
+          <li>Track outcomes: PR cycle time, defect rates, and onboarding velocity.</li>
+        </ul>
+
+        <h3>Bottom line</h3>
+        <p>
+          AI copilots accelerate the <strong>mechanics</strong> of coding and help you
+          explore solution space faster. The best results come from clear prompting,
+          incremental verification, and steady engineering standards.
+        </p>
+
+        <p class="note">
+          If you want this summary tailored to your team’s stack or governance
+          needs, I can expand it with concrete prompts, checklists, and policy
+          templates.
+        </p>
+      </article>
+    </main>
+
+    <div data-include="../partials/footer.html"></div>
+    <script src="../js/includes.js"></script>
+    <script src="../js/nav.js"></script>
+    <script src="../js/starspinner.js"></script>
+    <script>
+      initStarspinner('#bgCanvas', {
+        lineColor: 'rgba(139, 255, 196, 0.9)',
+        trail: 0.23,
+        glow: 20
+      })
+    </script>
+  </body>
+  </html>

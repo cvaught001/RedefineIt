@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Pole‑Position Style — Canvas Vector Racer</title>
+    <style>
+      html, body { margin: 0; height: 100%; overflow: hidden; background: #000; color:#cfe8ff; font-family: system-ui, sans-serif; }
+      #game { position: absolute; inset: 0; width: 100vw; height: 100vh; display: block; touch-action: none; user-select: none; }
+      #hud { position: fixed; left: 10px; top: 10px; z-index: 2; font-size: 13px; background: rgba(15,22,34,0.85); border: 1px solid rgba(140,200,255,0.35); border-radius: 10px; padding: 8px 10px; backdrop-filter: blur(6px); }
+      #help { position: fixed; left: 10px; bottom: 10px; font-size: 12px; opacity: 0.85; }
+    </style>
+  </head>
+  <body>
+    <canvas id="game"></canvas>
+    <div id="hud">Lap: <span id="lap">1</span> • Time: <span id="time">0.0</span>s • Speed: <span id="spd">0</span> • PosX: <span id="pos">0</span></div>
+    <div id="help">Controls: ←/→ steer • ↑ accel • ↓ brake • Drag to steer • Double‑tap to boost • R restart</div>
+    <script>
+      ;(() => {
+        const cv = document.getElementById('game')
+        const ctx = cv.getContext('2d')
+        const dpr = Math.max(1, window.devicePixelRatio || 1)
+        // Road config (declared early so resize can reference it)
+        let road = { minHalf: 24*dpr, maxHalf: 0, rumble: 6*dpr }
+
+        let W = 0, H = 0
+        let horizonY = 0
+        function resize(){
+          const cssW = cv.clientWidth || window.innerWidth
+          const cssH = cv.clientHeight || window.innerHeight
+          cv.width = Math.floor(cssW * dpr)
+          cv.height = Math.floor(cssH * dpr)
+          W = cv.width; H = cv.height
+          horizonY = Math.floor(H * 0.44)
+          // keep road width responsive
+          road.maxHalf = W * 0.35
+        }
+        window.addEventListener('resize', resize)
+        resize()
+
+        const u = { lap: byId('lap'), time: byId('time'), spd: byId('spd'), pos: byId('pos') }
+        function byId(id){ return document.getElementById(id) }
+
+        // Game state
+        const player = { x: 0, // lateral (-1..1)
+                         dx: 0,
+                         carW: 40*dpr, carH: 70*dpr, 
+                         maxSpeed: 360*dpr, speed: 0, accel: 220*dpr, brake: 350*dpr, friction: 110*dpr }
+        const track = { length: 16000, t: 0, lap: 1, timeMs: 0 }
+
+        // Curvature function (sum of sines) for a simple track
+        function trackCurve(z){
+          const k = 1/1200
+          return Math.sin(z*k*1.2)*0.8 + Math.sin(z*k*0.5+1.7)*0.5 + Math.sin(z*k*2.4+3.2)*0.25
+        }
+
+        // Hills (optional small vertical undulation)
+        function trackHill(z){
+          const k = 1/1400
+          return Math.sin(z*k*1.3)*0.6 + Math.sin(z*k*0.6+2.4)*0.35
+        }
+
+        // Opponent cars
+        const rivals = [] // {z,x, speed, color}
+        function spawnRival(aheadZ){
+          const x = (Math.random()*1.6 - 0.8) // -0.8..0.8
+          // Give rivals an absolute forward speed (independent of player)
+          const v = player.maxSpeed * (0.45 + Math.random()*0.5) // px/sec in track units
+          const color = ['#ff6b6b','#ffd966','#66ff99','#b28cff'][ (Math.random()*4)|0 ]
+          rivals.push({ z: (track.t + aheadZ) % track.length, x, v, color })
+        }
+        for (let i=0;i<8;i++) spawnRival(800 + i*1600)
+
+        // Input
+        const keys = {left:false,right:false,up:false,down:false}
+        let requestBoost = false
+        let touchActive=false, lastTapT=0, lastTapX=0, lastTapY=0
+        window.addEventListener('keydown', e=>{
+          if (e.code==='ArrowLeft' || e.code==='KeyA') keys.left=true
+          else if (e.code==='ArrowRight' || e.code==='KeyD') keys.right=true
+          else if (e.code==='ArrowUp' || e.code==='KeyW') keys.up=true
+          else if (e.code==='ArrowDown' || e.code==='KeyS') keys.down=true
+          else if (e.code==='KeyR') reset()
+        })
+        window.addEventListener('keyup', e=>{
+          if (e.code==='ArrowLeft' || e.code==='KeyA') keys.left=false
+          else if (e.code==='ArrowRight' || e.code==='KeyD') keys.right=false
+          else if (e.code==='ArrowUp' || e.code==='KeyW') keys.up=false
+          else if (e.code==='ArrowDown' || e.code==='KeyS') keys.down=false
+        })
+        function getPointer(e){ const r=cv.getBoundingClientRect(); return {x:(e.clientX-r.left)*dpr,y:(e.clientY-r.top)*dpr} }
+        cv.addEventListener('pointerdown', e=>{
+          e.preventDefault(); cv.setPointerCapture(e.pointerId)
+          const p=getPointer(e)
+          const dt=e.timeStamp-lastTapT, dx=p.x-lastTapX, dy=p.y-lastTapY
+          if (dt>0 && dt<300 && (dx*dx+dy*dy)<(42*42*dpr*dpr)) requestBoost=true
+          lastTapT=e.timeStamp; lastTapX=p.x; lastTapY=p.y
+          touchActive=true; steerToPointer(p.x)
+        }, {passive:false})
+        cv.addEventListener('pointermove', e=>{ if(!touchActive) return; steerToPointer(getPointer(e).x) })
+        function endTouch(e){ try{cv.releasePointerCapture(e.pointerId)}catch(_){ } touchActive=false }
+        cv.addEventListener('pointerup', endTouch); cv.addEventListener('pointercancel', endTouch)
+        function steerToPointer(px){ const center=W/2; const rel=(px-center)/(W*0.42); player.dx = rel*1.7 }
+
+        function reset(){ track.t=0; track.lap=1; track.timeMs=0; player.speed=0; player.x=0; rivals.length=0; for (let i=0;i<8;i++) spawnRival(800+i*1600) }
+
+        // Projection helpers
+        function roadHalfAtY(screenY){
+          const t = Math.max(0, Math.min(1, (screenY - horizonY) / (H - horizonY)))
+          return road.minHalf + (road.maxHalf - road.minHalf) * t
+        }
+        function depthForY(screenY){
+          const t = Math.max(0.0001, Math.min(1, (screenY - horizonY) / (H - horizonY)))
+          return t * 1200 // how far ahead this band represents
+        }
+
+        function drawScene(dt){
+          // Sky + far hills
+          const sky = ctx.createLinearGradient(0,0,0,H)
+          sky.addColorStop(0,'#0a121b'); sky.addColorStop(1,'#0b1722')
+          ctx.fillStyle=sky; ctx.fillRect(0,0,W,H)
+          ctx.fillStyle = '#081018'
+          for(let i=0;i<8;i++){
+            const y=horizonY - 20*dpr - i*10*dpr
+            ctx.fillRect(0, y, W, 2*dpr)
+          }
+
+          // Grass
+          ctx.fillStyle = '#10331f'
+          ctx.fillRect(0, horizonY, W, H-horizonY)
+
+          // Road bands
+          const bandH = Math.max(2, Math.floor(3*dpr))
+          for (let y=horizonY; y<=H; y+=bandH){
+            // Invert z progression so bands/lane markers advance toward the player
+            const z = depthForY(y) - track.t
+            const curve = trackCurve(z)
+            const hill = trackHill(z)
+            const centerX = W/2 - (curve*220*dpr) - (player.x*140*dpr)
+            const half = roadHalfAtY(y)
+            // road
+            ctx.fillStyle = ( ( (z/60|0) % 2) ? '#303b4f' : '#283247')
+            ctx.fillRect(centerX-half, y, half*2, bandH)
+            // rumble shoulders
+            ctx.fillStyle = ( ( (z/90|0) % 2) ? '#b23a3a' : '#d9d9d9')
+            ctx.fillRect(centerX-half - road.rumble, y, road.rumble, bandH)
+            ctx.fillRect(centerX+half, y, road.rumble, bandH)
+            // lane marker
+            if (((z/120|0)%2)===0){ ctx.fillStyle='#cfe8ff'; ctx.fillRect(centerX-3*dpr, y, 6*dpr, bandH) }
+          }
+
+          // Rivals (draw back to front)
+          rivals.sort((a,b)=> (b.z - a.z))
+          for (const r of rivals){
+            // compute screen position from depth
+            let rel = (r.z - track.t); if (rel < 0) rel += track.length
+            const y = Math.max(horizonY, Math.min(H-2, horizonY + (H-horizonY) * (rel/1400)))
+            const half = roadHalfAtY(y)
+            const cx = W/2 - (trackCurve(track.t + rel)*220*dpr) - (player.x*140*dpr)
+            const x = cx + r.x * (half*0.9)
+            const w = Math.max(8*dpr, half*0.22)
+            const h = w*1.7
+            // Draw a simple car shape (tires + body + roof)
+            ctx.fillStyle = '#1c2230'
+            ctx.fillRect(x - w*0.6, y - h*0.1, w*0.22, h*0.12) // left tire
+            ctx.fillRect(x + w*0.38, y - h*0.1, w*0.22, h*0.12) // right tire
+            ctx.fillStyle = r.color
+            ctx.fillRect(x - w*0.45, y - h*0.22, w*0.9, h*0.28) // body
+            ctx.fillRect(x - w*0.18, y - h*0.7, w*0.36, h*0.48) // roof
+          }
+
+          // Player car (vector)
+          const carY = H - player.carH*0.6
+          ctx.save()
+          ctx.translate(W/2 - player.x*140*dpr, carY)
+          // body
+          ctx.fillStyle = '#9fd6ff'
+          ctx.fillRect(-player.carW*0.45, -player.carH*0.15, player.carW*0.9, player.carH*0.3)
+          ctx.fillRect(-player.carW*0.18, -player.carH*0.75, player.carW*0.36, player.carH*0.6)
+          // tires
+          ctx.fillStyle = '#1c2230'
+          ctx.fillRect(-player.carW*0.6, -player.carH*0.05, player.carW*0.2, player.carH*0.1)
+          ctx.fillRect( player.carW*0.4, -player.carH*0.05, player.carW*0.2, player.carH*0.1)
+          ctx.restore()
+        }
+
+        // Game loop
+        let last = performance.now()
+        function step(){
+          const now = performance.now(); let dt = now - last; if (dt>80) dt=80; last = now
+          track.timeMs += dt
+          // speed control
+          if (keys.up || requestBoost) player.speed = Math.min(player.maxSpeed, player.speed + player.accel * (dt/1000))
+          else if (keys.down) player.speed = Math.max(0, player.speed - player.brake * (dt/1000))
+          else player.speed = Math.max(0, player.speed - player.friction * (dt/1000))
+          requestBoost = false
+
+          // steering
+          const steer = (keys.left?-1:0) + (keys.right?1:0)
+          player.x = Math.max(-1, Math.min(1, player.x + (player.dx + steer*0.02) ))
+          player.dx *= 0.9
+
+          // advance along track
+          track.t += player.speed * (dt/1000)
+          if (track.t >= track.length){ track.t -= track.length; track.lap += 1 }
+
+          // rivals update
+          for (const r of rivals){
+            // Move each rival forward at its own absolute speed
+            r.z += r.v * (dt/1000)
+            if (r.z >= track.length) r.z -= track.length
+          }
+
+          // UI
+          u.lap.textContent = track.lap
+          u.time.textContent = (track.timeMs/1000).toFixed(1)
+          u.spd.textContent = (player.speed/dpr|0)
+          u.pos.textContent = player.x.toFixed(2)
+        }
+
+        function loop(){ step(); drawScene(16); requestAnimationFrame(loop) }
+        loop()
+      })()
+    </script>
+  </body>
+  </html>

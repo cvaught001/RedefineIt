@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no" />
+    <title>Xevious‑like Horizontal Scroller</title>
+    <style>
+      html, body { margin: 0; height: 100%; overflow: hidden; background: #000; color:#cfe8ff; font-family: system-ui, sans-serif; }
+      #game { position: absolute; inset: 0; width: 100vw; height: 100vh; display: block; touch-action: none; user-select: none; }
+      #hud { position: fixed; left: 10px; top: 10px; z-index: 2; font-size: 13px; background: rgba(15,22,34,0.85); border: 1px solid rgba(140,200,255,0.35); border-radius: 10px; padding: 8px 10px; backdrop-filter: blur(6px); }
+      #help { position: fixed; left: 10px; bottom: 10px; font-size: 12px; opacity: 0.85; }
+    </style>
+  </head>
+  <body>
+    <canvas id="game"></canvas>
+    <div id="hud">Score: <span id="score">0</span> • Lives: <span id="lives">3</span> • Level: <span id="lvl">1</span> • Power: <span id="pwr">1</span></div>
+    <div id="help">Controls: Drag to move • Double‑tap to shoot • Keyboard: ←/→/↑/↓ to move, Space shoot, R restart</div>
+    <script>
+      ;(() => {
+        const cv = document.getElementById('game')
+        const ctx = cv.getContext('2d')
+        const dpr = Math.max(1, window.devicePixelRatio || 1)
+
+        let W = 0, H = 0
+        function resize(){
+          const cssW = cv.clientWidth || window.innerWidth
+          const cssH = cv.clientHeight || window.innerHeight
+          cv.width = Math.floor(cssW * dpr)
+          cv.height = Math.floor(cssH * dpr)
+          W = cv.width; H = cv.height
+        }
+        window.addEventListener('resize', resize)
+        resize()
+
+        const ui = { score: byId('score'), lives: byId('lives'), lvl: byId('lvl'), pwr: byId('pwr') }
+        function byId(id){ return document.getElementById(id) }
+
+        // Input
+        const keys = { left:false, right:false, up:false, down:false, shoot:false }
+        let requestFire = false
+        let touchActive = false
+        let lastTapT = 0, lastTapX = 0, lastTapY = 0
+
+        window.addEventListener('keydown', e => {
+          if (e.code === 'ArrowLeft' || e.code==='KeyA') keys.left = true
+          else if (e.code === 'ArrowRight' || e.code==='KeyD') keys.right = true
+          else if (e.code === 'ArrowUp' || e.code==='KeyW') keys.up = true
+          else if (e.code === 'ArrowDown' || e.code==='KeyS') keys.down = true
+          else if (e.code === 'Space') { keys.shoot = true; e.preventDefault() }
+          else if (e.code === 'KeyR') resetGame()
+        })
+        window.addEventListener('keyup', e => {
+          if (e.code === 'ArrowLeft' || e.code==='KeyA') keys.left = false
+          else if (e.code === 'ArrowRight' || e.code==='KeyD') keys.right = false
+          else if (e.code === 'ArrowUp' || e.code==='KeyW') keys.up = false
+          else if (e.code === 'ArrowDown' || e.code==='KeyS') keys.down = false
+          else if (e.code === 'Space') keys.shoot = false
+        })
+
+        function getPointer(e){ const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) * dpr, y: (e.clientY - r.top) * dpr } }
+        function clamp(v,a,b){ return Math.max(a, Math.min(b, v)) }
+
+        cv.addEventListener('pointerdown', e => {
+          e.preventDefault(); cv.setPointerCapture(e.pointerId)
+          const p = getPointer(e)
+          const dt = e.timeStamp - lastTapT
+          const dx = p.x - lastTapX, dy = p.y - lastTapY
+          if (dt>0 && dt<300 && (dx*dx+dy*dy) < (42*42*dpr*dpr)) requestFire = true
+          lastTapT = e.timeStamp; lastTapX = p.x; lastTapY = p.y
+          touchActive = true
+          player.x = clamp(p.x, world.boundsL+18*dpr, world.boundsR-18*dpr)
+          player.y = clamp(p.y, H*0.35, H-24*dpr)
+        }, { passive:false })
+        cv.addEventListener('pointermove', e => { if(!touchActive) return; const p = getPointer(e); player.x = clamp(p.x, world.boundsL+18*dpr, world.boundsR-18*dpr); player.y = clamp(p.y, H*0.35, H-24*dpr) })
+        function endTouch(e){ try{ cv.releasePointerCapture(e.pointerId) }catch(_){} touchActive=false }
+        cv.addEventListener('pointerup', endTouch)
+        cv.addEventListener('pointercancel', endTouch)
+
+        // World + map (tile scroller)
+        // Slower terrain scroll for horizontal scroller
+        const world = { speed: 180*dpr, boundsT: H*0.18, boundsB: H*0.82, tile: 32*dpr, scroll: 0 }
+        function updateBounds(){ world.boundsT = H*0.18; world.boundsB = H*0.82 }
+        updateBounds()
+
+        // Long horizontal map
+        const MAP_W = 500, MAP_H = 20
+        const T_EMPTY=0, T_WALL=1, T_WATER=2
+        const map = new Uint8Array(MAP_W*MAP_H)
+        function mapIdx(x,y){ return y*MAP_W + x }
+        function carveMaze(){
+          // Start with walls, carve a winding horizontal corridor
+          map.fill(T_WALL)
+          let cy = (MAP_H/2)|0
+          for (let x=0;x<MAP_W;x++){
+            const height = 4 + ((Math.sin(x*0.15)+1)*2|0)
+            for (let y=-height;y<=height;y++){
+              const gy = Math.max(1, Math.min(MAP_H-2, cy+y))
+              map[mapIdx(x,gy)] = T_EMPTY
+              if (Math.random()<0.08) map[mapIdx(x,gy)] = T_WATER
+            }
+            // meander vertically
+            cy += (Math.random()<0.5?-1:1)
+            cy = Math.max(2, Math.min(MAP_H-3, cy))
+            // pockets up/down
+            if (Math.random()<0.08){
+              const dir = Math.random()<0.5?-1:1
+              for (let k=1;k<4;k++){
+                const gy = Math.max(1, Math.min(MAP_H-2, cy + dir*k))
+                map[mapIdx(x,gy)] = T_EMPTY
+              }
+            }
+          }
+        }
+        carveMaze()
+
+        function drawMap(dt){
+          // background
+          const g = ctx.createLinearGradient(0,0,0,H)
+          g.addColorStop(0,'#0a121b'); g.addColorStop(1,'#0b1722')
+          ctx.fillStyle = g; ctx.fillRect(0,0,W,H)
+          // corridor area
+          ctx.fillStyle = '#152032'
+          ctx.fillRect(0, world.boundsT, W, world.boundsB - world.boundsT)
+
+          // slower terrain movement
+          world.scroll = (world.scroll + dt * world.speed * 0.035) % (MAP_W * world.tile)
+          const tile = world.tile
+          const viewLeft = Math.floor(world.scroll / tile)
+          const offsetX = -(world.scroll % tile)
+          const tilesY = Math.ceil((world.boundsB-world.boundsT)/tile)
+          const startY = Math.max(0, ((MAP_H - tilesY)/2)|0)
+          for (let sx = 0; sx <= Math.ceil(W/tile)+1; sx++){
+            const mx = (viewLeft + sx) % MAP_W
+            for (let sy = 0; sy < tilesY; sy++){
+              const my = startY + sy
+              const t = map[mapIdx(mx,my)]
+              const x = offsetX + sx*tile
+              const y = world.boundsT + sy*tile
+              if (t === T_WALL){ ctx.fillStyle = '#0f1622'; ctx.fillRect(x,y,tile,tile); ctx.fillStyle='#2b3f5e'; ctx.fillRect(x+3*dpr,y+3*dpr,tile-6*dpr,tile-6*dpr) }
+              else if (t === T_WATER){ ctx.fillStyle = '#0b1420'; ctx.fillRect(x,y,tile,tile); ctx.fillStyle='#0f89ff'; ctx.globalAlpha=0.25; ctx.fillRect(x+2*dpr,y+2*dpr,tile-4*dpr,tile-4*dpr); ctx.globalAlpha=1 }
+              else { /* empty corridor */ }
+            }
+          }
+        }
+
+        // Entities
+        const state = { score:0, lives:3, level:1, running:true, power:1 }
+        const player = { x: W*0.22, y:(world.boundsT+world.boundsB)/2, w:22*dpr, h:28*dpr, speed:6*dpr, fireCd:120, acc:0 }
+        const shots = []   // {x,y,r,vx}
+        const enemies = [] // {x,y,w,h,vx,hp}
+        const powerups = [] // {x,y,w,h,type,vx}
+
+        function drawPlayer(){
+          ctx.fillStyle = '#9fd6ff'
+          ctx.fillRect(player.x - player.w*0.6, player.y - player.h*0.15, player.w*1.2, player.h*0.3)
+          ctx.fillRect(player.x - player.w*0.15, player.y - player.h*0.7, player.w*0.3, player.h*0.6)
+          if (state.power>=2){ ctx.fillStyle='#66ff99'; ctx.fillRect(player.x+player.w*0.6, player.y-2*dpr, 6*dpr, 4*dpr) }
+        }
+        function fire(){
+          const spread = state.power>=3 ? [-6,0,6] : state.power>=2 ? [-4,4] : [0]
+          for (const ang of spread){ shots.push({ x: player.x + player.w*0.8, y: player.y + ang*dpr, r: 3*dpr, vx: 9*dpr }) }
+        }
+
+        function spawnEnemy(){
+          const w = (18+Math.random()*16)*dpr, h = (14+Math.random()*12)*dpr
+          const laneH = world.boundsB - world.boundsT
+          const x = W + w + 10*dpr
+          const y = world.boundsT + 20*dpr + Math.random() * (laneH - 40*dpr)
+          const vx = -world.speed * (0.45 + Math.random()*0.2) * 0.016
+          enemies.push({ x,y,w,h,vx,hp: 2 })
+        }
+        function spawnPower(){
+          const w=16*dpr,h=16*dpr
+          const y = world.boundsT + 20*dpr + Math.random()*(world.boundsB-world.boundsT-40*dpr)
+          powerups.push({ x: W + w + 10*dpr, y, w, h, vx: -world.speed*0.012, type: (Math.random()<0.7?'power':'life') })
+        }
+
+        let spawnE=0, spawnP=0
+        function spawner(dt){
+          spawnE += dt; spawnP += dt
+          if (spawnE>600){ spawnE=0; spawnEnemy() }
+          if (spawnP>4000){ spawnP=0; spawnPower() }
+        }
+
+        function aabb(ax,ay,aw,ah,bx,by,bw,bh){ return ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by }
+        function bulletHits(ax,ay,aw,ah,b){
+          const cx = Math.max(ax, Math.min(b.x, ax+aw))
+          const cy = Math.max(ay, Math.min(b.y, ay+ah))
+          const dx = b.x - cx, dy = b.y - cy
+          return dx*dx + dy*dy <= b.r*b.r
+        }
+
+        function damage(){
+          state.lives -= 1; if (state.lives<=0){ state.running=false } else { player.x=(world.boundsL+world.boundsR)/2; shots.length=0 }
+        }
+
+        function resetGame(){ state.score=0; state.lives=3; state.level=1; state.power=1; player.acc=0; shots.length=0; enemies.length=0; powerups.length=0; world.speed=180*dpr; state.running=true; updateUI() }
+        function nextLevel(){ state.level+=1; world.speed*=1.12; enemies.length=0; powerups.length=0; updateUI() }
+        function updateUI(){ ui.score.textContent=state.score|0; ui.lives.textContent=state.lives; ui.lvl.textContent=state.level; ui.pwr.textContent=state.power }
+
+        let last = performance.now()
+        function loop(){
+          const now = performance.now(); let dt = now - last; if (dt>80) dt=80; last = now
+          updateBounds()
+          // Input move
+          let mvx = 0, mvy = 0
+          if (keys.left) mvx -= player.speed
+          if (keys.right) mvx += player.speed
+          if (keys.up) mvy -= player.speed
+          if (keys.down) mvy += player.speed
+          player.x = clamp(player.x + mvx, 18*dpr, W - 24*dpr)
+          player.y = clamp(player.y + mvy, world.boundsT+18*dpr, world.boundsB-18*dpr)
+
+          // Shooting
+          player.acc += dt
+          const cd = Math.max(80, player.fireCd - state.power*10)
+          if ((keys.shoot || requestFire) && player.acc >= cd){ fire(); player.acc = 0; requestFire=false }
+
+          if (state.running){ spawner(dt) }
+
+          // Update shots
+          for (let i=0;i<shots.length;i++){
+            const b = shots[i]; b.x += b.vx
+            if (b.x > W + 20){ shots.splice(i--,1); continue }
+            for (let j=0;j<enemies.length;j++){
+              const e = enemies[j]
+              if (bulletHits(e.x-e.w/2,e.y-e.h/2,e.w,e.h,b)){
+                e.hp -= 1; shots.splice(i--,1); if (e.hp<=0){ enemies.splice(j--,1); state.score += 100 }
+                break
+              }
+            }
+            for (let j=0;j<powerups.length && i>=0;j++){
+              const p = powerups[j]
+              if (bulletHits(p.x-p.w/2,p.y-p.h/2,p.w,p.h,b)){
+                // allow shooting powerups too (turns into score)
+                powerups.splice(j--,1); shots.splice(i--,1); state.score += 50
+              }
+            }
+          }
+
+          // Enemies
+          for (let i=0;i<enemies.length;i++){
+            const e = enemies[i]
+            e.x += e.vx * dt
+            if (e.x + e.w/2 < -30){ enemies.splice(i--,1); continue }
+            if (aabb(e.x-e.w/2,e.y-e.h/2,e.w,e.h, player.x-player.w/2, player.y-player.h/2, player.w, player.h)){
+              enemies.splice(i--,1); damage()
+            }
+          }
+
+          // Powerups
+          for (let i=0;i<powerups.length;i++){
+            const p = powerups[i]
+            p.x += p.vx * dt
+            if (p.x + p.w/2 < -30){ powerups.splice(i--,1); continue }
+            if (aabb(p.x-p.w/2,p.y-p.h/2,p.w,p.h, player.x-player.w/2, player.y-player.h/2, player.w, player.h)){
+              if (p.type==='power') state.power = Math.min(3, state.power+1)
+              else state.lives += 1
+              powerups.splice(i--,1); updateUI()
+            }
+          }
+
+          // Level progression
+          if (state.running && state.score >= state.level*1500){ nextLevel() }
+
+          // Render
+          drawMap(dt)
+          // draw entities
+          ctx.fillStyle = '#5e7899'
+          for (const e of enemies){ ctx.fillStyle='#7effff'; ctx.fillRect(e.x-e.w/2,e.y-e.h/2,e.w,e.h) }
+          for (const p of powerups){ ctx.fillStyle = p.type==='power' ? '#66ff99' : '#ffd966'; ctx.fillRect(p.x-p.w/2,p.y-p.h/2,p.w,p.h) }
+          ctx.fillStyle='#ffea00'; for (const b of shots){ ctx.beginPath(); ctx.arc(b.x,b.y,b.r,0,Math.PI*2); ctx.fill() }
+          drawPlayer()
+
+          if (!state.running){ ctx.fillStyle='#cfe8ff'; ctx.font=(18*dpr)+'px monospace'; const m='Game Over — Press R to Restart'; const mw=ctx.measureText(m).width; ctx.fillText(m,(W-mw)/2, H*0.5) }
+
+          updateUI()
+          requestAnimationFrame(loop)
+        }
+        loop()
+      })()
+    </script>
+  </body>
+  </html>

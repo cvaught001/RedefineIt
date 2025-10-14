@@ -42,6 +42,21 @@
         "Generative Visuals",
         "Creative Coding"
       ]
+    },
+    {
+      "slug": "ai-in-coding-using-chatgpt-and-copilot",
+      "title": "AI in Coding — Using ChatGPT and Copilot (Summary)",
+      "date": "2025-10-14",
+      "readTime": 5,
+      "cover": "/images/blog/ai-in-coding-using-chatgpt-and-copilot.png",
+      "coverAlt": "AI in coding summary cover",
+      "excerpt": "Key takeaways and practical tips from an external piece on using ChatGPT and GitHub Copilot effectively in software development.",
+      "tags": [
+        "Agentic AI",
+        "Copilot",
+        "ChatGPT",
+        "Engineering"
+      ]
     }
   ]
 }
