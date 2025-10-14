@@ -173,6 +173,15 @@
     performTransition('right', to)
   })
 
+  // Eye toggle: hide/show main content
+  document.addEventListener('click', function (e) {
+    var btn = e.target && e.target.closest && e.target.closest('#toggleEye')
+    if (!btn) return
+    e.preventDefault()
+    var hidden = document.body.classList.toggle('content-hidden')
+    try { btn.setAttribute('aria-pressed', hidden ? 'true' : 'false') } catch (err) {}
+  })
+
   // --- Dynamic enhancements (photography gallery & lightbox) ---
   function ensureLightbox() {
     var lb = document.getElementById('lightbox')

@@ -292,6 +292,25 @@ h2 {
 }
 .site-header .spacer { justify-self: end; }
 
+/* Eye toggle button */
+.nav-eye {
+  display: inline-grid;
+  place-items: center;
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  border: 1px solid var(--outline);
+  background: rgba(15, 22, 34, 0.72);
+  color: #cfe8ff;
+  cursor: pointer;
+}
+.nav-eye:active { transform: scale(0.98); }
+
+/* Hide all main content when toggled */
+body.content-hidden .content,
+body.content-hidden #slideArrow,
+body.content-hidden #slideArrowLeft,
+body.content-hidden .site-footer { display: none !important; }
+
 /* Panels */
 .panel {
   background: var(--surface);
