@@ -6,6 +6,10 @@
   const els = {
     animate: document.getElementById('animate'),
     morph: document.getElementById('morph'),
+    mono: document.getElementById('mono'),
+    monoColor: document.getElementById('monoColor'),
+    thickness: document.getElementById('thickness'),
+    stretch: document.getElementById('stretch'),
     arms: document.getElementById('arms'),
     depth: document.getElementById('depth'),
     angle: document.getElementById('angle'),
@@ -18,12 +22,16 @@
     morphDuration: document.getElementById('morphDuration'),
     morphHold: document.getElementById('morphHold'),
     morphUsePresets: document.getElementById('morphUsePresets'),
+    easingOn: document.getElementById('easingOn'),
+    easing: document.getElementById('easing'),
+    trailFrames: document.getElementById('trailFrames'),
     presetSelect: document.getElementById('presetSelect'),
     presetName: document.getElementById('presetName'),
     presetRename: document.getElementById('presetRename'),
     presetSave: document.getElementById('presetSave'),
     animateVal: document.getElementById('animateVal'),
     morphVal: document.getElementById('morphVal'),
+    monoVal: document.getElementById('monoVal'),
     armsVal: document.getElementById('armsVal'),
     depthVal: document.getElementById('depthVal'),
     angleVal: document.getElementById('angleVal'),
@@ -34,6 +42,10 @@
     pulseSpeedVal: document.getElementById('pulseSpeedVal'),
     morphDurationVal: document.getElementById('morphDurationVal'),
     morphHoldVal: document.getElementById('morphHoldVal'),
+    easingOnVal: document.getElementById('easingOnVal'),
+    thicknessVal: document.getElementById('thicknessVal'),
+    stretchVal: document.getElementById('stretchVal'),
+    trailFramesVal: document.getElementById('trailFramesVal'),
     randomize: document.getElementById('randomize'),
     reset: document.getElementById('reset'),
     saveJson: document.getElementById('saveJson'),
@@ -49,6 +61,11 @@
     spin: 30,        // degrees per second
     pulse: 10,       // +/- degrees of angle pulse
     pulseSpeed: 0.6, // cycles per second multiplier
+    mono: false,
+    monoColor: '#cfe8ff',
+    trailFrames: 16,
+    thickness: 0.9,
+    stretch: 1.0,
   };
 
   let DPR = 1;
@@ -73,12 +90,19 @@
     const spin = clamp(parseFloat(els.spin.value), -360, 360);
     const pulse = clamp(parseFloat(els.pulse.value), 0, 90);
     const pulseSpeed = clamp(parseFloat(els.pulseSpeed.value), 0, 5);
-    return { arms, depth, angleDeg, scale, length, spin, pulse, pulseSpeed };
+    const mono = Boolean(els.mono?.checked);
+    const monoColor = String(els.monoColor?.value || defaults.monoColor);
+    const trailFrames = clamp(parseInt(els.trailFrames?.value || defaults.trailFrames, 10), 0, 240);
+    const thickness = clamp(parseFloat(els.thickness?.value || defaults.thickness), 0.1, 5);
+    const stretch = clamp(parseFloat(els.stretch?.value || defaults.stretch), 0.2, 5);
+    return { arms, depth, angleDeg, scale, length, spin, pulse, pulseSpeed, mono, monoColor, trailFrames, thickness, stretch };
   }
 
   function updateLabels(p) {
     els.animateVal.textContent = els.animate.checked ? 'On' : 'Off';
     if (els.morphVal) els.morphVal.textContent = els.morph?.checked ? 'On' : 'Off';
+    if (els.easingOnVal) els.easingOnVal.textContent = els.easingOn?.checked ? 'On' : 'Off';
+    if (els.monoVal) els.monoVal.textContent = els.mono?.checked ? 'On' : 'Off';
     els.armsVal.textContent = String(p.arms);
     els.depthVal.textContent = String(p.depth);
     els.angleVal.textContent = formatNum(p.angleDeg);
@@ -89,6 +113,9 @@
     els.pulseSpeedVal.textContent = formatNum(p.pulseSpeed);
     if (els.morphDurationVal && els.morphDuration) els.morphDurationVal.textContent = formatNum(Number(els.morphDuration.value));
     if (els.morphHoldVal && els.morphHold) els.morphHoldVal.textContent = formatNum(Number(els.morphHold.value));
+    if (els.trailFramesVal && els.trailFrames) els.trailFramesVal.textContent = String(parseInt(els.trailFrames.value, 10));
+    if (els.thicknessVal && els.thickness) els.thicknessVal.textContent = formatNum(Number(els.thickness.value));
+    if (els.stretchVal && els.stretch) els.stretchVal.textContent = formatNum(Number(els.stretch.value));
   }
 
   function formatNum(n) {
@@ -119,17 +146,41 @@
     ctx.restore();
   }
 
+  function fadeCanvas(alpha = 0.1) {
+    const { width, height } = canvas;
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    const g = ctx.createRadialGradient(
+      width / 2,
+      height / 2,
+      Math.min(width, height) * 0.1,
+      width / 2,
+      height / 2,
+      Math.max(width, height) * 0.6
+    );
+    g.addColorStop(0, '#0b0b12');
+    g.addColorStop(1, '#05050a');
+    ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, width, height);
+    ctx.restore();
+  }
+
   function draw(state, paramsOverride) {
     setCanvasSize();
-    clearCanvas();
     const p = paramsOverride || readParams();
+    if (rafId && p.trailFrames > 0) {
+      fadeCanvas(1 / p.trailFrames);
+    } else {
+      clearCanvas();
+    }
     updateLabels(p);
 
     const w = canvas.width / DPR;
     const h = canvas.height / DPR;
     const cx = w / 2;
     const cy = h / 2;
-    const baseLen = Math.min(w, h) * p.length;
+    const baseLen = Math.min(w, h) * p.length * p.stretch;
     const rotation = state?.rotation || 0;
     const angleOsc = state?.angleOsc || 0;
     const aRad = degToRad(p.angleDeg + angleOsc);
@@ -163,8 +214,12 @@
     ctx.beginPath();
     ctx.moveTo(x, y);
     ctx.lineTo(x2, y2);
-    ctx.lineWidth = Math.max(0.5, depth * 0.9);
-    ctx.strokeStyle = `hsl(${baseHue}, ${sat}%, ${light}%)`;
+    ctx.lineWidth = Math.max(0.25, depth * p.thickness);
+    if (p.mono) {
+      ctx.strokeStyle = p.monoColor;
+    } else {
+      ctx.strokeStyle = `hsl(${baseHue}, ${sat}%, ${light}%)`;
+    }
     ctx.stroke();
 
     const nextLen = len * p.scale;
@@ -179,7 +234,7 @@
       draw();
     });
 
-    ['arms', 'depth', 'angle', 'scale', 'length', 'spin', 'pulse', 'pulseSpeed'].forEach((id) => {
+    ['arms', 'depth', 'angle', 'scale', 'length', 'thickness', 'stretch', 'spin', 'pulse', 'pulseSpeed', 'mono', 'monoColor', 'trailFrames'].forEach((id) => {
       els[id].addEventListener('input', draw);
       els[id].addEventListener('change', draw);
     });
@@ -219,6 +274,14 @@
     if (els.morphUsePresets) {
       els.morphUsePresets.addEventListener('change', () => { readMorphControls(); });
     }
+    if (els.easingOn) {
+      const upd = () => { readMorphControls(); draw(); };
+      els.easingOn.addEventListener('change', upd);
+    }
+    if (els.easing) {
+      const upd = () => { readMorphControls(); draw(); };
+      els.easing.addEventListener('change', upd);
+    }
 
     els.randomize.addEventListener('click', () => {
       els.arms.value = String(randInt(6, 36));
@@ -226,6 +289,14 @@
       els.angle.value = String(randInt(15, 65));
       els.scale.value = String(randFloat(0.55, 0.78).toFixed(2));
       els.length.value = String(randFloat(0.18, 0.36).toFixed(2));
+      if (els.thickness) els.thickness.value = String(randFloat(0.6, 1.4).toFixed(2));
+      if (els.stretch) els.stretch.value = String(randFloat(0.8, 1.4).toFixed(2));
+      if (els.mono) els.mono.checked = Math.random() < 0.3;
+      if (els.monoColor) {
+        const hue = Math.floor(Math.random() * 360);
+        els.monoColor.value = hslToHex(hue, 90, 75);
+      }
+      if (els.trailFrames) els.trailFrames.value = String(randInt(0, 40));
       draw();
     });
 
@@ -235,6 +306,8 @@
       els.angle.value = String(defaults.angle);
       els.scale.value = String(defaults.scale);
       els.length.value = String(defaults.length);
+      if (els.thickness) els.thickness.value = String(defaults.thickness);
+      if (els.stretch) els.stretch.value = String(defaults.stretch);
       els.spin.value = String(defaults.spin);
       els.pulse.value = String(defaults.pulse);
       els.pulseSpeed.value = String(defaults.pulseSpeed);
@@ -243,6 +316,11 @@
       if (els.morphDuration) els.morphDuration.value = '6';
       if (els.morphHold) els.morphHold.value = '2';
       if (els.morphUsePresets) els.morphUsePresets.checked = true;
+      if (els.easingOn) els.easingOn.checked = true;
+      if (els.easing) els.easing.value = 'easeInOutQuad';
+      if (els.mono) els.mono.checked = defaults.mono;
+      if (els.monoColor) els.monoColor.value = defaults.monoColor;
+      if (els.trailFrames) els.trailFrames.value = String(defaults.trailFrames);
       stopAnimation();
       draw();
     });
@@ -304,11 +382,29 @@
   }
 
   function degToRad(d) { return (d * Math.PI) / 180; }
+  function hslToHex(h, s, l) {
+    s /= 100; l /= 100;
+    const k = n => (n + h / 30) % 12;
+    const a = s * Math.min(l, 1 - l);
+    const f = n => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+    const toHex = x => {
+      const v = Math.round(255 * x).toString(16);
+      return v.length === 1 ? '0' + v : v;
+    };
+    return '#' + toHex(f(0)) + toHex(f(8)) + toHex(f(4));
+  }
 
   function getSettings() {
     return {
       animate: Boolean(els.animate.checked),
       morph: Boolean(els.morph?.checked),
+      easingOn: Boolean(els.easingOn?.checked),
+      easing: String(els.easing?.value || 'easeInOutQuad'),
+      mono: Boolean(els.mono?.checked),
+      monoColor: String(els.monoColor?.value || defaults.monoColor),
+      trailFrames: clamp(parseInt(els.trailFrames?.value || defaults.trailFrames, 10), 0, 240),
+      thickness: clamp(parseFloat(els.thickness?.value || defaults.thickness), 0.1, 5),
+      stretch: clamp(parseFloat(els.stretch?.value || defaults.stretch), 0.2, 5),
       arms: clamp(parseInt(els.arms.value, 10), 3, 96),
       depth: clamp(parseInt(els.depth.value, 10), 1, 12),
       angleDeg: clamp(parseFloat(els.angle.value), 0, 120),
@@ -322,6 +418,13 @@
 
   function applySettings(s) {
     if (!s || typeof s !== 'object') return;
+    if (typeof s.easingOn === 'boolean' && els.easingOn) els.easingOn.checked = s.easingOn;
+    if (typeof s.easing === 'string' && els.easing) els.easing.value = s.easing;
+    if (typeof s.thickness === 'number' && els.thickness) els.thickness.value = String(s.thickness);
+    if (typeof s.stretch === 'number' && els.stretch) els.stretch.value = String(s.stretch);
+    if (typeof s.mono === 'boolean' && els.mono) els.mono.checked = s.mono;
+    if (typeof s.monoColor === 'string' && els.monoColor) els.monoColor.value = s.monoColor;
+    if (typeof s.trailFrames === 'number' && els.trailFrames) els.trailFrames.value = String(s.trailFrames);
     if (typeof s.arms === 'number') els.arms.value = String(s.arms);
     if (typeof s.depth === 'number') els.depth.value = String(s.depth);
     if (typeof s.angleDeg === 'number') els.angle.value = String(s.angleDeg);
@@ -388,9 +491,15 @@
           morph.holding = Math.max(0, morph.hold);
         }
       }
-      const te = easeInOut(Math.max(0, Math.min(1, morph.t)));
+      const tNorm = Math.max(0, Math.min(1, morph.t));
+      const ez = (morph.easingOn && Ease[morph.easing]) ? Ease[morph.easing] : Ease.linear;
+      const te = ez(tNorm);
       pEff = lerpSettings(morph.from || pBase, morph.to || pBase, te);
-    }
+      // Ensure monochrome/trails respect current toggles during morph
+      pEff.mono = pBase.mono;
+      pEff.monoColor = pBase.monoColor;
+      pEff.trailFrames = pBase.trailFrames;
+  }
 
     rotationAcc += degToRad(pEff.spin) * dt;
     // keep rotation bounded to avoid floating-point blowup
@@ -433,6 +542,20 @@
   }
   function mix(a, b, t) { return a + (b - a) * t; }
 
+  // Easing library
+  const Ease = {
+    linear: t => t,
+    easeInQuad: t => t * t,
+    easeOutQuad: t => t * (2 - t),
+    easeInOutQuad: t => (t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t),
+    easeInCubic: t => t * t * t,
+    easeOutCubic: t => --t * t * t + 1,
+    easeInOutCubic: t => (t < 0.5 ? 4 * t * t * t : (t - 1) * (2 * t - 2) * (2 * t - 2) + 1),
+    easeInSine: t => 1 - Math.cos((t * Math.PI) / 2),
+    easeOutSine: t => Math.sin((t * Math.PI) / 2),
+    easeInOutSine: t => -(Math.cos(Math.PI * t) - 1) / 2,
+  };
+
   function lerpSettings(a, b, t) {
     // guard
     if (!a) return b;
@@ -446,6 +569,8 @@
     r.spin = clamp(mix(a.spin, b.spin, t), -360, 360);
     r.pulse = clamp(mix(a.pulse, b.pulse, t), 0, 90);
     r.pulseSpeed = clamp(mix(a.pulseSpeed, b.pulseSpeed, t), 0, 5);
+    r.thickness = clamp(mix(a.thickness ?? defaults.thickness, b.thickness ?? defaults.thickness, t), 0.1, 5);
+    r.stretch = clamp(mix(a.stretch ?? defaults.stretch, b.stretch ?? defaults.stretch, t), 0.2, 5);
     return r;
   }
 
@@ -454,6 +579,8 @@
     morph.duration = Number(els.morphDuration?.value || morph.duration) || 6;
     morph.hold = Number(els.morphHold?.value || morph.hold) || 2;
     morph.usePresets = Boolean(els.morphUsePresets?.checked);
+    morph.easingOn = Boolean(els.easingOn?.checked);
+    morph.easing = String(els.easing?.value || 'easeInOutQuad');
   }
 
   function nextMorphTarget() {
@@ -475,6 +602,8 @@
       spin: Number(randFloat(-90, 120).toFixed(1)),
       pulse: randInt(0, 20),
       pulseSpeed: Number(randFloat(0.0, 1.2).toFixed(2)),
+      thickness: Number(randFloat(0.6, 1.4).toFixed(2)),
+      stretch: Number(randFloat(0.8, 1.4).toFixed(2)),
     };
   }
 
@@ -495,6 +624,8 @@
       spin: Number(randFloat(-90, 120).toFixed(1)),
       pulse: randInt(0, 20),
       pulseSpeed: Number(randFloat(0.0, 1.2).toFixed(2)),
+      thickness: Number(randFloat(0.6, 1.4).toFixed(2)),
+      stretch: Number(randFloat(0.8, 1.4).toFixed(2)),
     };
     return { name, settings: s };
   }

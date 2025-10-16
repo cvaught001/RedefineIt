@@ -91,6 +91,15 @@ canvas {
   color: var(--text);
 }
 
+.controls input[type="color"] {
+  width: 100%;
+  height: 32px;
+  padding: 0 4px;
+  border-radius: 8px;
+  border: 1px solid var(--panel-border);
+  background: rgba(255,255,255,0.06);
+}
+
 .controls input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;

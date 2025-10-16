@@ -68,6 +68,16 @@
       </div>
 
       <div class="control">
+        <label for="thickness">Line Thickness <span id="thicknessVal">0.9</span></label>
+        <input id="thickness" type="range" min="0.20" max="3.00" step="0.05" value="0.90" />
+      </div>
+
+      <div class="control">
+        <label for="stretch">Center Stretch <span id="stretchVal">1</span></label>
+        <input id="stretch" type="range" min="0.50" max="2.00" step="0.01" value="1.00" />
+      </div>
+
+      <div class="control">
         <label for="spin">Spin (°/s) <span id="spinVal">30</span></label>
         <input id="spin" type="range" min="-180" max="180" step="1" value="30" />
       </div>
@@ -83,23 +93,59 @@
       </div>
 
       <div class="control">
+        <label for="mono">Monochrome <span id="monoVal">Off</span></label>
+        <input id="mono" type="checkbox" />
+      </div>
+
+      <div class="control">
+        <label for="monoColor">Mono Color</label>
+        <input id="monoColor" type="color" value="#cfe8ff" />
+      </div>
+
+      <div class="control">
+        <label for="trailFrames">Trail Frames <span id="trailFramesVal">16</span></label>
+        <input id="trailFrames" type="range" min="0" max="60" step="1" value="16" />
+      </div>
+
+      <div class="control">
         <label for="morph">Morph Settings <span id="morphVal">Off</span></label>
         <input id="morph" type="checkbox" />
       </div>
 
       <div class="control">
         <label for="morphDuration">Morph Duration (s) <span id="morphDurationVal">6</span></label>
-        <input id="morphDuration" type="range" min="1" max="30" step="0.5" value="6" />
+        <input id="morphDuration" type="range" min="1" max="300" step="0.1" value="6" />
       </div>
 
       <div class="control">
         <label for="morphHold">Hold (s) <span id="morphHoldVal">2</span></label>
-        <input id="morphHold" type="range" min="0" max="10" step="0.5" value="2" />
+        <input id="morphHold" type="range" min="0" max="60" step="0.5" value="2" />
       </div>
 
       <div class="control">
         <label for="morphUsePresets">Use Presets as Targets</label>
         <input id="morphUsePresets" type="checkbox" checked />
+      </div>
+
+      <div class="control">
+        <label for="easingOn">Use Easing <span id="easingOnVal">On</span></label>
+        <input id="easingOn" type="checkbox" checked />
+      </div>
+
+      <div class="control">
+        <label for="easing">Easing</label>
+        <select id="easing">
+          <option value="linear">Linear</option>
+          <option value="easeInQuad">Ease In Quad</option>
+          <option value="easeOutQuad">Ease Out Quad</option>
+          <option value="easeInOutQuad" selected>Ease In Out Quad</option>
+          <option value="easeInCubic">Ease In Cubic</option>
+          <option value="easeOutCubic">Ease Out Cubic</option>
+          <option value="easeInOutCubic">Ease In Out Cubic</option>
+          <option value="easeInSine">Ease In Sine</option>
+          <option value="easeOutSine">Ease Out Sine</option>
+          <option value="easeInOutSine">Ease In Out Sine</option>
+        </select>
       </div>
 
       <div class="control">
