@@ -36,11 +36,13 @@
 
       // Function to draw the sine wave
       function drawSineWave() {
-        // Clear the canvas
-        ctx.clearRect(0, 0, canvas.width, canvas.height)
+        // Clear the canvas with a black background
+        ctx.fillStyle = '#000'
+        ctx.fillRect(0, 0, canvas.width, canvas.height)
 
-        // Set the fill style for the sine wave
-        ctx.fillStyle = `hsl(${hue}, 100%, 50%)`
+        // Set the fill style for the sine wave using neon colors
+        ctx.strokeStyle = `hsl(${hue}, 100%, 50%)`
+        ctx.lineWidth = 3
 
         // Draw the sine wave using a path
         ctx.beginPath()
@@ -54,6 +56,9 @@
         // Increment the angle and hue for the next frame
         angle += 0.1
         hue = (hue + 0.5) % 360
+
+        // Call requestAnimationFrame to draw the next frame
+        requestAnimationFrame(drawSineWave)
       }
 
       // Function to handle window resize events
@@ -63,7 +68,7 @@
       }
 
       // Add event listeners for animation and resize
-      setInterval(drawSineWave, 16) // Use requestAnimationFrame instead of setInterval
+      requestAnimationFrame(drawSineWave)
       window.addEventListener('resize', handleResize)
     </script>
   </body>
