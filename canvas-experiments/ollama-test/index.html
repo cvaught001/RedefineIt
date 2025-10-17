@@ -1,0 +1,70 @@
+<!-- HTML -->
+<html>
+  <head>
+    <!-- CSS Styles -->
+    <style>
+      /* Style the canvas */
+      canvas {
+        border: 1px solid black;
+      }
+
+      /* Animation styles */
+      .sine-wave {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Canvas Element -->
+    <canvas id="sine-wave" width="800" height="600"></canvas>
+
+    <!-- JavaScript Code -->
+    <script>
+      // Get the canvas element
+      const canvas = document.getElementById('sine-wave')
+
+      // Get the 2D drawing context
+      const ctx = canvas.getContext('2d')
+
+      // Set up animation variables
+      let angle = 0
+      let hue = 0
+
+      // Function to draw the sine wave
+      function drawSineWave() {
+        // Clear the canvas
+        ctx.clearRect(0, 0, canvas.width, canvas.height)
+
+        // Set the fill style for the sine wave
+        ctx.fillStyle = `hsl(${hue}, 100%, 50%)`
+
+        // Draw the sine wave using a path
+        ctx.beginPath()
+        ctx.moveTo(0, canvas.height / 2)
+        for (let x = 0; x < canvas.width; x++) {
+          const y = canvas.height / 2 + Math.sin(angle + x * 0.01) * 100
+          ctx.lineTo(x, y)
+        }
+        ctx.stroke()
+
+        // Increment the angle and hue for the next frame
+        angle += 0.1
+        hue = (hue + 0.5) % 360
+      }
+
+      // Function to handle window resize events
+      function handleResize() {
+        canvas.width = window.innerWidth
+        canvas.height = window.innerHeight
+      }
+
+      // Add event listeners for animation and resize
+      setInterval(drawSineWave, 16) // Use requestAnimationFrame instead of setInterval
+      window.addEventListener('resize', handleResize)
+    </script>
+  </body>
+</html>
