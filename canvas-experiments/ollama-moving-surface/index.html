@@ -1,0 +1,65 @@
+<!-- trigExample.html -->
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Trigonometric Animation</title>
+    <style>
+      /* Style the canvas */
+      canvas {
+        border: 1px solid black;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Canvas Element -->
+    <canvas id="trig-example" width="800" height="600"></canvas>
+
+    <!-- JavaScript Code -->
+    <script>
+      // Get the canvas element and its 2D drawing context
+      const canvas = document.getElementById('trig-example')
+      const ctx = canvas.getContext('2d')
+
+      // Set up animation variables
+      let angle = 0
+
+      // Function to draw the moving surface using parametric equations
+      function drawTrigSurface() {
+        // Clear the canvas with a white background
+        ctx.fillStyle = '#fff'
+        ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+        // Define the parametric equations for the 3D surface
+        const x = (angle + Math.sin(angle)) * 100
+        const y = (Math.cos(angle) + Math.sin(angle)) * 100
+        const z =
+          (Math.pow(Math.sin(angle), 2) + Math.pow(Math.cos(angle), 2)) * 50
+
+        // Map the 3D coordinates to 2D using a perspective projection
+        const x2d = canvas.width / 2 + x / (z + 10)
+        const y2d = canvas.height / 2 - y / (z + 10)
+
+        // Draw the surface as a line
+        ctx.beginPath()
+        ctx.moveTo(x2d, y2d)
+        ctx.lineTo(canvas.width, canvas.height)
+        ctx.stroke()
+
+        // Increment the angle for the next frame
+        angle += 0.1
+
+        // Call requestAnimationFrame to draw the next frame
+        requestAnimationFrame(drawTrigSurface)
+      }
+
+      // Add an event listener to handle window resize events
+      window.addEventListener('resize', () => {
+        canvas.width = window.innerWidth
+        canvas.height = window.innerHeight
+      })
+
+      // Start the animation by calling requestAnimationFrame for the first time
+      requestAnimationFrame(drawTrigSurface)
+    </script>
+  </body>
+</html>

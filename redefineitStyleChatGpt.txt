@@ -1,0 +1,34 @@
+Design a RedefineIt-style UI feature called the “Eye UI.”
+
+Purpose:
+A minimalist eye icon sits at the top-right corner of the screen. 
+Clicking or tapping it toggles visibility of the visual control panel (sliders, presets, options). 
+When the panel is hidden, only the glowing eye icon remains. 
+When revealed, the panel slides in smoothly with a subtle neon glow and frosted-glass effect.
+
+Design guidelines (RedefineIt Visual Style):
+- Background: deep black-blue gradient (#0b0f13 → #101820).
+- Glow tones: cyan, magenta, and violet accent lines.
+- The eye icon glows softly when active, dim when inactive.
+- The toggle animation should feel *kinetic but deliberate* — easing curves that simulate inertia.
+- The control panel should have a blurred, glass-like backdrop (`backdrop-filter: blur(6px)`).
+- Borders use faint neon outlines with subtle inner glow.
+- Font: clean system-ui, small-caps or monospace, bright text on translucent dark.
+- Layout: right-aligned floating container with minimal padding and rounded corners.
+- Include a hover effect that gently increases glow intensity.
+- Motion: smooth transitions (300–500ms ease-in-out) with transform and opacity fade.
+- Optional: slight “blink” or pulse when the eye toggles visibility.
+
+Behavior:
+- Clicking the eye toggles the `.visible` class on the control panel.
+- The panel slides from `translateX(100%)` to `translateX(0)` on show.
+- Keyboard shortcut: `E` toggles visibility.
+- When hidden, the controls remain in the DOM but visually collapsed.
+
+Tone:
+Clean, cinematic, and reactive — part retro console, part modern synth interface. 
+Everything should feel engineered, not ornamental.
+
+Deliverable:
+Generate fully self-contained HTML, CSS, and JavaScript code 
+that implements this toggle UI with all described RedefineIt styling and animations.

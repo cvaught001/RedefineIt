@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>RedefineIt Parametric Canvas</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      :root {
+        --bg-outer: #0b0f13;
+        --bg-inner: #101820;
+        --panel-bg: rgba(12, 18, 28, 0.68);
+        --panel-border: rgba(120, 220, 255, 0.25);
+        --accent: #7dd3fc;
+        --accent-strong: #fb6ad9;
+        --text: #e7f6ff;
+        --muted: rgba(231, 246, 255, 0.65);
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        font-family: 'SF Pro Text', system-ui, -apple-system, BlinkMacSystemFont,
+          'Segoe UI', sans-serif;
+        color: var(--text);
+        background: radial-gradient(
+          circle at 50% 35%,
+          var(--bg-inner),
+          var(--bg-outer) 70%
+        );
+        overflow: hidden;
+      }
+      canvas {
+        display: block;
+        width: 100vw;
+        height: 100vh;
+      }
+      .control-shell {
+        position: fixed;
+        top: 24px;
+        right: 24px;
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        z-index: 5;
+      }
+      #togglePanel {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        border: 1px solid var(--panel-border);
+        background: rgba(12, 18, 28, 0.55);
+        display: grid;
+        place-items: center;
+        cursor: pointer;
+        color: var(--accent);
+        transition: box-shadow 220ms ease, transform 160ms ease,
+          border 220ms ease;
+        backdrop-filter: blur(6px);
+        outline: none;
+      }
+      #togglePanel:hover {
+        box-shadow: 0 0 18px rgba(125, 211, 252, 0.55);
+        border-color: rgba(125, 211, 252, 0.55);
+      }
+      #togglePanel:active {
+        transform: translateY(1px);
+      }
+      #togglePanel[aria-expanded='false'] {
+        animation: pulse 1800ms ease-in-out infinite;
+      }
+      @keyframes pulse {
+        0%,
+        100% {
+          box-shadow: 0 0 0 rgba(125, 211, 252, 0);
+        }
+        50% {
+          box-shadow: 0 0 22px rgba(251, 106, 217, 0.45);
+        }
+      }
+      .control-panel {
+        min-width: 240px;
+        padding: 18px;
+        border-radius: 16px;
+        border: 1px solid var(--panel-border);
+        background: var(--panel-bg);
+        backdrop-filter: blur(6px);
+        box-shadow: 0 18px 32px rgba(0, 0, 0, 0.38);
+        transition: opacity 200ms ease, transform 200ms ease,
+          visibility 0s linear 0s;
+      }
+      .control-panel.hidden {
+        opacity: 0;
+        transform: translateX(12px);
+        visibility: hidden;
+        transition: opacity 160ms ease, transform 160ms ease,
+          visibility 0s linear 160ms;
+      }
+      .control-panel h2 {
+        margin: 0 0 12px;
+        font-size: 14px;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--accent);
+      }
+      .control-panel label {
+        display: flex;
+        justify-content: space-between;
+        font-size: 13px;
+        color: var(--muted);
+        margin-bottom: 6px;
+      }
+      .control-panel input[type='range'],
+      .control-panel select {
+        width: 100%;
+        margin-bottom: 12px;
+        background: transparent;
+        color: var(--text);
+      }
+      .control-panel input[type='range'] {
+        -webkit-appearance: none;
+        appearance: none;
+        height: 4px;
+        border-radius: 999px;
+        background: linear-gradient(
+          90deg,
+          rgba(125, 211, 252, 0.6),
+          rgba(251, 106, 217, 0.6)
+        );
+        outline: none;
+      }
+      .control-panel input[type='range']::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: var(--accent-strong);
+        border: 2px solid #12202d;
+        box-shadow: 0 0 10px rgba(251, 106, 217, 0.65);
+        cursor: pointer;
+      }
+      .control-panel select {
+        border-radius: 10px;
+        border: 1px solid rgba(125, 211, 252, 0.25);
+        padding: 6px 8px;
+        background: rgba(12, 18, 28, 0.6);
+        backdrop-filter: blur(6px);
+      }
+      .value {
+        color: var(--accent);
+        font-variant-numeric: tabular-nums;
+      }
+      @media (max-width: 640px) {
+        .control-shell {
+          top: 16px;
+          right: 16px;
+        }
+        .control-panel {
+          width: min(280px, 88vw);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="sketch" aria-label="Parametric curve animation"></canvas>
+
+    <div class="control-shell">
+      <button
+        id="togglePanel"
+        aria-expanded="true"
+        aria-controls="controlPanel"
+        title="Toggle controls (E)"
+        aria-label="Toggle controls"
+      >
+        <svg
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          aria-hidden="true"
+        >
+          <path
+            d="M12 5C6.5 5 2.5 9.5 1.5 11c1 1.3 5 6 10.5 6s9.5-4.7 10.5-6c-1-1.5-5-6-10.5-6Zm0 2c4.1 0 7.3 3.2 8.7 4-1.4.8-4.6 4-8.7 4s-7.3-3.2-8.7-4c1.4-.8 4.6-4 8.7-4Zm0 2.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Zm0 2A1.5 1.5 0 1 1 12 15a1.5 1.5 0 0 1 0-3.5Z"
+            fill="currentColor"
+          />
+        </svg>
+      </button>
+
+      <section class="control-panel" id="controlPanel">
+        <h2>Parametric Flow</h2>
+
+        <label for="preset"
+          >Preset <span class="value" id="presetVal">Circle</span></label
+        >
+        <select id="preset" aria-label="Curve preset">
+          <option value="circle">Circle</option>
+          <option value="lissajous">Lissajous</option>
+          <option value="epicycloid">Epicycloid</option>
+        </select>
+
+        <label for="speed"
+          >Speed <span class="value" id="speedVal">1.0</span></label
+        >
+        <input
+          id="speed"
+          type="range"
+          min="0.1"
+          max="3.0"
+          step="0.05"
+          value="1.0"
+        />
+
+        <label for="scale"
+          >Scale <span class="value" id="scaleVal">220</span></label
+        >
+        <input
+          id="scale"
+          type="range"
+          min="40"
+          max="320"
+          step="5"
+          value="220"
+        />
+
+        <label for="lineWidth"
+          >Line Width <span class="value" id="lineWidthVal">2.4</span></label
+        >
+        <input
+          id="lineWidth"
+          type="range"
+          min="0.6"
+          max="6"
+          step="0.1"
+          value="2.4"
+        />
+
+        <label for="trail"
+          >Trail Fade <span class="value" id="trailVal">0.12</span></label
+        >
+        <input
+          id="trail"
+          type="range"
+          min="0.02"
+          max="0.4"
+          step="0.01"
+          value="0.12"
+        />
+      </section>
+    </div>
+
+    <script>
+      // Setup
+      const canvas = document.getElementById('sketch')
+      const ctx = canvas.getContext('2d')
+      let dpr = Math.min(window.devicePixelRatio || 1, 2)
+      const gradient = { fill: null }
+
+      // Params
+      const preferReducedMotion = window.matchMedia(
+        '(prefers-reduced-motion: reduce)'
+      ).matches
+      const params = {
+        preset: 'circle',
+        speed: preferReducedMotion ? 0.6 : 1.0,
+        scale: 220,
+        lineWidth: 2.4,
+        trail: preferReducedMotion ? 0.22 : 0.12
+      }
+
+      const controls = {
+        preset: document.getElementById('preset'),
+        speed: document.getElementById('speed'),
+        scale: document.getElementById('scale'),
+        lineWidth: document.getElementById('lineWidth'),
+        trail: document.getElementById('trail')
+      }
+
+      const valueSpans = {
+        preset: document.getElementById('presetVal'),
+        speed: document.getElementById('speedVal'),
+        scale: document.getElementById('scaleVal'),
+        lineWidth: document.getElementById('lineWidthVal'),
+        trail: document.getElementById('trailVal')
+      }
+
+      const panel = document.getElementById('controlPanel')
+      const toggleBtn = document.getElementById('togglePanel')
+
+      const presets = {
+        circle: {
+          label: 'Circle',
+          fn: t => ({ x: Math.cos(t), y: Math.sin(t) }),
+          period: Math.PI * 2
+        },
+        lissajous: {
+          label: 'Lissajous',
+          fn: t => ({ x: Math.sin(3 * t + Math.PI / 3), y: Math.sin(4 * t) }),
+          period: Math.PI * 2
+        },
+        epicycloid: {
+          label: 'Epicycloid',
+          fn: t => {
+            const k = 3
+            const x = (k + 1) * Math.cos(t) - Math.cos((k + 1) * t)
+            const y = (k + 1) * Math.sin(t) - Math.sin((k + 1) * t)
+            return { x: x / (k + 2), y: y / (k + 2) }
+          },
+          period: Math.PI * 2
+        }
+      }
+
+      // Animation loop
+      let t = 0
+      let lastTime = 0
+      let lastPoint = null
+
+      function resize() {
+        dpr = Math.min(window.devicePixelRatio || 1, 2)
+        const { innerWidth: w, innerHeight: h } = window
+        canvas.width = w * dpr
+        canvas.height = h * dpr
+        canvas.style.width = w + 'px'
+        canvas.style.height = h + 'px'
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+
+        gradient.fill = ctx.createRadialGradient(
+          w * 0.5,
+          h * 0.4,
+          Math.min(w, h) * 0.2,
+          w * 0.5,
+          h * 0.5,
+          Math.max(w, h) * 0.8
+        )
+        gradient.fill.addColorStop(0, 'rgba(8, 12, 18, 0.22)')
+        gradient.fill.addColorStop(1, 'rgba(4, 7, 12, 0.6)')
+        clearCanvas(true)
+      }
+
+      function clearCanvas(init = false) {
+        const { width: w, height: h } = canvas
+        ctx.save()
+        ctx.globalCompositeOperation = 'source-over'
+        ctx.setTransform(1, 0, 0, 1, 0, 0)
+        ctx.fillStyle = init
+          ? 'rgba(11, 15, 19, 1)'
+          : `rgba(11, 15, 19, ${params.trail})`
+        ctx.fillRect(0, 0, w, h)
+        ctx.restore()
+        if (init) lastPoint = null
+      }
+
+      function drawFrame(now) {
+        if (!lastTime) lastTime = now
+        const dt = Math.min((now - lastTime) / 1000, 0.05)
+        lastTime = now
+
+        clearCanvas(false)
+
+        const preset = presets[params.preset] || presets.circle
+        const centerX = canvas.width / (2 * dpr)
+        const centerY = canvas.height / (2 * dpr)
+        const scale = params.scale
+
+        t += (dt * params.speed * 2 * Math.PI) / (preset.period || 2 * Math.PI)
+        if (t > Number.MAX_SAFE_INTEGER / 2) t = 0
+
+        const point = preset.fn(t)
+        const x = centerX + point.x * scale
+        const y = centerY + point.y * scale
+
+        ctx.save()
+        ctx.lineWidth = params.lineWidth
+        ctx.lineCap = 'round'
+        ctx.lineJoin = 'round'
+        ctx.strokeStyle = '#7dd3fc'
+        ctx.shadowBlur = 14
+        ctx.shadowColor = 'rgba(125, 211, 252, 0.8)'
+        ctx.globalCompositeOperation = 'lighter'
+
+        if (lastPoint) {
+          ctx.beginPath()
+          ctx.moveTo(lastPoint.x, lastPoint.y)
+          ctx.lineTo(x, y)
+          ctx.stroke()
+        }
+        ctx.restore()
+
+        lastPoint = { x, y }
+        requestAnimationFrame(drawFrame)
+      }
+
+      // UI wiring
+      function syncControls() {
+        controls.preset.value = params.preset
+        controls.speed.value = params.speed
+        controls.scale.value = params.scale
+        controls.lineWidth.value = params.lineWidth
+        controls.trail.value = params.trail
+        valueSpans.preset.textContent = presets[params.preset].label
+        valueSpans.speed.textContent = params.speed.toFixed(2)
+        valueSpans.scale.textContent = Math.round(params.scale)
+        valueSpans.lineWidth.textContent = params.lineWidth.toFixed(1)
+        valueSpans.trail.textContent = params.trail.toFixed(2)
+      }
+
+      controls.preset.addEventListener('change', () => {
+        params.preset = controls.preset.value
+        valueSpans.preset.textContent = presets[params.preset].label
+        lastPoint = null
+      })
+
+      controls.speed.addEventListener('input', () => {
+        params.speed = parseFloat(controls.speed.value)
+        valueSpans.speed.textContent = params.speed.toFixed(2)
+      })
+
+      controls.scale.addEventListener('input', () => {
+        params.scale = parseFloat(controls.scale.value)
+        valueSpans.scale.textContent = Math.round(params.scale)
+      })
+
+      controls.lineWidth.addEventListener('input', () => {
+        params.lineWidth = parseFloat(controls.lineWidth.value)
+        valueSpans.lineWidth.textContent = params.lineWidth.toFixed(1)
+      })
+
+      controls.trail.addEventListener('input', () => {
+        params.trail = parseFloat(controls.trail.value)
+        valueSpans.trail.textContent = params.trail.toFixed(2)
+      })
+
+      function togglePanelVisibility(force) {
+        const willShow =
+          force !== undefined ? force : panel.classList.contains('hidden')
+        panel.classList.toggle('hidden', !willShow)
+        toggleBtn.setAttribute('aria-expanded', willShow)
+      }
+
+      toggleBtn.addEventListener('click', () => togglePanelVisibility())
+
+      document.addEventListener('keydown', event => {
+        if (event.key === 'e' || event.key === 'E') {
+          togglePanelVisibility()
+        }
+      })
+
+      window.addEventListener('resize', resize)
+
+      // Kickoff
+      resize()
+      syncControls()
+      requestAnimationFrame(drawFrame)
+    </script>
+  </body>
+</html>
