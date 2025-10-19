@@ -116,7 +116,8 @@
         border: 1px solid rgba(120, 160, 220, 0.35);
         background: rgba(20, 28, 44, 0.65);
         color: #d9e7ff;
-        font: 600 12px/1.2 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        font: 600 12px/1.2 system-ui, -apple-system, Segoe UI, Roboto,
+          sans-serif;
         appearance: none;
         transition: border-color 0.15s ease, box-shadow 0.15s ease;
       }
@@ -297,9 +298,7 @@
       </select>
       <div class="btn-row">
         <button class="btn" id="savePreset" type="button">Save Preset</button>
-        <button class="btn" id="importPreset" type="button">
-          Import JSON
-        </button>
+        <button class="btn" id="importPreset" type="button">Import JSON</button>
         <button class="btn" id="shuffle" type="button">Shuffle Preset</button>
       </div>
 
@@ -358,12 +357,12 @@
 
         const defaultPreset = {
           version: 1,
-          createdAt: '2025-10-19T21:09:03.266Z',
-          steps: 139,
-          radius: 140,
-          depth: 60,
-          rise: 8,
-          span: 0.3839724354387525,
+          createdAt: '2025-10-19T21:23:15.629Z',
+          steps: 27,
+          radius: 173,
+          depth: 120,
+          rise: 10,
+          span: 0.3316125578789226,
           thickness: 4,
           turns: 3,
           autorot: 0.22,
@@ -371,12 +370,12 @@
           glow: 16,
           lineW: 1.2,
           hue: 196,
-          handrail: false,
+          handrail: true,
           ribbon: false,
           solid: false,
           cam: {
-            yaw: 17.578183031250028,
-            pitch: 1.0963476562499999,
+            yaw: 43.70942893749934,
+            pitch: 1.2776713267948967,
             dist: 700
           }
         }
@@ -501,14 +500,15 @@
         const toDeg = rad => (rad * 180) / Math.PI
         const wrapDeg = rad => {
           const deg = toDeg(rad)
-          return (((deg + 180) % 360) + 360) % 360 - 180
+          return ((((deg + 180) % 360) + 360) % 360) - 180
         }
         const clamp = (v, min, max) => Math.min(max, Math.max(min, v))
         const updateCameraOutputs = () => {
           const yawDeg = wrapDeg(state.cam.yaw)
           const pitchDeg = toDeg(state.cam.pitch)
           if (camYawLabel) camYawLabel.textContent = yawDeg.toFixed(1) + '°'
-          if (camPitchLabel) camPitchLabel.textContent = pitchDeg.toFixed(1) + '°'
+          if (camPitchLabel)
+            camPitchLabel.textContent = pitchDeg.toFixed(1) + '°'
           if (camDistLabel)
             camDistLabel.textContent = Math.round(state.cam.dist) + 'px'
           if (camYawInput) camYawInput.value = yawDeg
@@ -552,7 +552,10 @@
         const setControlsVisible = visible => {
           if (!controlPanel || !toggleUIButton) return
           controlPanel.classList.toggle('hidden', !visible)
-          toggleUIButton.setAttribute('aria-expanded', visible ? 'true' : 'false')
+          toggleUIButton.setAttribute(
+            'aria-expanded',
+            visible ? 'true' : 'false'
+          )
           if (visible) {
             labels()
           }
@@ -696,7 +699,11 @@
           if (Number.isFinite(preset.rise))
             state.rise = clamp(Math.round(preset.rise), 2, 18)
           if (Number.isFinite(preset.spanDeg))
-            state.span = clamp((preset.spanDeg * Math.PI) / 180, minSpan, maxSpan)
+            state.span = clamp(
+              (preset.spanDeg * Math.PI) / 180,
+              minSpan,
+              maxSpan
+            )
           else if (Number.isFinite(preset.span))
             state.span = clamp(preset.span, minSpan, maxSpan)
           if (Number.isFinite(preset.thickness))
@@ -706,7 +713,11 @@
           if (Number.isFinite(preset.autorot))
             state.autorot = clamp(preset.autorot, -1.5, 1.5)
           if (Number.isFinite(preset.tiltDeg))
-            state.tilt = clamp((preset.tiltDeg * Math.PI) / 180, minTilt, maxTilt)
+            state.tilt = clamp(
+              (preset.tiltDeg * Math.PI) / 180,
+              minTilt,
+              maxTilt
+            )
           else if (Number.isFinite(preset.tilt))
             state.tilt = clamp(preset.tilt, minTilt, maxTilt)
           if (Number.isFinite(preset.glow))
@@ -715,7 +726,8 @@
             state.lineW = clamp(preset.lineW, 0.5, 4)
           if (Number.isFinite(preset.hue))
             state.hue = ((preset.hue % 360) + 360) % 360
-          if (typeof preset.handrail === 'boolean') state.handrail = preset.handrail
+          if (typeof preset.handrail === 'boolean')
+            state.handrail = preset.handrail
           if (typeof preset.ribbon === 'boolean') state.ribbon = preset.ribbon
           if (typeof preset.solid === 'boolean') state.solid = preset.solid
           if (preset.cam && typeof preset.cam === 'object') {
@@ -1070,9 +1082,7 @@
 
           // Handrail
           if (state.handrail) {
-            const rail = getHandrail()
-              .map(worldToCam)
-              .map(project)
+            const rail = getHandrail().map(worldToCam).map(project)
             ctx.beginPath()
             ctx.moveTo(rail[0][0], rail[0][1])
             for (let i = 1; i < rail.length; i++)
