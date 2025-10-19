@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>RedefineIt — 3-Axis Stepper Outlines</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg0: #0b0f13;
+        --bg1: #101820;
+        --fg: #d9e7ff;
+        --neon: rgba(120, 200, 255, 0.9);
+        --panel: rgba(12, 16, 24, 0.55);
+        --brd: rgba(120, 160, 220, 0.25);
+      }
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: linear-gradient(180deg, var(--bg0), var(--bg1));
+        overflow: hidden;
+      }
+      canvas {
+        display: block;
+        width: 100vw;
+        height: 100vh;
+      }
+      .ui {
+        position: fixed;
+        right: 12px;
+        top: 12px;
+        z-index: 10;
+        width: 320px;
+        max-height: 90vh;
+        overflow: auto;
+        font: 13px/1.2 system-ui, ui-sans-serif;
+        color: var(--fg);
+        background: var(--panel);
+        border: 1px solid var(--brd);
+        border-radius: 12px;
+        padding: 12px;
+        backdrop-filter: blur(8px);
+      }
+      .ui h3 {
+        margin: 0 0 8px 0;
+        font-size: 14px;
+        letter-spacing: 0.3px;
+        opacity: 0.9;
+      }
+      .row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 6px 0;
+      }
+      .row label {
+        flex: 1;
+      }
+      .row input[type='range'] {
+        width: 130px;
+      }
+      .chip {
+        display: inline-flex;
+        gap: 8px;
+        margin: 0.25rem 0 0.5rem 0;
+        flex-wrap: wrap;
+      }
+      .chip label {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 8px;
+        border: 1px solid var(--brd);
+        border-radius: 999px;
+        cursor: pointer;
+        user-select: none;
+      }
+      .sep {
+        height: 1px;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          rgba(180, 200, 255, 0.25),
+          transparent
+        );
+        margin: 10px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="c"></canvas>
+
+    <div class="ui" id="panel">
+      <h3>3-Axis Stepper Outlines</h3>
+
+      <div class="chip">
+        <label><input type="checkbox" id="axisXY" checked /> XY</label>
+        <label><input type="checkbox" id="axisXZ" /> XZ</label>
+        <label><input type="checkbox" id="axisYZ" /> YZ</label>
+      </div>
+
+      <div class="row">
+        <label
+          >Shape
+          <select id="shape">
+            <option value="circle">Circle</option>
+            <option value="square">Square</option>
+            <option value="triangle">Triangle</option>
+            <option value="polygon">Polygon (6)</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="row">
+        <label>Base size <span id="vSize">40</span></label>
+        <input type="range" id="size" min="8" max="140" step="1" value="40" />
+      </div>
+
+      <div class="row">
+        <label>Micro-iterations <span id="vIter">3</span></label>
+        <input type="range" id="iters" min="0" max="10" step="1" value="3" />
+      </div>
+
+      <div class="row">
+        <label>Nested growth (ratio) <span id="vRatio">0.72</span></label>
+        <input
+          type="range"
+          id="ratio"
+          min="0.5"
+          max="0.95"
+          step="0.01"
+          value="0.72"
+        />
+      </div>
+
+      <div class="row">
+        <label>Step size (Δt) <span id="vStep">0.2</span></label>
+        <input
+          type="range"
+          id="step"
+          min="0.02"
+          max="1.0"
+          step="0.02"
+          value="0.20"
+        />
+      </div>
+
+      <div class="row">
+        <label>Speed (dt/frame) <span id="vSpeed">0.03</span></label>
+        <input
+          type="range"
+          id="speed"
+          min="0.005"
+          max="0.2"
+          step="0.005"
+          value="0.03"
+        />
+      </div>
+
+      <div class="row">
+        <label>Trail fade <span id="vFade">0.08</span></label>
+        <input
+          type="range"
+          id="fade"
+          min="0.02"
+          max="0.25"
+          step="0.01"
+          value="0.08"
+        />
+      </div>
+
+      <div class="sep"></div>
+      <div class="row">
+        <button id="reset">Reset</button>
+        <button id="clearGhosts">Clear Outlines</button>
+      </div>
+    </div>
+
+    <script>
+      ;(() => {
+        const canvas = document.getElementById('c')
+        const ctx = canvas.getContext('2d')
+        const DPR = Math.max(1, devicePixelRatio || 1)
+        let W = 0,
+          H = 0,
+          CX = 0,
+          CY = 0
+
+        function resize() {
+          W = canvas.width = Math.floor(innerWidth * DPR)
+          H = canvas.height = Math.floor(innerHeight * DPR)
+          canvas.style.width = innerWidth + 'px'
+          canvas.style.height = innerHeight + 'px'
+          CX = W / 2
+          CY = H / 2
+        }
+        addEventListener('resize', resize, { passive: true })
+        resize()
+
+        // UI refs
+        const q = id => document.getElementById(id)
+        const axisXY = q('axisXY'),
+          axisXZ = q('axisXZ'),
+          axisYZ = q('axisYZ')
+        const shapeSel = q('shape')
+        const sSize = q('size'),
+          vSize = q('vSize')
+        const sIters = q('iters'),
+          vIter = q('vIter')
+        const sRatio = q('ratio'),
+          vRatio = q('vRatio')
+        const sStep = q('step'),
+          vStep = q('vStep')
+        const sSpeed = q('speed'),
+          vSpeed = q('vSpeed')
+        const sFade = q('fade'),
+          vFade = q('vFade')
+        const btnReset = q('reset'),
+          btnClear = q('clearGhosts')
+
+        function syncLabels() {
+          vSize.textContent = sSize.value
+          vIter.textContent = sIters.value
+          vRatio.textContent = Number(sRatio.value).toFixed(2)
+          vStep.textContent = Number(sStep.value).toFixed(2)
+          vSpeed.textContent = Number(sSpeed.value).toFixed(3)
+          vFade.textContent = Number(sFade.value).toFixed(2)
+        }
+        syncLabels()
+        ;['input', 'change'].forEach(evt => {
+          ;[sSize, sIters, sRatio, sStep, sSpeed, sFade].forEach(el =>
+            el.addEventListener(evt, syncLabels)
+          )
+        })
+
+        // Parametric path (curtate epicycloid in XY), and derived Z
+        // Equations:
+        // x(t) = (R + r) cos t - d cos((R + r)/r * t)
+        // y(t) = (R + r) sin t - d sin((R + r)/r * t)
+        // We'll create z(t) as a slow helical lift to drive XZ/YZ projections.
+        const R = 150 * DPR
+        const r = 50 * DPR
+        const d = 30 * DPR
+        const k = (R + r) / r
+
+        function P(t) {
+          const x = (R + r) * Math.cos(t) - d * Math.cos(k * t)
+          const y = (R + r) * Math.sin(t) - d * Math.sin(k * t)
+          // Give z a gentle wave so XZ/YZ planes are interesting
+          const z = 80 * DPR * Math.sin(t * 0.5)
+          return { x, y, z }
+        }
+
+        // Ghost outlines per plane
+        const ghosts = {
+          XY: [],
+          XZ: [],
+          YZ: []
+        }
+
+        // Drawing helpers
+        function neonStroke(alpha = 1) {
+          ctx.shadowBlur = 18 * DPR
+          ctx.shadowColor = 'rgba(120,200,255,0.9)'
+          ctx.strokeStyle = `rgba(180,220,255,${alpha})`
+          ctx.lineWidth = 2 * DPR
+        }
+        function planeColor(alpha) {
+          return `rgba(160,200,255,${alpha})`
+        }
+
+        function drawShape(shape, cx, cy, size, rot = 0) {
+          ctx.save()
+          ctx.translate(cx, cy)
+          ctx.rotate(rot)
+          ctx.beginPath()
+          if (shape === 'circle') {
+            ctx.arc(0, 0, size, 0, Math.PI * 2)
+          } else if (shape === 'square') {
+            const s = size
+            ctx.moveTo(-s, -s)
+            ctx.lineTo(s, -s)
+            ctx.lineTo(s, s)
+            ctx.lineTo(-s, s)
+            ctx.closePath()
+          } else if (shape === 'triangle') {
+            const s = size
+            ctx.moveTo(0, -s)
+            ctx.lineTo(s, s)
+            ctx.lineTo(-s, s)
+            ctx.closePath()
+          } else {
+            // polygon (6)
+            const n = 6,
+              s = size
+            for (let i = 0; i < n; i++) {
+              const a = (i * 2 * Math.PI) / n
+              const px = s * Math.cos(a),
+                py = s * Math.sin(a)
+              ;(i ? ctx.lineTo : px => ctx.moveTo)(px, py)
+              if (i === 0) ctx.moveTo(px, py)
+            }
+            ctx.closePath()
+          }
+          neonStroke(0.95)
+          ctx.stroke()
+          ctx.restore()
+        }
+
+        function drawNested(shape, cx, cy, baseSize, iters, ratio, rot = 0) {
+          let size = baseSize
+          for (let i = 0; i <= iters; i++) {
+            drawShape(shape, cx, cy, size, rot + i * 0.15)
+            size *= ratio
+          }
+        }
+
+        // Map 3D point to each plane’s 2D coords (centered on screen)
+        function mapXY(p) {
+          return { X: CX + p.x, Y: CY + p.y }
+        }
+        function mapXZ(p) {
+          return { X: CX + p.x, Y: CY + p.z }
+        }
+        function mapYZ(p) {
+          return { X: CX + p.y, Y: CY + p.z }
+        }
+
+        // Animation/state
+        let t = 0,
+          acc = 0,
+          lastStep = 0
+
+        function fade() {
+          ctx.save()
+          ctx.globalCompositeOperation = 'source-over'
+          ctx.fillStyle = `rgba(10,15,24,${parseFloat(sFade.value)})`
+          ctx.fillRect(0, 0, W, H)
+          ctx.restore()
+        }
+
+        function drawAxes() {
+          // subtle crosshairs to hint center
+          ctx.save()
+          ctx.lineWidth = 1 * DPR
+          ctx.strokeStyle = 'rgba(120,160,220,0.15)'
+          ctx.beginPath()
+          ctx.moveTo(CX, 0)
+          ctx.lineTo(CX, H)
+          ctx.moveTo(0, CY)
+          ctx.lineTo(W, CY)
+          ctx.stroke()
+          ctx.restore()
+        }
+
+        function drawGhosts() {
+          neonStroke(0.85)
+          function drawList(list) {
+            for (const g of list) {
+              drawNested(g.shape, g.cx, g.cy, g.size, g.iters, g.ratio, g.rot)
+            }
+          }
+          if (axisXY.checked) drawList(ghosts.XY)
+          if (axisXZ.checked) drawList(ghosts.XZ)
+          if (axisYZ.checked) drawList(ghosts.YZ)
+        }
+
+        function stepCommit(p, rot) {
+          const base = parseFloat(sSize.value) * DPR
+          const iters = parseInt(sIters.value, 10)
+          const ratio = parseFloat(sRatio.value)
+
+          // For each enabled plane, convert and store a ghost outline entry
+          if (axisXY.checked) {
+            const m = mapXY(p)
+            ghosts.XY.push({
+              shape: shapeSel.value,
+              cx: m.X,
+              cy: m.Y,
+              size: base,
+              iters,
+              ratio,
+              rot
+            })
+          }
+          if (axisXZ.checked) {
+            const m = mapXZ(p)
+            ghosts.XZ.push({
+              shape: shapeSel.value,
+              cx: m.X,
+              cy: m.Y,
+              size: base,
+              iters,
+              ratio,
+              rot
+            })
+          }
+          if (axisYZ.checked) {
+            const m = mapYZ(p)
+            ghosts.YZ.push({
+              shape: shapeSel.value,
+              cx: m.X,
+              cy: m.Y,
+              size: base,
+              iters,
+              ratio,
+              rot
+            })
+          }
+        }
+
+        function drawCursor(p, rot) {
+          // live tracer “cursor” on each active plane
+          neonStroke(1)
+          const s = parseFloat(sSize.value) * 0.35 * DPR
+          if (axisXY.checked) {
+            const m = mapXY(p)
+            drawShape('circle', m.X, m.Y, s, rot)
+          }
+          if (axisXZ.checked) {
+            const m = mapXZ(p)
+            drawShape('circle', m.X, m.Y, s, rot)
+          }
+          if (axisYZ.checked) {
+            const m = mapYZ(p)
+            drawShape('circle', m.X, m.Y, s, rot)
+          }
+        }
+
+        function loop() {
+          requestAnimationFrame(loop)
+          fade()
+          drawAxes()
+
+          // advance
+          const dt = Math.min(0.05, parseFloat(sSpeed.value))
+          t += dt
+          acc += dt
+
+          // current param point
+          const p = P(t)
+          const rot = t * 0.6 // gentle rotation of outlines
+
+          // drop outlines at each step
+          const stepSize = parseFloat(sStep.value)
+          if (acc - lastStep >= stepSize) {
+            stepCommit(p, rot)
+            lastStep += stepSize
+          }
+
+          // draw ghosts and live cursor
+          drawGhosts()
+          drawCursor(p, rot)
+        }
+        loop()
+
+        btnReset.addEventListener('click', () => {
+          t = 0
+          acc = 0
+          lastStep = 0
+        })
+        btnClear.addEventListener('click', () => {
+          ghosts.XY.length = 0
+          ghosts.XZ.length = 0
+          ghosts.YZ.length = 0
+        })
+      })()
+    </script>
+  </body>
+</html>

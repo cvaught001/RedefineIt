@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Helicoid Spiral Staircase — Redefine Style</title>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #0b0f13;
+        overflow: hidden;
+      }
+      canvas {
+        display: block;
+        width: 100vw;
+        height: 100vh;
+      }
+      .ui {
+        position: fixed;
+        left: 12px;
+        top: 12px;
+        z-index: 10;
+        width: 290px;
+        font: 13px/1.2 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        color: #d9e7ff;
+        background: rgba(10, 15, 24, 0.55);
+        border: 1px solid rgba(120, 160, 220, 0.25);
+        border-radius: 12px;
+        backdrop-filter: blur(8px);
+        padding: 12px;
+        max-height: 90vh;
+        overflow: auto;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+      }
+      .ui h1 {
+        margin: 0 0 8px;
+        font-size: 16px;
+        letter-spacing: 0.4px;
+        font-weight: 700;
+        color: #e6f0ff;
+      }
+      .row {
+        display: grid;
+        grid-template-columns: 1fr 60px;
+        gap: 8px;
+        align-items: center;
+        margin: 8px 0;
+      }
+      .row label {
+        font-size: 12px;
+        opacity: 0.9;
+      }
+      .row input[type='range'] {
+        width: 100%;
+      }
+      .small {
+        font-size: 11px;
+        opacity: 0.75;
+      }
+      .toggle {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 8px 0;
+      }
+      .divider {
+        height: 1px;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          rgba(140, 170, 220, 0.35),
+          transparent
+        );
+        margin: 10px 0;
+      }
+      .btn {
+        display: inline-block;
+        padding: 8px 10px;
+        margin-top: 6px;
+        cursor: pointer;
+        user-select: none;
+        border: 1px solid rgba(120, 160, 220, 0.35);
+        border-radius: 10px;
+        color: #d9e7ff;
+        background: linear-gradient(
+          180deg,
+          rgba(22, 30, 45, 0.9),
+          rgba(15, 22, 35, 0.7)
+        );
+      }
+    </style>
+  </head>
+  <body>
+    <div class="ui">
+      <h1>Helicoid Spiral Staircase</h1>
+      <div class="small">RedefineStyle • Neon glow • Centered • Canvas 3D</div>
+      <div class="divider"></div>
+
+      <div class="row">
+        <label>Steps <span id="stepsVal"></span></label
+        ><input id="steps" type="range" min="20" max="400" value="180" />
+      </div>
+      <div class="row">
+        <label>Radius <span id="radVal"></span></label
+        ><input id="radius" type="range" min="40" max="300" value="140" />
+      </div>
+      <div class="row">
+        <label>Tread Depth <span id="depthVal"></span></label
+        ><input id="depth" type="range" min="8" max="120" value="60" />
+      </div>
+      <div class="row">
+        <label>Rise/Step <span id="riseVal"></span></label
+        ><input id="rise" type="range" min="2" max="18" value="8" />
+      </div>
+      <div class="row">
+        <label>Step Span° <span id="spanVal"></span></label
+        ><input id="span" type="range" min="6" max="40" value="22" />
+      </div>
+      <div class="row">
+        <label>Thickness <span id="thickVal"></span></label
+        ><input id="thick" type="range" min="1" max="16" value="4" />
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="row">
+        <label>Turns <span id="turnsVal"></span></label
+        ><input
+          id="turns"
+          type="range"
+          min="0.5"
+          max="8"
+          step="0.1"
+          value="3"
+        />
+      </div>
+      <div class="row">
+        <label>Auto Rotate <span id="autoVal"></span></label
+        ><input
+          id="autorot"
+          type="range"
+          min="-1.5"
+          max="1.5"
+          step="0.01"
+          value="0.22"
+        />
+      </div>
+      <div class="row">
+        <label>Pitch Tilt° <span id="tiltVal"></span></label
+        ><input id="tilt" type="range" min="-45" max="85" value="28" />
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="row">
+        <label>Glow <span id="glowVal"></span></label
+        ><input id="glow" type="range" min="0" max="40" value="16" />
+      </div>
+      <div class="row">
+        <label>Line Width <span id="lwVal"></span></label
+        ><input id="lw" type="range" min="0.5" max="4" step="0.1" value="1.2" />
+      </div>
+      <div class="row">
+        <label>Hue° <span id="hueVal"></span></label
+        ><input id="hue" type="range" min="0" max="360" value="196" />
+      </div>
+
+      <div class="toggle">
+        <input id="handrail" type="checkbox" checked /><label for="handrail"
+          >Handrail</label
+        >
+      </div>
+      <div class="toggle">
+        <input id="ribbon" type="checkbox" /><label for="ribbon"
+          >Helicoid Ribbon</label
+        >
+      </div>
+      <div class="toggle">
+        <input id="solid" type="checkbox" /><label for="solid"
+          >Solid Fill (treads)</label
+        >
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="small">
+        Drag to orbit • Wheel to zoom • Double‑click to reset
+      </div>
+      <button class="btn" id="shuffle">Shuffle Preset</button>
+    </div>
+
+    <canvas id="c"></canvas>
+
+    <script>
+      ;(() => {
+        const canvas = document.getElementById('c')
+        const ctx = canvas.getContext('2d')
+        const ui = id => document.getElementById(id)
+
+        const S = Math.sin,
+          C = Math.cos,
+          TAU = Math.PI * 2
+        let W = 0,
+          H = 0,
+          DPR = window.devicePixelRatio || 1
+
+        const state = {
+          steps: +ui('steps').value,
+          radius: +ui('radius').value,
+          depth: +ui('depth').value,
+          rise: +ui('rise').value,
+          span: (+ui('span').value * Math.PI) / 180,
+          thickness: +ui('thick').value,
+          turns: +ui('turns').value,
+          autorot: +ui('autorot').value,
+          tilt: (+ui('tilt').value * Math.PI) / 180,
+          glow: +ui('glow').value,
+          lineW: +ui('lw').value,
+          hue: +ui('hue').value,
+          handrail: ui('handrail').checked,
+          ribbon: ui('ribbon').checked,
+          solid: ui('solid').checked,
+          cam: { yaw: 0, pitch: 0, dist: 700 }
+        }
+
+        // Labels
+        const labels = () => {
+          ui('stepsVal').textContent = state.steps
+          ui('radVal').textContent = state.radius + 'px'
+          ui('depthVal').textContent = state.depth + 'px'
+          ui('riseVal').textContent = state.rise + 'px'
+          ui('spanVal').textContent =
+            Math.round((state.span * 180) / Math.PI) + '°'
+          ui('thickVal').textContent = state.thickness + 'px'
+          ui('turnsVal').textContent = state.turns.toFixed(1)
+          ui('autoVal').textContent = state.autorot.toFixed(2)
+          ui('tiltVal').textContent =
+            Math.round((state.tilt * 180) / Math.PI) + '°'
+          ui('glowVal').textContent = state.glow
+          ui('lwVal').textContent = state.lineW.toFixed(1) + 'px'
+          ui('hueVal').textContent = Math.round(state.hue) + '°'
+        }
+        labels()
+
+        // Resize
+        function resize() {
+          W = canvas.width = Math.round(innerWidth * DPR)
+          H = canvas.height = Math.round(innerHeight * DPR)
+          canvas.style.width = innerWidth + 'px'
+          canvas.style.height = innerHeight + 'px'
+        }
+        addEventListener('resize', resize)
+        resize()
+
+        // Controls wiring
+        ;[
+          'steps',
+          'radius',
+          'depth',
+          'rise',
+          'span',
+          'thick',
+          'turns',
+          'autorot',
+          'tilt',
+          'glow',
+          'lw',
+          'hue'
+        ].forEach(k => {
+          ui(k === 'lw' ? 'lw' : k).addEventListener('input', e => {
+            if (k === 'span') state[k] = (+e.target.value * Math.PI) / 180
+            else if (k === 'tilt') state[k] = (+e.target.value * Math.PI) / 180
+            else if (k === 'lineW' || k === 'lw') state.lineW = +e.target.value
+            else state[k] = +e.target.value
+            labels()
+          })
+        })
+        ui('handrail').addEventListener(
+          'change',
+          e => (state.handrail = e.target.checked)
+        )
+        ui('ribbon').addEventListener(
+          'change',
+          e => (state.ribbon = e.target.checked)
+        )
+        ui('solid').addEventListener(
+          'change',
+          e => (state.solid = e.target.checked)
+        )
+
+        ui('shuffle').addEventListener('click', () => {
+          const presets = [
+            { hue: 196, glow: 18, autorot: 0.22, tilt: 28, turns: 3.2 },
+            { hue: 24, glow: 22, autorot: 0.18, tilt: 18, turns: 2.2 },
+            { hue: 292, glow: 28, autorot: 0.35, tilt: 32, turns: 4.6 },
+            { hue: 140, glow: 14, autorot: 0.12, tilt: 12, turns: 1.8 }
+          ]
+          const p = presets[Math.floor(Math.random() * presets.length)]
+          state.hue = p.hue
+          state.glow = p.glow
+          state.autorot = p.autorot
+          state.tilt = (p.tilt * Math.PI) / 180
+          state.turns = p.turns
+          labels()
+          ui('hue').value = p.hue
+          ui('glow').value = p.glow
+          ui('autorot').value = p.autorot
+          ui('tilt').value = p.tilt
+          ui('turns').value = p.turns
+        })
+
+        // Orbit controls (drag + wheel)
+        let dragging = false,
+          lx = 0,
+          ly = 0
+        canvas.addEventListener('pointerdown', e => {
+          dragging = true
+          lx = e.clientX
+          ly = e.clientY
+          canvas.setPointerCapture(e.pointerId)
+        })
+        canvas.addEventListener('pointerup', e => {
+          dragging = false
+          canvas.releasePointerCapture(e.pointerId)
+        })
+        canvas.addEventListener('pointermove', e => {
+          if (!dragging) return
+          const dx = e.clientX - lx,
+            dy = e.clientY - ly
+          state.cam.yaw += dx * 0.005
+          state.cam.pitch += dy * 0.005
+          state.cam.pitch = Math.max(
+            -Math.PI / 2 + 0.01,
+            Math.min(Math.PI / 2 - 0.01, state.cam.pitch)
+          )
+          lx = e.clientX
+          ly = e.clientY
+        })
+        canvas.addEventListener('dblclick', () => {
+          state.cam = { yaw: 0, pitch: 0, dist: 700 }
+        })
+        canvas.addEventListener('wheel', e => {
+          state.cam.dist *= 1 + Math.sign(e.deltaY) * 0.08
+          state.cam.dist = Math.max(200, Math.min(2000, state.cam.dist))
+        })
+
+        // 3D math
+        function rotY(p, a) {
+          const [x, y, z] = p
+          const ca = C(a),
+            sa = S(a)
+          return [ca * x + sa * z, y, -sa * x + ca * z]
+        }
+        function rotX(p, a) {
+          const [x, y, z] = p
+          const ca = C(a),
+            sa = S(a)
+          return [x, ca * y - sa * z, sa * y + ca * z]
+        }
+        function project(p) {
+          const f = 700 / (state.cam.dist - p[2])
+          return [p[0] * f * DPR + W / 2, p[1] * f * DPR + H / 2, p[2]]
+        }
+        function worldToCam(p) {
+          // Camera orbits around origin; apply pitch then yaw, but inverse for world->cam
+          let v = rotY(p, -state.cam.yaw - state.autorot * 0.5)
+          v = rotX(v, -(state.cam.pitch + state.tilt))
+          return v
+        }
+
+        // Build geometry each frame from params
+        function buildStaircase() {
+          const faces = []
+          const {
+            steps,
+            radius: r,
+            depth: d,
+            rise,
+            span,
+            thickness: t,
+            turns
+          } = state
+          const totalAngle = turns * TAU
+          const stepAngle = totalAngle / steps
+          const inner = Math.max(6, r - d)
+          const outer = r
+
+          for (let i = 0; i < steps; i++) {
+            const a0 = i * stepAngle
+            const a1 = a0 + span
+            const hTop = i * rise - (steps * rise) / 2 // center vertically
+            const hBot = hTop - t
+            // top face (ring sector)
+            const P = [
+              [inner * C(a0), hTop, inner * S(a0)],
+              [outer * C(a0), hTop, outer * S(a0)],
+              [outer * C(a1), hTop, outer * S(a1)],
+              [inner * C(a1), hTop, inner * S(a1)]
+            ]
+            faces.push({ poly: P, kind: 'treadTop' })
+
+            // riser face at a1 edge
+            const R1 = [
+              [inner * C(a1), hTop, inner * S(a1)],
+              [outer * C(a1), hTop, outer * S(a1)],
+              [outer * C(a1), hBot, outer * S(a1)],
+              [inner * C(a1), hBot, inner * S(a1)]
+            ]
+            faces.push({ poly: R1, kind: 'riser' })
+
+            // underside face
+            const U = [
+              [inner * C(a0), hBot, inner * S(a0)],
+              [inner * C(a1), hBot, inner * S(a1)],
+              [outer * C(a1), hBot, outer * S(a1)],
+              [outer * C(a0), hBot, outer * S(a0)]
+            ]
+            faces.push({ poly: U, kind: 'underside' })
+
+            // inner radial face at a0
+            const IR = [
+              [inner * C(a0), hTop, inner * S(a0)],
+              [inner * C(a1), hTop, inner * S(a1)],
+              [inner * C(a1), hBot, inner * S(a1)],
+              [inner * C(a0), hBot, inner * S(a0)]
+            ]
+            faces.push({ poly: IR, kind: 'inner' })
+
+            // outer radial face at a0
+            const OR = [
+              [outer * C(a0), hTop, outer * S(a0)],
+              [outer * C(a1), hTop, outer * S(a1)],
+              [outer * C(a1), hBot, outer * S(a1)],
+              [outer * C(a0), hBot, outer * S(a0)]
+            ]
+            faces.push({ poly: OR, kind: 'outer' })
+          }
+
+          return { faces, inner, outer, totalHeight: steps * rise }
+        }
+
+        function buildHandrail(outer, steps, rise) {
+          const pts = []
+          const totalAngle = state.turns * TAU
+          const stepAngle = totalAngle / steps
+          const railR = outer + 14
+          const offset = 8 // above tread
+          for (let i = 0; i <= steps; i++) {
+            const a = i * stepAngle + state.span * 0.5 // run through tread centers
+            const y = i * rise - (steps * rise) / 2 + offset
+            pts.push([railR * C(a), y, railR * S(a)])
+          }
+          return pts
+        }
+
+        function buildHelicoidRibbon() {
+          // Parametric helicoid: (u*cos v, u*sin v, a*v)
+          // We'll draw as grid lines for a neon "ribbon" feel
+          const a = state.rise / (state.span || 0.0001) // relate pitch to stair rise/span
+          const uMax = state.radius
+          const uMin = Math.max(6, uMax - state.depth)
+          const vMax = state.turns * TAU + state.span // extend a bit
+          const vSteps = Math.max(40, Math.floor(state.steps / 2))
+          const uStrips = 6
+
+          const lines = []
+          for (let j = 0; j <= uStrips; j++) {
+            const u = uMin + (uMax - uMin) * (j / uStrips)
+            const strip = []
+            for (let i = 0; i <= vSteps; i++) {
+              const v = vMax * (i / vSteps)
+              const x = u * C(v)
+              const y = a * v - (a * vMax) / 2
+              const z = u * S(v)
+              strip.push([x, y, z])
+            }
+            lines.push(strip)
+          }
+          return lines
+        }
+
+        function draw() {
+          // Clear with slight vignette fade for subtle persistence
+          ctx.setTransform(1, 0, 0, 1, 0, 0)
+          ctx.globalCompositeOperation = 'source-over'
+          ctx.fillStyle = '#0b0f13'
+          ctx.fillRect(0, 0, W, H)
+
+          const { faces, inner, outer, totalHeight } = buildStaircase()
+
+          // Depth sort faces by avg camera-space z
+          const df = faces
+            .map(f => {
+              const camPoly = f.poly.map(worldToCam)
+              const zAvg =
+                camPoly.reduce((s, p) => s + p[2], 0) / camPoly.length
+              const scr = camPoly.map(project)
+              return { poly: scr, z: zAvg, kind: f.kind }
+            })
+            .sort((a, b) => b.z - a.z) // far to near
+
+          const neon = `hsl(${state.hue} 90% 70%)`
+          const fill = `hsl(${state.hue} 80% 50% / 0.10)`
+
+          ctx.lineJoin = 'round'
+          ctx.lineCap = 'round'
+          ctx.shadowColor = neon
+          ctx.shadowBlur = state.glow
+          ctx.strokeStyle = neon
+          ctx.lineWidth = state.lineW * DPR
+
+          for (const f of df) {
+            ctx.beginPath()
+            const p = f.poly
+            ctx.moveTo(p[0][0], p[0][1])
+            for (let i = 1; i < p.length; i++) ctx.lineTo(p[i][0], p[i][1])
+            ctx.closePath()
+            if (state.solid && f.kind === 'treadTop') {
+              ctx.fillStyle = fill
+              ctx.fill()
+            }
+            // outline all faces to get neon structure
+            ctx.stroke()
+          }
+
+          // Central column
+          {
+            const colR = inner - 6
+            if (colR > 2) {
+              const rings = 24
+              for (let i = 0; i <= rings; i++) {
+                const y = -totalHeight / 2 + totalHeight * (i / rings)
+                const circ = []
+                for (let j = 0; j < 40; j++) {
+                  const a = TAU * (j / 40)
+                  circ.push([colR * C(a), y, colR * S(a)])
+                }
+                const cam = circ.map(worldToCam).map(project)
+                ctx.beginPath()
+                ctx.moveTo(cam[0][0], cam[0][1])
+                for (let k = 1; k < cam.length; k++)
+                  ctx.lineTo(cam[k][0], cam[k][1])
+                ctx.closePath()
+                ctx.stroke()
+              }
+            }
+          }
+
+          // Handrail
+          if (state.handrail) {
+            const rail = buildHandrail(outer, state.steps, state.rise)
+              .map(worldToCam)
+              .map(project)
+            ctx.beginPath()
+            ctx.moveTo(rail[0][0], rail[0][1])
+            for (let i = 1; i < rail.length; i++)
+              ctx.lineTo(rail[i][0], rail[i][1])
+            ctx.stroke()
+          }
+
+          // Helicoid Ribbon grid
+          if (state.ribbon) {
+            const strips = buildHelicoidRibbon()
+            ctx.globalCompositeOperation = 'lighter'
+            for (const strip of strips) {
+              const cam = strip.map(worldToCam).map(project)
+              ctx.beginPath()
+              ctx.moveTo(cam[0][0], cam[0][1])
+              for (let i = 1; i < cam.length; i++)
+                ctx.lineTo(cam[i][0], cam[i][1])
+              ctx.stroke()
+            }
+            ctx.globalCompositeOperation = 'source-over'
+          }
+        }
+
+        // Ticker
+        let last = 0
+        function loop(t) {
+          const dt = t - last || 16
+          last = t
+          // gentle auto yaw
+          state.cam.yaw += (state.autorot * dt) / 1000
+          draw()
+          requestAnimationFrame(loop)
+        }
+        requestAnimationFrame(loop)
+      })()
+    </script>
+  </body>
+</html>

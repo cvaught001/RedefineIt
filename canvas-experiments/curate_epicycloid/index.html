@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>RedefineIt · Curtate Epicycloid</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      :root {
+        --bg-outer: #0b0f13;
+        --bg-inner: #101820;
+        --panel-bg: rgba(12, 18, 28, 0.7);
+        --panel-border: rgba(125, 211, 252, 0.28);
+        --accent: #7dd3fc;
+        --accent-strong: #d16dff;
+        --text: #e6f4ff;
+        --muted: rgba(230, 244, 255, 0.65);
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        font-family: 'SF Pro Text', system-ui, -apple-system, BlinkMacSystemFont,
+          'Segoe UI', sans-serif;
+        color: var(--text);
+        background: radial-gradient(
+          circle at 50% 35%,
+          var(--bg-inner),
+          var(--bg-outer) 70%
+        );
+        overflow: hidden;
+      }
+      canvas {
+        width: 100vw;
+        height: 100vh;
+        display: block;
+      }
+      .hud {
+        position: fixed;
+        top: 24px;
+        right: 24px;
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        z-index: 4;
+      }
+      #togglePanel {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        border: 1px solid var(--panel-border);
+        background: rgba(12, 18, 28, 0.55);
+        color: var(--accent);
+        display: grid;
+        place-items: center;
+        cursor: pointer;
+        transition: box-shadow 200ms ease, transform 150ms ease,
+          border 200ms ease;
+        backdrop-filter: blur(6px);
+        outline: none;
+      }
+      #togglePanel:hover {
+        box-shadow: 0 0 18px rgba(125, 211, 252, 0.6);
+        border-color: rgba(125, 211, 252, 0.6);
+      }
+      #togglePanel:active {
+        transform: translateY(1px);
+      }
+      #togglePanel[aria-expanded='false'] {
+        animation: pulse 1800ms ease-in-out infinite;
+      }
+      @keyframes pulse {
+        0%,
+        100% {
+          box-shadow: 0 0 0 rgba(209, 109, 255, 0);
+        }
+        50% {
+          box-shadow: 0 0 22px rgba(209, 109, 255, 0.5);
+        }
+      }
+      .panel {
+        min-width: 240px;
+        padding: 18px;
+        border-radius: 16px;
+        border: 1px solid var(--panel-border);
+        background: var(--panel-bg);
+        backdrop-filter: blur(6px);
+        box-shadow: 0 20px 36px rgba(0, 0, 0, 0.38);
+        transition: opacity 200ms ease, transform 200ms ease,
+          visibility 0s linear 0s;
+      }
+      .panel.hidden {
+        opacity: 0;
+        transform: translateX(14px);
+        visibility: hidden;
+        transition: opacity 150ms ease, transform 150ms ease,
+          visibility 0s linear 150ms;
+      }
+      .panel h2 {
+        margin: 0 0 12px;
+        font-size: 14px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--accent);
+      }
+      .panel label {
+        display: flex;
+        justify-content: space-between;
+        font-size: 13px;
+        color: var(--muted);
+        margin-bottom: 6px;
+      }
+      .panel input[type='range'],
+      .panel select {
+        width: 100%;
+        margin-bottom: 12px;
+        background: transparent;
+        color: var(--text);
+      }
+      .panel input[type='range'] {
+        -webkit-appearance: none;
+        appearance: none;
+        height: 4px;
+        border-radius: 999px;
+        background: linear-gradient(
+          90deg,
+          rgba(125, 211, 252, 0.6),
+          rgba(209, 109, 255, 0.6)
+        );
+        outline: none;
+      }
+      .panel input[type='range']::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: var(--accent-strong);
+        border: 2px solid #111;
+        box-shadow: 0 0 12px rgba(209, 109, 255, 0.75);
+        cursor: pointer;
+      }
+      .panel select {
+        border-radius: 10px;
+        border: 1px solid rgba(125, 211, 252, 0.25);
+        padding: 6px 8px;
+        background: rgba(12, 18, 28, 0.6);
+        backdrop-filter: blur(6px);
+      }
+      .value {
+        color: var(--accent);
+        font-variant-numeric: tabular-nums;
+      }
+      @media (max-width: 640px) {
+        .hud {
+          top: 16px;
+          right: 16px;
+        }
+        .panel {
+          width: min(280px, 88vw);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="canvas" aria-label="Curtate epicycloid animation"></canvas>
+
+    <div class="hud">
+      <button
+        id="togglePanel"
+        aria-controls="controlPanel"
+        aria-expanded="true"
+        title="Toggle controls (E)"
+      >
+        <svg
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          aria-hidden="true"
+        >
+          <path
+            d="M12 5C6.5 5 2.5 9.5 1.5 11c1 1.3 5 6 10.5 6s9.5-4.7 10.5-6c-1-1.5-5-6-10.5-6Zm0 2c4.1 0 7.3 3.2 8.7 4-1.4.8-4.6 4-8.7 4s-7.3-3.2-8.7-4c1.4-.8 4.6-4 8.7-4Zm0 2.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Zm0 2A1.5 1.5 0 1 1 12 15a1.5 1.5 0 0 1 0-3.5Z"
+            fill="currentColor"
+          />
+        </svg>
+      </button>
+
+      <section class="panel" id="controlPanel">
+        <h2>Curtate Epicycloid</h2>
+
+        <label for="R"
+          >R (outer radius) <span class="value" id="RVal">160</span></label
+        >
+        <input id="R" type="range" min="60" max="240" step="5" value="160" />
+
+        <label for="r"
+          >r (rolling radius) <span class="value" id="rVal">40</span></label
+        >
+        <input id="r" type="range" min="10" max="120" step="2" value="40" />
+
+        <label for="d"
+          >d (offset) <span class="value" id="dVal">24</span></label
+        >
+        <input id="d" type="range" min="4" max="110" step="1" value="24" />
+
+        <label for="speed"
+          >Speed <span class="value" id="speedVal">1.00</span></label
+        >
+        <input
+          id="speed"
+          type="range"
+          min="0.2"
+          max="3"
+          step="0.05"
+          value="1.00"
+        />
+
+        <label for="trail"
+          >Trail Fade <span class="value" id="trailVal">0.12</span></label
+        >
+        <input
+          id="trail"
+          type="range"
+          min="0.02"
+          max="0.4"
+          step="0.01"
+          value="0.12"
+        />
+
+        <label for="style"
+          >Preset <span class="value" id="styleVal">Classic</span></label
+        >
+        <select id="style">
+          <option value="classic">Classic</option>
+          <option value="gear">Gear Whisper</option>
+          <option value="petal">Petal Bloom</option>
+        </select>
+      </section>
+    </div>
+
+    <script>
+      // Setup
+      const canvas = document.getElementById('canvas')
+      const ctx = canvas.getContext('2d')
+      const toggleBtn = document.getElementById('togglePanel')
+      const panel = document.getElementById('controlPanel')
+      const controls = {
+        R: document.getElementById('R'),
+        r: document.getElementById('r'),
+        d: document.getElementById('d'),
+        speed: document.getElementById('speed'),
+        trail: document.getElementById('trail'),
+        style: document.getElementById('style')
+      }
+      const valueSpans = {
+        R: document.getElementById('RVal'),
+        r: document.getElementById('rVal'),
+        d: document.getElementById('dVal'),
+        speed: document.getElementById('speedVal'),
+        trail: document.getElementById('trailVal'),
+        style: document.getElementById('styleVal')
+      }
+      const prefersReducedMotion = window.matchMedia(
+        '(prefers-reduced-motion: reduce)'
+      ).matches
+
+      const params = {
+        R: 160,
+        r: 40,
+        d: 24,
+        speed: prefersReducedMotion ? 0.6 : 1.0,
+        trail: prefersReducedMotion ? 0.22 : 0.12,
+        style: 'classic'
+      }
+
+      let dpr = Math.min(window.devicePixelRatio || 1, 2)
+      let gradientFill = null
+
+      function resize() {
+        dpr = Math.min(window.devicePixelRatio || 1, 2)
+        const { innerWidth: w, innerHeight: h } = window
+        canvas.width = w * dpr
+        canvas.height = h * dpr
+        canvas.style.width = w + 'px'
+        canvas.style.height = h + 'px'
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+
+        gradientFill = ctx.createRadialGradient(
+          w * 0.5,
+          h * 0.35,
+          Math.min(w, h) * 0.2,
+          w * 0.5,
+          h * 0.55,
+          Math.max(w, h) * 0.9
+        )
+        gradientFill.addColorStop(0, 'rgba(11, 17, 28, 0.22)')
+        gradientFill.addColorStop(1, 'rgba(8, 12, 20, 0.65)')
+        clearCanvas(true)
+      }
+
+      function clearCanvas(initial = false) {
+        const { width, height } = canvas
+        ctx.save()
+        ctx.setTransform(1, 0, 0, 1, 0, 0)
+        ctx.globalCompositeOperation = 'source-over'
+        ctx.fillStyle = initial
+          ? 'rgba(11, 15, 19, 1)'
+          : `rgba(11, 15, 19, ${params.trail})`
+        ctx.fillRect(0, 0, width, height)
+        ctx.restore()
+        if (gradientFill) {
+          ctx.save()
+          ctx.globalCompositeOperation = 'destination-over'
+          ctx.fillStyle = gradientFill
+          ctx.fillRect(0, 0, width, height)
+          ctx.restore()
+        }
+      }
+
+      function syncUI() {
+        controls.R.value = params.R
+        controls.r.value = params.r
+        controls.d.value = params.d
+        controls.speed.value = params.speed
+        controls.trail.value = params.trail
+        controls.style.value = params.style
+
+        valueSpans.R.textContent = Math.round(params.R)
+        valueSpans.r.textContent = Math.round(params.r)
+        valueSpans.d.textContent = Math.round(params.d)
+        valueSpans.speed.textContent = params.speed.toFixed(2)
+        valueSpans.trail.textContent = params.trail.toFixed(2)
+        valueSpans.style.textContent = {
+          classic: 'Classic',
+          gear: 'Gear Whisper',
+          petal: 'Petal Bloom'
+        }[params.style]
+      }
+
+      function applyPreset(style) {
+        if (style === 'classic') {
+          params.R = 160
+          params.r = 40
+          params.d = 24
+        } else if (style === 'gear') {
+          params.R = 200
+          params.r = 50
+          params.d = 30
+        } else if (style === 'petal') {
+          params.R = 150
+          params.r = 70
+          params.d = 40
+        }
+        if (params.d >= params.r) params.d = params.r - 2
+        syncUI()
+        lastPoint = null
+      }
+
+      Object.entries(controls).forEach(([key, el]) => {
+        if (key === 'style') {
+          el.addEventListener('change', () => {
+            params.style = el.value
+            valueSpans.style.textContent = {
+              classic: 'Classic',
+              gear: 'Gear Whisper',
+              petal: 'Petal Bloom'
+            }[params.style]
+            applyPreset(params.style)
+          })
+        } else {
+          el.addEventListener('input', () => {
+            params[key] = parseFloat(el.value)
+            if (key === 'd' && params.d >= params.r) {
+              params.d = params.r - 1
+              controls.d.value = params.d
+            }
+            valueSpans[key].textContent =
+              key === 'speed'
+                ? params[key].toFixed(2)
+                : key === 'trail'
+                ? params[key].toFixed(2)
+                : Math.round(params[key])
+            lastPoint = null
+          })
+        }
+      })
+
+      toggleBtn.addEventListener('click', () => togglePanel())
+      document.addEventListener('keydown', event => {
+        if (event.key === 'e' || event.key === 'E') togglePanel()
+      })
+
+      function togglePanel(force) {
+        const show =
+          force !== undefined ? force : panel.classList.contains('hidden')
+        panel.classList.toggle('hidden', !show)
+        toggleBtn.setAttribute('aria-expanded', show)
+      }
+
+      // Animation loop
+      let time = 0
+      let lastStamp = 0
+      let lastPoint = null
+
+      function step(ts) {
+        if (!lastStamp) lastStamp = ts
+        const dt = Math.min((ts - lastStamp) / 1000, 0.05)
+        lastStamp = ts
+        time += dt * params.speed
+
+        clearCanvas(false)
+        drawCurve(time)
+        requestAnimationFrame(step)
+      }
+
+      function drawCurve(t) {
+        const R = params.R
+        const r = Math.max(5, params.r)
+        const d = Math.min(params.d, r - 0.5)
+        const ratio = (R + r) / r
+
+        const x = (R + r) * Math.cos(t) - d * Math.cos(ratio * t)
+        const y = (R + r) * Math.sin(t) - d * Math.sin(ratio * t)
+
+        const centerX = canvas.width / (2 * dpr)
+        const centerY = canvas.height / (2 * dpr)
+
+        const scale = 1
+        const px = centerX + x * scale
+        const py = centerY + y * scale
+
+        ctx.save()
+        ctx.lineWidth = 2.2
+        ctx.lineCap = 'round'
+        ctx.lineJoin = 'round'
+        ctx.globalCompositeOperation = 'lighter'
+        ctx.strokeStyle = '#7dd3fc'
+        ctx.shadowColor = 'rgba(209, 109, 255, 0.75)'
+        ctx.shadowBlur = 18
+
+        if (lastPoint) {
+          ctx.beginPath()
+          ctx.moveTo(lastPoint.x, lastPoint.y)
+          ctx.lineTo(px, py)
+          ctx.stroke()
+        }
+        ctx.restore()
+
+        lastPoint = { x: px, y: py }
+      }
+
+      // Init
+      window.addEventListener('resize', resize)
+      resize()
+      syncUI()
+      requestAnimationFrame(step)
+    </script>
+  </body>
+</html>
