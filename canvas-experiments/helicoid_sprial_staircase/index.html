@@ -36,6 +36,12 @@
         max-height: 90vh;
         overflow: auto;
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+        transition: opacity 0.25s ease, transform 0.25s ease;
+      }
+      .ui.hidden {
+        opacity: 0;
+        pointer-events: none;
+        transform: translate3d(-6px, -6px, 0);
       }
       .ui h1 {
         margin: 0 0 8px;
@@ -92,11 +98,82 @@
           rgba(22, 30, 45, 0.9),
           rgba(15, 22, 35, 0.7)
         );
+        transition: transform 0.12s ease;
+      }
+      .btn:active {
+        transform: translateY(1px);
+      }
+      .btn-row {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .preset-select {
+        width: 100%;
+        margin-top: 6px;
+        padding: 7px 10px;
+        border-radius: 10px;
+        border: 1px solid rgba(120, 160, 220, 0.35);
+        background: rgba(20, 28, 44, 0.65);
+        color: #d9e7ff;
+        font: 600 12px/1.2 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        appearance: none;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease;
+      }
+      .preset-select:focus {
+        outline: none;
+        border-color: rgba(160, 200, 255, 0.7);
+        box-shadow: 0 0 0 2px rgba(90, 140, 255, 0.2);
+      }
+      .eye-toggle {
+        position: fixed;
+        right: 16px;
+        top: 16px;
+        z-index: 12;
+        width: 44px;
+        height: 44px;
+        display: grid;
+        place-items: center;
+        border-radius: 50%;
+        border: 1px solid rgba(120, 160, 220, 0.35);
+        background: rgba(14, 20, 32, 0.78);
+        color: #d9e7ff;
+        cursor: pointer;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+        backdrop-filter: blur(8px);
+        transition: transform 0.18s ease;
+      }
+      .eye-toggle svg {
+        width: 22px;
+        height: 22px;
+        filter: drop-shadow(0 0 6px rgba(90, 160, 255, 0.45));
+      }
+      .eye-toggle:hover {
+        transform: translateY(-1px);
+      }
+      .eye-toggle:active {
+        transform: translateY(1px);
       }
     </style>
   </head>
   <body>
-    <div class="ui">
+    <button
+      id="toggleUI"
+      class="eye-toggle"
+      type="button"
+      aria-expanded="true"
+      aria-controls="controlPanel"
+      aria-label="Toggle controls"
+    >
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path
+          fill="currentColor"
+          d="M12 5c5.5 0 9.5 4.5 10.5 6-1 1.3-5 6-10.5 6S2.5 12.3 1.5 11C2.5 9.5 6.5 5 12 5zm0 2C7.9 7 4.7 10.2 3.3 11 4.7 11.8 7.9 15 12 15s7.3-3.2 8.7-4c-1.4-.8-4.6-4-8.7-4zm0 2.5A3.5 3.5 0 1 1 8.5 13 3.5 3.5 0 0 1 12 9.5zm0 2A1.5 1.5 0 1 0 13.5 13 1.5 1.5 0 0 0 12 11.5z"
+        />
+      </svg>
+    </button>
+
+    <div class="ui" id="controlPanel">
       <h1>Helicoid Spiral Staircase</h1>
       <div class="small">RedefineStyle • Neon glow • Centered • Canvas 3D</div>
       <div class="divider"></div>
@@ -188,11 +265,52 @@
 
       <div class="divider"></div>
 
+      <div class="row">
+        <label>Camera Yaw° <span id="camYawVal"></span></label
+        ><input id="camYaw" type="range" min="-180" max="180" value="0" />
+      </div>
+      <div class="row">
+        <label>Camera Pitch° <span id="camPitchVal"></span></label
+        ><input id="camPitch" type="range" min="-85" max="85" value="0" />
+      </div>
+      <div class="row">
+        <label>Camera Distance <span id="camDistVal"></span></label
+        ><input
+          id="camDist"
+          type="range"
+          min="200"
+          max="2000"
+          step="1"
+          value="700"
+        />
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="small">Presets</div>
+      <select id="presetSelect" class="preset-select">
+        <option value="default">Default Helicoid</option>
+        <option value="aurora">Aurora Ribbon</option>
+        <option value="ember">Ember Spiral</option>
+        <option value="zenith">Zenith Atrium</option>
+        <option value="custom">Custom / Manual</option>
+      </select>
+      <div class="btn-row">
+        <button class="btn" id="savePreset" type="button">Save Preset</button>
+        <button class="btn" id="importPreset" type="button">
+          Import JSON
+        </button>
+        <button class="btn" id="shuffle" type="button">Shuffle Preset</button>
+      </div>
+
+      <div class="divider"></div>
+
       <div class="small">
         Drag to orbit • Wheel to zoom • Double‑click to reset
       </div>
-      <button class="btn" id="shuffle">Shuffle Preset</button>
     </div>
+
+    <input id="presetFile" type="file" accept="application/json" hidden />
 
     <canvas id="c"></canvas>
 
@@ -201,6 +319,16 @@
         const canvas = document.getElementById('c')
         const ctx = canvas.getContext('2d')
         const ui = id => document.getElementById(id)
+        const controlPanel = ui('controlPanel')
+        const toggleUIButton = ui('toggleUI')
+        const presetSelect = ui('presetSelect')
+        const presetFileInput = ui('presetFile')
+        const camYawInput = ui('camYaw')
+        const camPitchInput = ui('camPitch')
+        const camDistInput = ui('camDist')
+        const camYawLabel = ui('camYawVal')
+        const camPitchLabel = ui('camPitchVal')
+        const camDistLabel = ui('camDistVal')
 
         const S = Math.sin,
           C = Math.cos,
@@ -228,24 +356,214 @@
           cam: { yaw: 0, pitch: 0, dist: 700 }
         }
 
+        const defaultPreset = {
+          version: 1,
+          createdAt: '2025-10-19T21:09:03.266Z',
+          steps: 139,
+          radius: 140,
+          depth: 60,
+          rise: 8,
+          span: 0.3839724354387525,
+          thickness: 4,
+          turns: 3,
+          autorot: 0.22,
+          tilt: 0.4886921905584123,
+          glow: 16,
+          lineW: 1.2,
+          hue: 196,
+          handrail: false,
+          ribbon: false,
+          solid: false,
+          cam: {
+            yaw: 17.578183031250028,
+            pitch: 1.0963476562499999,
+            dist: 700
+          }
+        }
+
+        const presetLibrary = [
+          { id: 'default', label: 'Default Helicoid', data: defaultPreset },
+          {
+            id: 'aurora',
+            label: 'Aurora Ribbon',
+            data: {
+              version: 1,
+              createdAt: '2024-08-15T00:00:00.000Z',
+              steps: 160,
+              radius: 150,
+              depth: 70,
+              rise: 9,
+              span: 0.3490658503988659, // 20°
+              thickness: 4,
+              turns: 4.2,
+              autorot: 0.3,
+              tilt: 0.41887902047863906, // 24°
+              glow: 24,
+              lineW: 1.4,
+              hue: 292,
+              handrail: true,
+              ribbon: true,
+              solid: false,
+              cam: { yaw: 0.8, pitch: 0.95, dist: 820 }
+            }
+          },
+          {
+            id: 'ember',
+            label: 'Ember Spiral',
+            data: {
+              version: 1,
+              createdAt: '2024-09-05T00:00:00.000Z',
+              steps: 120,
+              radius: 120,
+              depth: 55,
+              rise: 6,
+              span: 0.4537856055185257, // 26°
+              thickness: 3,
+              turns: 2.4,
+              autorot: 0.18,
+              tilt: 0.3141592653589793, // 18°
+              glow: 20,
+              lineW: 1,
+              hue: 24,
+              handrail: false,
+              ribbon: false,
+              solid: true,
+              cam: { yaw: -0.6, pitch: 0.7, dist: 760 }
+            }
+          },
+          {
+            id: 'zenith',
+            label: 'Zenith Atrium',
+            data: {
+              version: 1,
+              createdAt: '2024-11-11T00:00:00.000Z',
+              steps: 200,
+              radius: 180,
+              depth: 90,
+              rise: 10,
+              span: 0.2792526803190927, // 16°
+              thickness: 5,
+              turns: 5.5,
+              autorot: 0.12,
+              tilt: 0.5585053606381855, // 32°
+              glow: 18,
+              lineW: 1.5,
+              hue: 140,
+              handrail: true,
+              ribbon: true,
+              solid: false,
+              cam: { yaw: 1.5, pitch: 1.05, dist: 900 }
+            }
+          }
+        ]
+        const presetMap = new Map(presetLibrary.map(p => [p.id, p]))
+
+        let staircaseDirty = true
+        let handrailDirty = true
+        let ribbonDirty = true
+        let cachedStaircase = null
+        let cachedHandrail = null
+        let cachedRibbon = null
+
+        const markGeometryDirty = () => {
+          staircaseDirty = true
+          handrailDirty = true
+          ribbonDirty = true
+        }
+        const markHandrailDirty = () => {
+          handrailDirty = true
+        }
+        const markRibbonDirty = () => {
+          ribbonDirty = true
+        }
+
+        const setPresetSelect = id => {
+          if (!presetSelect) return
+          if (id && presetMap.has(id)) presetSelect.value = id
+          else presetSelect.value = 'custom'
+        }
+
+        if (presetSelect) {
+          presetSelect.innerHTML = ''
+          const customOption = document.createElement('option')
+          customOption.value = 'custom'
+          customOption.textContent = 'Custom / Manual'
+          presetSelect.appendChild(customOption)
+          presetLibrary.forEach(p => {
+            const option = document.createElement('option')
+            option.value = p.id
+            option.textContent = p.label
+            presetSelect.appendChild(option)
+          })
+        }
+
         // Labels
+        const toDeg = rad => (rad * 180) / Math.PI
+        const wrapDeg = rad => {
+          const deg = toDeg(rad)
+          return (((deg + 180) % 360) + 360) % 360 - 180
+        }
+        const clamp = (v, min, max) => Math.min(max, Math.max(min, v))
+        const updateCameraOutputs = () => {
+          const yawDeg = wrapDeg(state.cam.yaw)
+          const pitchDeg = toDeg(state.cam.pitch)
+          if (camYawLabel) camYawLabel.textContent = yawDeg.toFixed(1) + '°'
+          if (camPitchLabel) camPitchLabel.textContent = pitchDeg.toFixed(1) + '°'
+          if (camDistLabel)
+            camDistLabel.textContent = Math.round(state.cam.dist) + 'px'
+          if (camYawInput) camYawInput.value = yawDeg
+          if (camPitchInput)
+            camPitchInput.value = Math.max(-85, Math.min(85, pitchDeg))
+          if (camDistInput) camDistInput.value = Math.round(state.cam.dist)
+        }
         const labels = () => {
           ui('stepsVal').textContent = state.steps
+          ui('steps').value = state.steps
           ui('radVal').textContent = state.radius + 'px'
+          ui('radius').value = state.radius
           ui('depthVal').textContent = state.depth + 'px'
+          ui('depth').value = state.depth
           ui('riseVal').textContent = state.rise + 'px'
-          ui('spanVal').textContent =
-            Math.round((state.span * 180) / Math.PI) + '°'
+          ui('rise').value = state.rise
+          const spanDeg = toDeg(state.span)
+          ui('spanVal').textContent = Math.round(spanDeg) + '°'
+          ui('span').value = spanDeg
           ui('thickVal').textContent = state.thickness + 'px'
+          ui('thick').value = state.thickness
           ui('turnsVal').textContent = state.turns.toFixed(1)
+          ui('turns').value = state.turns
           ui('autoVal').textContent = state.autorot.toFixed(2)
-          ui('tiltVal').textContent =
-            Math.round((state.tilt * 180) / Math.PI) + '°'
+          ui('autorot').value = state.autorot
+          const tiltDeg = toDeg(state.tilt)
+          ui('tiltVal').textContent = Math.round(tiltDeg) + '°'
+          ui('tilt').value = tiltDeg
           ui('glowVal').textContent = state.glow
+          ui('glow').value = state.glow
           ui('lwVal').textContent = state.lineW.toFixed(1) + 'px'
+          ui('lw').value = state.lineW
           ui('hueVal').textContent = Math.round(state.hue) + '°'
+          ui('hue').value = state.hue
+          ui('handrail').checked = state.handrail
+          ui('ribbon').checked = state.ribbon
+          ui('solid').checked = state.solid
+
+          updateCameraOutputs()
         }
-        labels()
+        const setControlsVisible = visible => {
+          if (!controlPanel || !toggleUIButton) return
+          controlPanel.classList.toggle('hidden', !visible)
+          toggleUIButton.setAttribute('aria-expanded', visible ? 'true' : 'false')
+          if (visible) {
+            labels()
+          }
+        }
+        if (toggleUIButton) {
+          toggleUIButton.addEventListener('click', () => {
+            if (!controlPanel) return
+            const willShow = controlPanel.classList.contains('hidden')
+            setControlsVisible(willShow)
+          })
+        }
 
         // Resize
         function resize() {
@@ -258,40 +576,173 @@
         resize()
 
         // Controls wiring
-        ;[
+        const geometryKeys = new Set([
           'steps',
           'radius',
           'depth',
           'rise',
           'span',
-          'thick',
-          'turns',
-          'autorot',
-          'tilt',
-          'glow',
-          'lw',
-          'hue'
-        ].forEach(k => {
-          ui(k === 'lw' ? 'lw' : k).addEventListener('input', e => {
-            if (k === 'span') state[k] = (+e.target.value * Math.PI) / 180
-            else if (k === 'tilt') state[k] = (+e.target.value * Math.PI) / 180
-            else if (k === 'lineW' || k === 'lw') state.lineW = +e.target.value
-            else state[k] = +e.target.value
+          'thickness',
+          'turns'
+        ])
+        const sliderBindings = [
+          { id: 'steps', key: 'steps' },
+          { id: 'radius', key: 'radius' },
+          { id: 'depth', key: 'depth' },
+          { id: 'rise', key: 'rise' },
+          { id: 'span', key: 'span' },
+          { id: 'thick', key: 'thickness' },
+          { id: 'turns', key: 'turns' },
+          { id: 'autorot', key: 'autorot' },
+          { id: 'tilt', key: 'tilt' },
+          { id: 'glow', key: 'glow' },
+          { id: 'lw', key: 'lineW' },
+          { id: 'hue', key: 'hue' }
+        ]
+        sliderBindings.forEach(({ id, key }) => {
+          const el = ui(id)
+          if (!el) return
+          el.addEventListener('input', e => {
+            const raw = +e.target.value
+            if (key === 'span') state.span = (raw * Math.PI) / 180
+            else if (key === 'tilt') state.tilt = (raw * Math.PI) / 180
+            else state[key] = raw
+            if (geometryKeys.has(key)) markGeometryDirty()
+            setPresetSelect('custom')
             labels()
           })
         })
-        ui('handrail').addEventListener(
-          'change',
-          e => (state.handrail = e.target.checked)
-        )
-        ui('ribbon').addEventListener(
-          'change',
-          e => (state.ribbon = e.target.checked)
-        )
-        ui('solid').addEventListener(
-          'change',
-          e => (state.solid = e.target.checked)
-        )
+        ui('handrail').addEventListener('change', e => {
+          state.handrail = e.target.checked
+          markHandrailDirty()
+          setPresetSelect('custom')
+          labels()
+        })
+        ui('ribbon').addEventListener('change', e => {
+          state.ribbon = e.target.checked
+          markRibbonDirty()
+          setPresetSelect('custom')
+          labels()
+        })
+        ui('solid').addEventListener('change', e => {
+          state.solid = e.target.checked
+          setPresetSelect('custom')
+          labels()
+        })
+
+        if (camYawInput) {
+          camYawInput.addEventListener('input', e => {
+            state.cam.yaw = (+e.target.value * Math.PI) / 180
+            updateCameraOutputs()
+            setPresetSelect('custom')
+          })
+        }
+        if (camPitchInput) {
+          camPitchInput.addEventListener('input', e => {
+            const val = Math.max(-85, Math.min(85, +e.target.value))
+            state.cam.pitch = (val * Math.PI) / 180
+            updateCameraOutputs()
+            setPresetSelect('custom')
+          })
+        }
+        if (camDistInput) {
+          camDistInput.addEventListener('input', e => {
+            state.cam.dist = +e.target.value
+            updateCameraOutputs()
+            setPresetSelect('custom')
+          })
+        }
+
+        const serializePreset = () => ({
+          version: 1,
+          createdAt: new Date().toISOString(),
+          steps: state.steps,
+          radius: state.radius,
+          depth: state.depth,
+          rise: state.rise,
+          span: state.span,
+          thickness: state.thickness,
+          turns: state.turns,
+          autorot: state.autorot,
+          tilt: state.tilt,
+          glow: state.glow,
+          lineW: state.lineW,
+          hue: state.hue,
+          handrail: state.handrail,
+          ribbon: state.ribbon,
+          solid: state.solid,
+          cam: {
+            yaw: state.cam.yaw,
+            pitch: state.cam.pitch,
+            dist: state.cam.dist
+          }
+        })
+        const applyPreset = (preset, meta = {}) => {
+          if (!preset || typeof preset !== 'object') {
+            throw new Error('Preset is not an object')
+          }
+          markGeometryDirty()
+          const minSpan = (6 * Math.PI) / 180
+          const maxSpan = (40 * Math.PI) / 180
+          const minTilt = (-45 * Math.PI) / 180
+          const maxTilt = (85 * Math.PI) / 180
+
+          if (Number.isFinite(preset.steps))
+            state.steps = clamp(Math.round(preset.steps), 20, 400)
+          if (Number.isFinite(preset.radius))
+            state.radius = clamp(Math.round(preset.radius), 40, 300)
+          if (Number.isFinite(preset.depth))
+            state.depth = clamp(Math.round(preset.depth), 8, 120)
+          if (Number.isFinite(preset.rise))
+            state.rise = clamp(Math.round(preset.rise), 2, 18)
+          if (Number.isFinite(preset.spanDeg))
+            state.span = clamp((preset.spanDeg * Math.PI) / 180, minSpan, maxSpan)
+          else if (Number.isFinite(preset.span))
+            state.span = clamp(preset.span, minSpan, maxSpan)
+          if (Number.isFinite(preset.thickness))
+            state.thickness = clamp(Math.round(preset.thickness), 1, 16)
+          if (Number.isFinite(preset.turns))
+            state.turns = clamp(preset.turns, 0.5, 8)
+          if (Number.isFinite(preset.autorot))
+            state.autorot = clamp(preset.autorot, -1.5, 1.5)
+          if (Number.isFinite(preset.tiltDeg))
+            state.tilt = clamp((preset.tiltDeg * Math.PI) / 180, minTilt, maxTilt)
+          else if (Number.isFinite(preset.tilt))
+            state.tilt = clamp(preset.tilt, minTilt, maxTilt)
+          if (Number.isFinite(preset.glow))
+            state.glow = clamp(Math.round(preset.glow), 0, 40)
+          if (Number.isFinite(preset.lineW))
+            state.lineW = clamp(preset.lineW, 0.5, 4)
+          if (Number.isFinite(preset.hue))
+            state.hue = ((preset.hue % 360) + 360) % 360
+          if (typeof preset.handrail === 'boolean') state.handrail = preset.handrail
+          if (typeof preset.ribbon === 'boolean') state.ribbon = preset.ribbon
+          if (typeof preset.solid === 'boolean') state.solid = preset.solid
+          if (preset.cam && typeof preset.cam === 'object') {
+            if (Number.isFinite(preset.cam.yaw)) state.cam.yaw = preset.cam.yaw
+            if (Number.isFinite(preset.cam.pitch))
+              state.cam.pitch = clamp(
+                preset.cam.pitch,
+                -Math.PI / 2 + 0.01,
+                Math.PI / 2 - 0.01
+              )
+            if (Number.isFinite(preset.cam.dist))
+              state.cam.dist = clamp(preset.cam.dist, 200, 2000)
+          }
+          labels()
+          setPresetSelect(meta.presetId)
+        }
+
+        if (presetSelect) {
+          presetSelect.addEventListener('change', e => {
+            const id = e.target.value
+            if (id === 'custom') return
+            const preset = presetMap.get(id)
+            if (preset) applyPreset(preset.data, { presetId: id })
+          })
+        }
+
+        applyPreset(defaultPreset, { presetId: 'default' })
 
         ui('shuffle').addEventListener('click', () => {
           const presets = [
@@ -306,13 +757,50 @@
           state.autorot = p.autorot
           state.tilt = (p.tilt * Math.PI) / 180
           state.turns = p.turns
+          markGeometryDirty()
+          setPresetSelect('custom')
           labels()
-          ui('hue').value = p.hue
-          ui('glow').value = p.glow
-          ui('autorot').value = p.autorot
-          ui('tilt').value = p.tilt
-          ui('turns').value = p.turns
         })
+
+        const saveBtn = ui('savePreset')
+        if (saveBtn) {
+          saveBtn.addEventListener('click', () => {
+            const preset = serializePreset()
+            const blob = new Blob([JSON.stringify(preset, null, 2)], {
+              type: 'application/json'
+            })
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = `helicoid-preset-${Date.now()}.json`
+            document.body.appendChild(a)
+            a.click()
+            document.body.removeChild(a)
+            URL.revokeObjectURL(url)
+          })
+        }
+
+        const importBtn = ui('importPreset')
+        if (importBtn && presetFileInput) {
+          importBtn.addEventListener('click', () => presetFileInput.click())
+          presetFileInput.addEventListener('change', e => {
+            const [file] = e.target.files || []
+            if (!file) return
+            const reader = new FileReader()
+            reader.onload = () => {
+              try {
+                const data = JSON.parse(reader.result)
+                applyPreset(data, { presetId: 'custom' })
+              } catch (err) {
+                console.error(err)
+                alert('Unable to import preset: ' + err.message)
+              } finally {
+                presetFileInput.value = ''
+              }
+            }
+            reader.readAsText(file)
+          })
+        }
 
         // Orbit controls (drag + wheel)
         let dragging = false,
@@ -340,13 +828,19 @@
           )
           lx = e.clientX
           ly = e.clientY
+          updateCameraOutputs()
+          setPresetSelect('custom')
         })
         canvas.addEventListener('dblclick', () => {
           state.cam = { yaw: 0, pitch: 0, dist: 700 }
+          setPresetSelect('custom')
+          labels()
         })
         canvas.addEventListener('wheel', e => {
           state.cam.dist *= 1 + Math.sign(e.deltaY) * 0.08
           state.cam.dist = Math.max(200, Math.min(2000, state.cam.dist))
+          updateCameraOutputs()
+          setPresetSelect('custom')
         })
 
         // 3D math
@@ -484,6 +978,29 @@
           return lines
         }
 
+        const getStaircase = () => {
+          if (staircaseDirty || !cachedStaircase) {
+            cachedStaircase = buildStaircase()
+            staircaseDirty = false
+          }
+          return cachedStaircase
+        }
+        const getHandrail = () => {
+          if (handrailDirty || !cachedHandrail) {
+            const { outer } = getStaircase()
+            cachedHandrail = buildHandrail(outer, state.steps, state.rise)
+            handrailDirty = false
+          }
+          return cachedHandrail
+        }
+        const getRibbon = () => {
+          if (ribbonDirty || !cachedRibbon) {
+            cachedRibbon = buildHelicoidRibbon()
+            ribbonDirty = false
+          }
+          return cachedRibbon
+        }
+
         function draw() {
           // Clear with slight vignette fade for subtle persistence
           ctx.setTransform(1, 0, 0, 1, 0, 0)
@@ -491,7 +1008,7 @@
           ctx.fillStyle = '#0b0f13'
           ctx.fillRect(0, 0, W, H)
 
-          const { faces, inner, outer, totalHeight } = buildStaircase()
+          const { faces, inner, outer, totalHeight } = getStaircase()
 
           // Depth sort faces by avg camera-space z
           const df = faces
@@ -553,7 +1070,7 @@
 
           // Handrail
           if (state.handrail) {
-            const rail = buildHandrail(outer, state.steps, state.rise)
+            const rail = getHandrail()
               .map(worldToCam)
               .map(project)
             ctx.beginPath()
@@ -565,7 +1082,7 @@
 
           // Helicoid Ribbon grid
           if (state.ribbon) {
-            const strips = buildHelicoidRibbon()
+            const strips = getRibbon()
             ctx.globalCompositeOperation = 'lighter'
             for (const strip of strips) {
               const cam = strip.map(worldToCam).map(project)
@@ -587,6 +1104,9 @@
           // gentle auto yaw
           state.cam.yaw += (state.autorot * dt) / 1000
           draw()
+          if (controlPanel && !controlPanel.classList.contains('hidden')) {
+            updateCameraOutputs()
+          }
           requestAnimationFrame(loop)
         }
         requestAnimationFrame(loop)
