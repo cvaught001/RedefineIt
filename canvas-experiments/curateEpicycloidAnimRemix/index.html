@@ -1,0 +1,2285 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>RedefineIt · Curtate Epicycloid Axial Draw</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      :root {
+        --bg-outer: #0b0f13;
+        --bg-inner: #101820;
+        --panel-bg: rgba(12, 18, 28, 0.72);
+        --panel-border: rgba(125, 211, 252, 0.34);
+        --accent: #7dd3fc;
+        --accent-strong: #d16dff;
+        --accent-alt: #9dffb5;
+        --text: #e6f4ff;
+        --muted: rgba(230, 244, 255, 0.65);
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        font-family: 'SF Pro Text', system-ui, -apple-system, BlinkMacSystemFont,
+          'Segoe UI', sans-serif;
+        color: var(--text);
+        background: radial-gradient(
+          circle at 50% 35%,
+          var(--bg-inner),
+          var(--bg-outer) 70%
+        );
+        overflow: hidden;
+      }
+      canvas {
+        width: 100vw;
+        height: 100vh;
+        display: block;
+      }
+      .hud {
+        position: fixed;
+        top: 24px;
+        right: 24px;
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        z-index: 4;
+      }
+      #togglePanel {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        border: 1px solid var(--panel-border);
+        background: rgba(12, 18, 28, 0.55);
+        color: var(--accent);
+        display: grid;
+        place-items: center;
+        cursor: pointer;
+        transition: box-shadow 200ms ease, transform 150ms ease,
+          border 200ms ease;
+        backdrop-filter: blur(6px);
+        outline: none;
+        scrollbar-width: 300x; /* Firefox */
+      }
+      #togglePanel:hover {
+        box-shadow: 0 0 18px rgba(125, 211, 252, 0.6);
+        border-color: rgba(125, 211, 252, 0.6);
+      }
+      #togglePanel:active {
+        transform: translateY(1px);
+      }
+      #togglePanel[aria-expanded='false'] {
+        animation: pulse 1800ms ease-in-out infinite;
+      }
+      @keyframes pulse {
+        0%,
+        100% {
+          box-shadow: 0 0 0 rgba(209, 109, 255, 0);
+        }
+        50% {
+          box-shadow: 0 0 22px rgba(209, 109, 255, 0.5);
+        }
+      }
+      .panel {
+        width: 280px;
+        max-width: 90vw;
+        padding: 20px 18px;
+        border-radius: 16px;
+        border: 1px solid var(--panel-border);
+        background: var(--panel-bg);
+        backdrop-filter: blur(7px);
+        box-shadow: 0 24px 44px rgba(0, 0, 0, 0.42);
+        transition: opacity 200ms ease, transform 200ms ease,
+          visibility 0s linear 0s;
+        max-height: calc(100vh - 64px);
+        overflow-y: auto;
+        overscroll-behavior: contain;
+      }
+      .panel.hidden {
+        opacity: 0;
+        transform: translateX(14px);
+        visibility: hidden;
+        transition: opacity 150ms ease, transform 150ms ease,
+          visibility 0s linear 150ms;
+      }
+      .panel h2 {
+        margin: 0 0 12px;
+        font-size: 14px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--accent);
+      }
+      .panel h3 {
+        margin: 10px 0 6px;
+        font-size: 12px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: rgba(125, 211, 252, 0.72);
+      }
+      .panel label {
+        display: flex;
+        justify-content: space-between;
+        font-size: 13px;
+        color: var(--muted);
+        margin-bottom: 6px;
+      }
+      .panel input[type='range'],
+      .panel select {
+        width: 100%;
+        margin-bottom: 12px;
+        background: transparent;
+        color: var(--text);
+      }
+      .panel input[type='range'] {
+        -webkit-appearance: none;
+        appearance: none;
+        height: 4px;
+        border-radius: 999px;
+        background: linear-gradient(
+          90deg,
+          rgba(125, 211, 252, 0.6),
+          rgba(209, 109, 255, 0.6)
+        );
+        outline: none;
+      }
+      .panel input[type='range']::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: var(--accent-strong);
+        border: 2px solid #111;
+        box-shadow: 0 0 12px rgba(209, 109, 255, 0.75);
+        cursor: pointer;
+      }
+      .panel select {
+        border-radius: 10px;
+        border: 1px solid rgba(125, 211, 252, 0.25);
+        padding: 6px 8px;
+        background: rgba(12, 18, 28, 0.6);
+        backdrop-filter: blur(6px);
+      }
+      .value {
+        color: var(--accent);
+        font-variant-numeric: tabular-nums;
+      }
+      .controls-section + .controls-section {
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px solid rgba(125, 211, 252, 0.18);
+      }
+      .axis-block {
+        border: 1px solid rgba(125, 211, 252, 0.16);
+        border-radius: 12px;
+        padding: 10px 12px;
+        margin-bottom: 10px;
+        background: rgba(8, 14, 20, 0.55);
+        transition: border 180ms ease, box-shadow 180ms ease,
+          transform 180ms ease;
+      }
+      .axis-block.active {
+        border-color: rgba(125, 211, 252, 0.75);
+        box-shadow: 0 0 22px rgba(125, 211, 252, 0.35);
+        transform: translateY(-2px);
+      }
+      .axis-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 12px;
+      }
+      .axis-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--muted);
+      }
+      .axis-toggle input {
+        accent-color: var(--accent);
+      }
+      .axis-steppers {
+        display: grid;
+        grid-template-columns: auto auto 1fr auto auto auto;
+        align-items: center;
+        gap: 6px;
+        margin-top: 8px;
+      }
+      .axis-steppers button {
+        appearance: none;
+        border: 1px solid rgba(125, 211, 252, 0.26);
+        background: rgba(13, 20, 28, 0.55);
+        color: var(--text);
+        border-radius: 8px;
+        padding: 4px 6px;
+        font-size: 12px;
+        cursor: pointer;
+        transition: border 160ms ease, box-shadow 160ms ease;
+      }
+      .axis-steppers button:hover {
+        border-color: rgba(125, 211, 252, 0.7);
+        box-shadow: 0 0 12px rgba(125, 211, 252, 0.35);
+      }
+      .axis-steppers input[type='range'] {
+        margin-bottom: 0;
+      }
+      .axis-options {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 8px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .axis-options span,
+      .axis-options label {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .axis-options label {
+        margin: 0;
+        gap: 6px;
+      }
+      .axis-options input {
+        accent-color: var(--accent-strong);
+      }
+      .axis-options .axis-progress {
+        font-variant-numeric: tabular-nums;
+        color: var(--accent);
+      }
+      .axis-auto {
+        margin-top: 8px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .axis-auto label {
+        margin: 0;
+        gap: 6px;
+        display: inline-flex;
+        align-items: center;
+      }
+      .axis-auto-controls {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .axis-auto-controls input[type='range'] {
+        flex: 1 1 auto;
+        margin: 0;
+      }
+      .axis-speed-readout {
+        min-width: 52px;
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+        color: var(--accent);
+      }
+      .motion-section {
+        display: grid;
+        gap: 8px;
+      }
+      .motion-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .panel input[type='text'] {
+        width: 100%;
+        padding: 6px 8px;
+        margin-bottom: 10px;
+        border-radius: 10px;
+        border: 1px solid rgba(125, 211, 252, 0.28);
+        background: rgba(12, 18, 28, 0.55);
+        color: var(--text);
+        font-family: inherit;
+      }
+      .preset-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 8px;
+      }
+      .preset-actions button,
+      .preset-controls button {
+        flex: 1 1 auto;
+        border-radius: 8px;
+        border: 1px solid rgba(125, 211, 252, 0.26);
+        background: rgba(13, 20, 28, 0.55);
+        color: var(--text);
+        padding: 6px 8px;
+        font-size: 12px;
+        cursor: pointer;
+        transition: border 160ms ease, box-shadow 160ms ease;
+      }
+      .preset-actions button:hover,
+      .preset-controls button:hover {
+        border-color: rgba(125, 211, 252, 0.65);
+        box-shadow: 0 0 12px rgba(125, 211, 252, 0.35);
+      }
+      .preset-controls {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+      .preset-controls button {
+        flex: 1 1 0;
+      }
+      .panel .note {
+        font-size: 11px;
+        color: rgba(231, 244, 255, 0.55);
+        margin-top: 6px;
+      }
+      @media (max-width: 640px) {
+        .hud {
+          top: 16px;
+          right: 16px;
+        }
+        .panel {
+          width: min(300px, 88vw);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="canvas" aria-label="Curtate epicycloid axis animation"></canvas>
+
+    <div class="hud">
+      <button
+        id="togglePanel"
+        aria-controls="controlPanel"
+        aria-expanded="true"
+        title="Toggle controls (E)"
+      >
+        <svg
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          aria-hidden="true"
+        >
+          <path
+            d="M12 5C6.5 5 2.5 9.5 1.5 11c1 1.3 5 6 10.5 6s9.5-4.7 10.5-6c-1-1.5-5-6-10.5-6Zm0 2c4.1 0 7.3 3.2 8.7 4-1.4.8-4.6 4-8.7 4s-7.3-3.2-8.7-4c1.4-.8 4.6-4 8.7-4Zm0 2.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Zm0 2A1.5 1.5 0 1 1 12 15a1.5 1.5 0 0 1 0-3.5Z"
+            fill="currentColor"
+          />
+        </svg>
+      </button>
+
+      <section class="panel" id="controlPanel">
+        <h2>Curtate Epicycloid</h2>
+
+        <div class="controls-section">
+          <label for="R"
+            >R (outer radius) <span class="value" id="RVal">160</span></label
+          >
+          <input id="R" type="range" min="60" max="240" step="5" value="160" />
+
+          <label for="r"
+            >r (rolling radius) <span class="value" id="rVal">40</span></label
+          >
+          <input id="r" type="range" min="10" max="120" step="2" value="40" />
+
+          <label for="d"
+            >d (offset) <span class="value" id="dVal">24</span></label
+          >
+          <input id="d" type="range" min="4" max="110" step="1" value="24" />
+
+          <label for="speed"
+            >Speed <span class="value" id="speedVal">1.00</span></label
+          >
+          <input
+            id="speed"
+            type="range"
+            min="0.2"
+            max="3"
+            step="0.05"
+            value="1.00"
+          />
+
+          <label for="trail"
+            >Trail Fade <span class="value" id="trailVal">0.12</span></label
+          >
+          <input
+            id="trail"
+            type="range"
+            min="0.02"
+            max="0.4"
+            step="0.01"
+            value="0.12"
+          />
+
+          <label for="style"
+            >Preset <span class="value" id="styleVal">Classic</span></label
+          >
+          <select id="style">
+            <option value="classic">Classic</option>
+            <option value="gear">Gear Whisper</option>
+            <option value="petal">Petal Bloom</option>
+          </select>
+
+          <label for="iterationCount"
+            >Iterations
+            <span class="value" id="iterationCountVal">3</span></label
+          >
+          <input
+            id="iterationCount"
+            type="range"
+            min="1"
+            max="50"
+            step="1"
+            value="3"
+          />
+
+          <label for="iterationScale"
+            >Scale Ratio
+            <span class="value" id="iterationScaleVal">0.85</span></label
+          >
+          <input
+            id="iterationScale"
+            type="range"
+            min="0.5"
+            max="1.6"
+            step="0.01"
+            value="0.85"
+          />
+
+          <label for="stepQuantum"
+            >Step Quantum
+            <span class="value" id="stepQuantumVal">0.10</span></label
+          >
+          <input
+            id="stepQuantum"
+            type="range"
+            min="0.02"
+            max="0.5"
+            step="0.01"
+            value="0.10"
+          />
+
+          <label class="motion-toggle">
+            <input type="checkbox" id="drawTips" checked /> Show tip markers
+          </label>
+        </div>
+
+        <div class="controls-section axis-section">
+          <h3>Axis Reveal</h3>
+
+          <div class="axis-block" data-axis="xy">
+            <div class="axis-header">
+              <label class="axis-toggle" data-set-active="xy">
+                <input type="checkbox" id="axis-xy-enabled" checked />
+                <span>XY Plane</span>
+              </label>
+              <span class="axis-progress" id="axis-xy-readout">100%</span>
+            </div>
+            <div class="axis-steppers">
+              <button type="button" data-axis="xy" data-action="start">
+                0%
+              </button>
+              <button type="button" data-axis="xy" data-action="step-back">
+                -
+              </button>
+              <input
+                type="range"
+                id="axis-xy-progress"
+                min="0"
+                max="1"
+                step="0.01"
+                value="1"
+              />
+              <button type="button" data-axis="xy" data-action="step-forward">
+                +
+              </button>
+              <button type="button" data-axis="xy" data-action="end">
+                100%
+              </button>
+              <button
+                type="button"
+                class="auto-btn"
+                data-axis="xy"
+                data-action="step-run"
+              >
+                Step
+              </button>
+            </div>
+            <div class="axis-options">
+              <label>
+                <input type="checkbox" id="axis-xy-follow" checked /> Follow
+                cycle
+              </label>
+              <label>
+                <input type="checkbox" id="axis-xy-outline" checked /> Ghost
+                outline
+              </label>
+            </div>
+            <div class="axis-auto">
+              <label>
+                <input type="checkbox" id="axis-xy-auto" /> Auto animate
+              </label>
+              <div class="axis-auto-controls">
+                <input
+                  type="range"
+                  id="axis-xy-speed"
+                  min="-3"
+                  max="3"
+                  step="0.05"
+                  value="0.5"
+                />
+                <span class="axis-speed-readout" id="axis-xy-speedVal"
+                  >0.50×</span
+                >
+              </div>
+            </div>
+          </div>
+
+          <div class="axis-block" data-axis="yz">
+            <div class="axis-header">
+              <label class="axis-toggle" data-set-active="yz">
+                <input type="checkbox" id="axis-yz-enabled" />
+                <span>YZ Plane</span>
+              </label>
+              <span class="axis-progress" id="axis-yz-readout">100%</span>
+            </div>
+            <div class="axis-steppers">
+              <button type="button" data-axis="yz" data-action="start">
+                0%
+              </button>
+              <button type="button" data-axis="yz" data-action="step-back">
+                -
+              </button>
+              <input
+                type="range"
+                id="axis-yz-progress"
+                min="0"
+                max="1"
+                step="0.01"
+                value="1"
+              />
+              <button type="button" data-axis="yz" data-action="step-forward">
+                +
+              </button>
+              <button type="button" data-axis="yz" data-action="end">
+                100%
+              </button>
+              <button
+                type="button"
+                class="auto-btn"
+                data-axis="yz"
+                data-action="step-run"
+              >
+                Step
+              </button>
+            </div>
+            <div class="axis-options">
+              <label>
+                <input type="checkbox" id="axis-yz-follow" checked /> Follow
+                cycle
+              </label>
+              <label>
+                <input type="checkbox" id="axis-yz-outline" checked /> Ghost
+                outline
+              </label>
+            </div>
+            <div class="axis-auto">
+              <label>
+                <input type="checkbox" id="axis-yz-auto" /> Auto animate
+              </label>
+              <div class="axis-auto-controls">
+                <input
+                  type="range"
+                  id="axis-yz-speed"
+                  min="-3"
+                  max="3"
+                  step="0.05"
+                  value="0.5"
+                />
+                <span class="axis-speed-readout" id="axis-yz-speedVal"
+                  >0.50×</span
+                >
+              </div>
+            </div>
+          </div>
+
+          <div class="axis-block" data-axis="zx">
+            <div class="axis-header">
+              <label class="axis-toggle" data-set-active="zx">
+                <input type="checkbox" id="axis-zx-enabled" />
+                <span>ZX Plane</span>
+              </label>
+              <span class="axis-progress" id="axis-zx-readout">100%</span>
+            </div>
+            <div class="axis-steppers">
+              <button type="button" data-axis="zx" data-action="start">
+                0%
+              </button>
+              <button type="button" data-axis="zx" data-action="step-back">
+                -
+              </button>
+              <input
+                type="range"
+                id="axis-zx-progress"
+                min="0"
+                max="1"
+                step="0.01"
+                value="1"
+              />
+              <button type="button" data-axis="zx" data-action="step-forward">
+                +
+              </button>
+              <button type="button" data-axis="zx" data-action="end">
+                100%
+              </button>
+              <button
+                type="button"
+                class="auto-btn"
+                data-axis="zx"
+                data-action="step-run"
+              >
+                Step
+              </button>
+            </div>
+            <div class="axis-options">
+              <label>
+                <input type="checkbox" id="axis-zx-follow" checked /> Follow
+                cycle
+              </label>
+              <label>
+                <input type="checkbox" id="axis-zx-outline" checked /> Ghost
+                outline
+              </label>
+            </div>
+            <div class="axis-auto">
+              <label>
+                <input type="checkbox" id="axis-zx-auto" /> Auto animate
+              </label>
+              <div class="axis-auto-controls">
+                <input
+                  type="range"
+                  id="axis-zx-speed"
+                  min="-3"
+                  max="3"
+                  step="0.05"
+                  value="0.5"
+                />
+                <span class="axis-speed-readout" id="axis-zx-speedVal"
+                  >0.50×</span
+                >
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="controls-section preset-section">
+          <h3>Presets & JSON</h3>
+
+          <label for="presetSelect"
+            >Preset <span class="value" id="presetSelectVal">Default</span></label
+          >
+          <select id="presetSelect"></select>
+
+          <label for="presetName">Preset Name</label>
+          <input id="presetName" type="text" placeholder="Preset name" />
+
+          <div class="preset-controls">
+            <button id="presetSave">Save</button>
+            <button id="presetRename">Rename</button>
+            <button id="presetDelete">Delete</button>
+          </div>
+
+          <div class="preset-actions">
+            <button id="jsonSave">Copy JSON</button>
+            <button id="jsonLoad">Load JSON</button>
+          </div>
+        </div>
+
+        <div class="controls-section motion-section">
+          <h3>Motion Lab</h3>
+
+          <label class="motion-toggle">
+            <input type="checkbox" id="globalSpin" checked /> Global spin
+          </label>
+          <label for="spinSpeed"
+            >Spin Speed <span class="value" id="spinSpeedVal">0.40</span></label
+          >
+          <input
+            id="spinSpeed"
+            type="range"
+            min="0"
+            max="2"
+            step="0.05"
+            value="0.40"
+          />
+
+          <label for="planeFan"
+            >Plane Fan (°) <span class="value" id="planeFanVal">28</span></label
+          >
+          <input
+            id="planeFan"
+            type="range"
+            min="0"
+            max="120"
+            step="1"
+            value="28"
+          />
+
+          <label for="planeOrbitRadius"
+            >Orbit Radius (px)
+            <span class="value" id="planeOrbitRadiusVal">110</span></label
+          >
+          <input
+            id="planeOrbitRadius"
+            type="range"
+            min="0"
+            max="240"
+            step="5"
+            value="110"
+          />
+
+          <label for="planeOrbitSpeed"
+            >Orbit Speed
+            <span class="value" id="planeOrbitSpeedVal">0.20</span></label
+          >
+          <input
+            id="planeOrbitSpeed"
+            type="range"
+            min="0"
+            max="2"
+            step="0.05"
+            value="0.20"
+          />
+
+          <label class="motion-toggle">
+            <input type="checkbox" id="paramMorph" checked /> Morph parameters
+          </label>
+          <label for="morphAmount"
+            >Morph Amount
+            <span class="value" id="morphAmountVal">0.25</span></label
+          >
+          <input
+            id="morphAmount"
+            type="range"
+            min="0"
+            max="0.5"
+            step="0.01"
+            value="0.25"
+          />
+          <label for="morphSpeed"
+            >Morph Speed
+            <span class="value" id="morphSpeedVal">0.35</span></label
+          >
+          <input
+            id="morphSpeed"
+            type="range"
+            min="0"
+            max="2"
+            step="0.05"
+            value="0.35"
+          />
+
+          <label class="motion-toggle">
+            <input type="checkbox" id="colorCycle" checked /> Color cycling
+          </label>
+          <label for="colorSpeed"
+            >Color Speed
+            <span class="value" id="colorSpeedVal">0.30</span></label
+          >
+          <input
+            id="colorSpeed"
+            type="range"
+            min="0"
+            max="3"
+            step="0.05"
+            value="0.30"
+          />
+
+          <label class="motion-toggle">
+            <input type="checkbox" id="depthParallax" checked /> Depth parallax
+          </label>
+          <label for="depthAmount"
+            >Depth Amount
+            <span class="value" id="depthAmountVal">0.22</span></label
+          >
+          <input
+            id="depthAmount"
+            type="range"
+            min="0"
+            max="0.6"
+            step="0.01"
+            value="0.22"
+          />
+
+          <label for="motionPreset"
+            >Motion Preset
+            <span class="value" id="motionPresetVal">Off</span></label
+          >
+          <select id="motionPreset">
+            <option value="off">Off</option>
+            <option value="spiral">Spiral Bloom</option>
+            <option value="pulse">Pulse Horizon</option>
+            <option value="cascade">Cascade Sweep</option>
+          </select>
+        </div>
+
+        <div class="controls-section cycle-section">
+          <h3>Cyclic Motion</h3>
+          <label
+            class="axis-toggle"
+            style="justify-content: flex-start; gap: 8px"
+          >
+            <input type="checkbox" id="autoCycle" checked /> Enable cycle motion
+          </label>
+
+          <label for="cycleMode"
+            >Mode <span class="value" id="cycleModeVal">Sync Sweep</span></label
+          >
+          <select id="cycleMode">
+            <option value="sync">Sync Sweep</option>
+            <option value="cascade">Cascade Axes</option>
+            <option value="bounce">Mirror Bounce</option>
+            <option value="sequence">Axis Sequence</option>
+          </select>
+
+          <label for="cycleDuration"
+            >Cycle Duration (s)
+            <span class="value" id="cycleDurationVal">12</span></label
+          >
+          <input
+            id="cycleDuration"
+            type="range"
+            min="4"
+            max="30"
+            step="0.5"
+            value="12"
+          />
+          <p class="note">
+            Press E to hide the console. Steppers reveal each axis outline with
+            precise control.
+          </p>
+        </div>
+      </section>
+    </div>
+
+    <script>
+      // --- Setup ---
+      const canvas = document.getElementById('canvas')
+      const ctx = canvas.getContext('2d')
+      const toggleBtn = document.getElementById('togglePanel')
+      const panel = document.getElementById('controlPanel')
+
+      const controls = {
+        R: document.getElementById('R'),
+        r: document.getElementById('r'),
+        d: document.getElementById('d'),
+        speed: document.getElementById('speed'),
+        trail: document.getElementById('trail'),
+        style: document.getElementById('style'),
+        iterationCount: document.getElementById('iterationCount'),
+        iterationScale: document.getElementById('iterationScale'),
+        stepQuantum: document.getElementById('stepQuantum'),
+        drawTips: document.getElementById('drawTips'),
+        presetSelect: document.getElementById('presetSelect'),
+        presetName: document.getElementById('presetName'),
+        presetSave: document.getElementById('presetSave'),
+        presetRename: document.getElementById('presetRename'),
+        presetDelete: document.getElementById('presetDelete'),
+        jsonSave: document.getElementById('jsonSave'),
+        jsonLoad: document.getElementById('jsonLoad'),
+        globalSpin: document.getElementById('globalSpin'),
+        spinSpeed: document.getElementById('spinSpeed'),
+        planeFan: document.getElementById('planeFan'),
+        planeOrbitRadius: document.getElementById('planeOrbitRadius'),
+        planeOrbitSpeed: document.getElementById('planeOrbitSpeed'),
+        paramMorph: document.getElementById('paramMorph'),
+        morphAmount: document.getElementById('morphAmount'),
+        morphSpeed: document.getElementById('morphSpeed'),
+        colorCycle: document.getElementById('colorCycle'),
+        colorSpeed: document.getElementById('colorSpeed'),
+        depthParallax: document.getElementById('depthParallax'),
+        depthAmount: document.getElementById('depthAmount'),
+        motionPreset: document.getElementById('motionPreset'),
+        autoCycle: document.getElementById('autoCycle'),
+        cycleMode: document.getElementById('cycleMode'),
+        cycleDuration: document.getElementById('cycleDuration')
+      }
+
+      const valueSpans = {
+        R: document.getElementById('RVal'),
+        r: document.getElementById('rVal'),
+        d: document.getElementById('dVal'),
+        speed: document.getElementById('speedVal'),
+        trail: document.getElementById('trailVal'),
+        style: document.getElementById('styleVal'),
+        iterationCount: document.getElementById('iterationCountVal'),
+        iterationScale: document.getElementById('iterationScaleVal'),
+        stepQuantum: document.getElementById('stepQuantumVal'),
+        drawTips: null,
+        presetSelect: document.getElementById('presetSelectVal'),
+        spinSpeed: document.getElementById('spinSpeedVal'),
+        planeFan: document.getElementById('planeFanVal'),
+        planeOrbitRadius: document.getElementById('planeOrbitRadiusVal'),
+        planeOrbitSpeed: document.getElementById('planeOrbitSpeedVal'),
+        morphAmount: document.getElementById('morphAmountVal'),
+        morphSpeed: document.getElementById('morphSpeedVal'),
+        colorSpeed: document.getElementById('colorSpeedVal'),
+        depthAmount: document.getElementById('depthAmountVal'),
+        motionPreset: document.getElementById('motionPresetVal'),
+        cycleMode: document.getElementById('cycleModeVal'),
+        cycleDuration: document.getElementById('cycleDurationVal')
+      }
+
+      const axisConfigs = [
+        {
+          key: 'xy',
+          label: 'XY Plane',
+          color: '#7dd3fc',
+          hue: 195,
+          progressInput: document.getElementById('axis-xy-progress'),
+          enabledInput: document.getElementById('axis-xy-enabled'),
+          followInput: document.getElementById('axis-xy-follow'),
+          outlineInput: document.getElementById('axis-xy-outline'),
+          autoInput: document.getElementById('axis-xy-auto'),
+          autoSpeedInput: document.getElementById('axis-xy-speed'),
+          speedReadout: document.getElementById('axis-xy-speedVal'),
+          readout: document.getElementById('axis-xy-readout')
+        },
+        {
+          key: 'yz',
+          label: 'YZ Plane',
+          color: '#fb6ad9',
+          hue: 320,
+          progressInput: document.getElementById('axis-yz-progress'),
+          enabledInput: document.getElementById('axis-yz-enabled'),
+          followInput: document.getElementById('axis-yz-follow'),
+          outlineInput: document.getElementById('axis-yz-outline'),
+          autoInput: document.getElementById('axis-yz-auto'),
+          autoSpeedInput: document.getElementById('axis-yz-speed'),
+          speedReadout: document.getElementById('axis-yz-speedVal'),
+          readout: document.getElementById('axis-yz-readout')
+        },
+        {
+          key: 'zx',
+          label: 'ZX Plane',
+          color: '#9dffb5',
+          hue: 140,
+          progressInput: document.getElementById('axis-zx-progress'),
+          enabledInput: document.getElementById('axis-zx-enabled'),
+          followInput: document.getElementById('axis-zx-follow'),
+          outlineInput: document.getElementById('axis-zx-outline'),
+          autoInput: document.getElementById('axis-zx-auto'),
+          autoSpeedInput: document.getElementById('axis-zx-speed'),
+          speedReadout: document.getElementById('axis-zx-speedVal'),
+          readout: document.getElementById('axis-zx-readout')
+        }
+      ]
+
+      const axisBlocks = Array.from(document.querySelectorAll('.axis-block'))
+      const axisOrder = axisConfigs.map(cfg => cfg.key)
+      let activeAxis = 'xy'
+
+      const stepperButtons = Array.from(
+        document.querySelectorAll('.axis-steppers button')
+      )
+
+      const prefersReducedMotion = window.matchMedia(
+        '(prefers-reduced-motion: reduce)'
+      ).matches
+
+      const params = {
+        R: 160,
+        r: 40,
+        d: 24,
+        speed: prefersReducedMotion ? 0.6 : 1.0,
+        trail: prefersReducedMotion ? 0.22 : 0.12,
+        style: 'classic',
+        iterationCount: 3,
+        iterationScale: 0.85,
+        stepQuantum: 0.1,
+        drawTips: true,
+        shapeType: 'dot',
+        shapeSize: 6,
+        globalSpin: true,
+        spinSpeed: 0.4,
+        planeFan: 28,
+        planeOrbitRadius: 110,
+        planeOrbitSpeed: 0.2,
+        paramMorph: true,
+        morphAmount: 0.25,
+        morphSpeed: 0.35,
+        colorCycle: true,
+        colorSpeed: 0.3,
+        depthParallax: true,
+        depthAmount: 0.22,
+        motionPreset: 'off',
+        autoCycle: true,
+        cycleMode: 'sync',
+        cycleDuration: 12
+      }
+
+      const axisState = axisConfigs.reduce((acc, cfg) => {
+        const isXY = cfg.key === 'xy'
+        acc[cfg.key] = {
+          enabled: isXY,
+          progress: isXY ? 1 : 0,
+          followCycle: isXY,
+          showOutline: true,
+          stepping: false,
+          stepElapsed: 0,
+          stepDuration: 4,
+          auto: false,
+          autoSpeed: 0.5
+        }
+        return acc
+      }, {})
+
+      let motionTime = 0
+      let presetMode = params.motionPreset
+      let presetTime = 0
+      let globalSpinAngle = 0
+      let orbitPhase = 0
+      let morphPhase = 0
+      let effectiveParams = { R: params.R, r: params.r, d: params.d }
+
+      const PRESET_STORAGE_KEY = 'curate_epicycloid_anim_remix_presets_v1'
+      let presetRecords = {}
+      let currentPresetId = 'default'
+
+      function updateAxisActiveClasses() {
+        axisBlocks.forEach(block => {
+          block.classList.toggle('active', block.dataset.axis === activeAxis)
+        })
+      }
+
+      function setActiveAxis(key) {
+        if (!axisState[key] || !axisState[key].enabled) {
+          const fallback = axisConfigs.find(cfg => axisState[cfg.key].enabled)
+          if (fallback) activeAxis = fallback.key
+        } else {
+          activeAxis = key
+        }
+        updateAxisActiveClasses()
+      }
+
+      setActiveAxis(activeAxis)
+
+      let dpr = Math.min(window.devicePixelRatio || 1, 2)
+      let gradientFill = null
+      let points = []
+      let boundingRadius = 1
+      let needsRecalc = true
+
+      activateMotionPreset(params.motionPreset)
+
+      // --- Geometry helpers ---
+      function gcd(a, b) {
+        let x = Math.round(Math.abs(a))
+        let y = Math.round(Math.abs(b))
+        while (y) {
+          const t = y
+          y = x % y
+          x = t
+        }
+        return x || 1
+      }
+
+      function computePoints() {
+        const { R, r, d } = effectiveParams
+        const safeR = Math.max(r, 1)
+        const ratio = (R + safeR) / safeR
+        const period = (2 * Math.PI * safeR) / gcd(safeR, R)
+        const samples = Math.max(600, Math.round(period * 150))
+        points = []
+        let maxAbs = 1
+        for (let i = 0; i <= samples; i++) {
+          const t = (period * i) / samples
+          const c = Math.cos(t)
+          const s = Math.sin(t)
+          const cosRatio = Math.cos(ratio * t)
+          const sinRatio = Math.sin(ratio * t)
+          const x = (R + safeR) * c - d * cosRatio
+          const y = (R + safeR) * s - d * sinRatio
+          const z =
+            (R + safeR) * Math.cos(0.5 * t) - d * Math.cos(0.5 * ratio * t)
+          points.push({ x, y, z })
+          maxAbs = Math.max(maxAbs, Math.abs(x), Math.abs(y), Math.abs(z))
+        }
+        const maxScaleFactor =
+          params.iterationCount <= 1
+            ? 1
+            : params.iterationScale >= 1
+            ? Math.pow(params.iterationScale, params.iterationCount - 1)
+            : 1
+        boundingRadius = maxAbs * maxScaleFactor
+        needsRecalc = false
+      }
+
+      function resize() {
+        dpr = Math.min(window.devicePixelRatio || 1, 2)
+        const { innerWidth: w, innerHeight: h } = window
+        canvas.width = w * dpr
+        canvas.height = h * dpr
+        canvas.style.width = w + 'px'
+        canvas.style.height = h + 'px'
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+
+        gradientFill = ctx.createRadialGradient(
+          w * 0.5,
+          h * 0.35,
+          Math.min(w, h) * 0.2,
+          w * 0.5,
+          h * 0.55,
+          Math.max(w, h) * 0.9
+        )
+        gradientFill.addColorStop(0, 'rgba(11, 17, 28, 0.18)')
+        gradientFill.addColorStop(1, 'rgba(8, 12, 20, 0.65)')
+        clearCanvas(true)
+      }
+
+      function clearCanvas(initial = false) {
+        const { width, height } = canvas
+        ctx.save()
+        ctx.setTransform(1, 0, 0, 1, 0, 0)
+        ctx.globalCompositeOperation = 'source-over'
+        ctx.fillStyle = initial
+          ? 'rgba(11, 15, 19, 1)'
+          : `rgba(11, 15, 19, ${params.trail})`
+        ctx.fillRect(0, 0, width, height)
+        ctx.restore()
+        if (gradientFill) {
+          ctx.save()
+          ctx.globalCompositeOperation = 'destination-over'
+          ctx.fillStyle = gradientFill
+          ctx.fillRect(0, 0, width, height)
+          ctx.restore()
+        }
+      }
+
+      // --- UI Sync ---
+      function syncUI() {
+        controls.R.value = params.R
+        controls.r.value = params.r
+        controls.d.value = params.d
+        controls.speed.value = params.speed
+        controls.trail.value = params.trail
+        controls.style.value = params.style
+        controls.iterationCount.value = params.iterationCount
+        controls.iterationScale.value = params.iterationScale
+        controls.stepQuantum.value = params.stepQuantum
+        controls.drawTips.checked = params.drawTips
+        controls.globalSpin.checked = params.globalSpin
+        controls.spinSpeed.value = params.spinSpeed
+        controls.planeFan.value = params.planeFan
+        controls.planeOrbitRadius.value = params.planeOrbitRadius
+        controls.planeOrbitSpeed.value = params.planeOrbitSpeed
+        controls.paramMorph.checked = params.paramMorph
+        controls.morphAmount.value = params.morphAmount
+        controls.morphSpeed.value = params.morphSpeed
+        controls.colorCycle.checked = params.colorCycle
+        controls.colorSpeed.value = params.colorSpeed
+        controls.depthParallax.checked = params.depthParallax
+        controls.depthAmount.value = params.depthAmount
+        controls.motionPreset.value = params.motionPreset
+        controls.cycleMode.value = params.cycleMode
+        controls.cycleDuration.value = params.cycleDuration
+        controls.autoCycle.checked = params.autoCycle
+
+        valueSpans.R.textContent = Math.round(params.R)
+        valueSpans.r.textContent = Math.round(params.r)
+        valueSpans.d.textContent = Math.round(params.d)
+        valueSpans.speed.textContent = params.speed.toFixed(2)
+        valueSpans.trail.textContent = params.trail.toFixed(2)
+        valueSpans.style.textContent = {
+          classic: 'Classic',
+          gear: 'Gear Whisper',
+          petal: 'Petal Bloom'
+        }[params.style]
+        valueSpans.iterationCount.textContent = params.iterationCount
+        valueSpans.iterationScale.textContent = params.iterationScale.toFixed(2)
+        valueSpans.stepQuantum.textContent = params.stepQuantum.toFixed(2)
+        valueSpans.spinSpeed.textContent = params.spinSpeed.toFixed(2)
+        valueSpans.planeFan.textContent = Math.round(params.planeFan)
+        valueSpans.planeOrbitRadius.textContent = Math.round(
+          params.planeOrbitRadius
+        )
+        valueSpans.planeOrbitSpeed.textContent =
+          params.planeOrbitSpeed.toFixed(2)
+        valueSpans.morphAmount.textContent = params.morphAmount.toFixed(2)
+        valueSpans.morphSpeed.textContent = params.morphSpeed.toFixed(2)
+        valueSpans.colorSpeed.textContent = params.colorSpeed.toFixed(2)
+        valueSpans.depthAmount.textContent = params.depthAmount.toFixed(2)
+        valueSpans.motionPreset.textContent = {
+          off: 'Off',
+          spiral: 'Spiral Bloom',
+          pulse: 'Pulse Horizon',
+          cascade: 'Cascade Sweep'
+        }[params.motionPreset]
+        valueSpans.cycleMode.textContent = {
+          sync: 'Sync Sweep',
+          cascade: 'Cascade Axes',
+          bounce: 'Mirror Bounce',
+          sequence: 'Axis Sequence'
+        }[params.cycleMode]
+        valueSpans.cycleDuration.textContent = params.cycleDuration
+
+        axisConfigs.forEach(cfg => {
+          const state = axisState[cfg.key]
+          cfg.progressInput.value = state.progress
+          cfg.enabledInput.checked = state.enabled
+          cfg.followInput.checked = state.followCycle
+          cfg.outlineInput.checked = state.showOutline
+          cfg.readout.textContent = Math.round(state.progress * 100) + '%'
+          if (cfg.autoInput) cfg.autoInput.checked = state.auto
+          if (cfg.autoSpeedInput) cfg.autoSpeedInput.value = state.autoSpeed
+          if (cfg.speedReadout)
+            cfg.speedReadout.textContent = formatSpeed(state.autoSpeed)
+        })
+
+        updateAxisActiveClasses()
+      }
+
+      function applyPreset(style) {
+        if (style === 'classic') {
+          params.R = 160
+          params.r = 40
+          params.d = 24
+        } else if (style === 'gear') {
+          params.R = 200
+          params.r = 50
+          params.d = 30
+        } else if (style === 'petal') {
+          params.R = 150
+          params.r = 70
+          params.d = 32
+        }
+        if (params.d >= params.r) params.d = params.r - 2
+        needsRecalc = true
+        syncUI()
+      }
+
+      Object.entries(controls).forEach(([key, el]) => {
+        if (key === 'style') {
+          el.addEventListener('change', () => {
+            params.style = el.value
+            valueSpans.style.textContent = {
+              classic: 'Classic',
+              gear: 'Gear Whisper',
+              petal: 'Petal Bloom'
+            }[params.style]
+            applyPreset(params.style)
+          })
+        } else if (key === 'cycleMode') {
+          el.addEventListener('change', () => {
+            params.cycleMode = el.value
+            valueSpans.cycleMode.textContent = {
+              sync: 'Sync Sweep',
+              cascade: 'Cascade Axes',
+              bounce: 'Mirror Bounce',
+              sequence: 'Axis Sequence'
+            }[params.cycleMode]
+          })
+        } else if (key === 'autoCycle') {
+          el.addEventListener('change', () => {
+            params.autoCycle = el.checked
+          })
+        } else if (key === 'cycleDuration') {
+          el.addEventListener('input', () => {
+            params.cycleDuration = parseFloat(el.value)
+            valueSpans.cycleDuration.textContent = params.cycleDuration
+          })
+        } else if (key === 'trail') {
+          el.addEventListener('input', () => {
+            params.trail = parseFloat(el.value)
+            valueSpans.trail.textContent = params.trail.toFixed(2)
+          })
+        } else if (key === 'speed') {
+          el.addEventListener('input', () => {
+            params.speed = parseFloat(el.value)
+            valueSpans.speed.textContent = params.speed.toFixed(2)
+          })
+        } else if (key === 'iterationCount') {
+          el.addEventListener('input', () => {
+            params.iterationCount = parseInt(el.value, 10)
+            valueSpans.iterationCount.textContent = params.iterationCount
+            needsRecalc = true
+          })
+        } else if (key === 'iterationScale') {
+          el.addEventListener('input', () => {
+            params.iterationScale = parseFloat(el.value)
+            valueSpans.iterationScale.textContent =
+              params.iterationScale.toFixed(2)
+            needsRecalc = true
+          })
+        } else if (key === 'stepQuantum') {
+          el.addEventListener('input', () => {
+            params.stepQuantum = parseFloat(el.value)
+            valueSpans.stepQuantum.textContent = params.stepQuantum.toFixed(2)
+          })
+        } else if (key === 'drawTips') {
+          el.addEventListener('change', () => {
+            params.drawTips = el.checked
+          })
+        } else if (key === 'globalSpin') {
+          el.addEventListener('change', () => {
+            params.globalSpin = el.checked
+          })
+        } else if (key === 'spinSpeed') {
+          el.addEventListener('input', () => {
+            params.spinSpeed = parseFloat(el.value)
+            valueSpans.spinSpeed.textContent = params.spinSpeed.toFixed(2)
+          })
+        } else if (key === 'planeFan') {
+          el.addEventListener('input', () => {
+            params.planeFan = parseFloat(el.value)
+            valueSpans.planeFan.textContent = Math.round(params.planeFan)
+          })
+        } else if (key === 'planeOrbitRadius') {
+          el.addEventListener('input', () => {
+            params.planeOrbitRadius = parseFloat(el.value)
+            valueSpans.planeOrbitRadius.textContent = Math.round(
+              params.planeOrbitRadius
+            )
+          })
+        } else if (key === 'planeOrbitSpeed') {
+          el.addEventListener('input', () => {
+            params.planeOrbitSpeed = parseFloat(el.value)
+            valueSpans.planeOrbitSpeed.textContent =
+              params.planeOrbitSpeed.toFixed(2)
+          })
+        } else if (key === 'paramMorph') {
+          el.addEventListener('change', () => {
+            params.paramMorph = el.checked
+            if (!params.paramMorph) {
+              morphPhase = 0
+              updateEffectiveParams({ R: params.R, r: params.r, d: params.d })
+            }
+          })
+        } else if (key === 'morphAmount') {
+          el.addEventListener('input', () => {
+            params.morphAmount = parseFloat(el.value)
+            valueSpans.morphAmount.textContent = params.morphAmount.toFixed(2)
+          })
+        } else if (key === 'morphSpeed') {
+          el.addEventListener('input', () => {
+            params.morphSpeed = parseFloat(el.value)
+            valueSpans.morphSpeed.textContent = params.morphSpeed.toFixed(2)
+          })
+        } else if (key === 'colorCycle') {
+          el.addEventListener('change', () => {
+            params.colorCycle = el.checked
+          })
+        } else if (key === 'colorSpeed') {
+          el.addEventListener('input', () => {
+            params.colorSpeed = parseFloat(el.value)
+            valueSpans.colorSpeed.textContent = params.colorSpeed.toFixed(2)
+          })
+        } else if (key === 'depthParallax') {
+          el.addEventListener('change', () => {
+            params.depthParallax = el.checked
+          })
+        } else if (key === 'depthAmount') {
+          el.addEventListener('input', () => {
+            params.depthAmount = parseFloat(el.value)
+            valueSpans.depthAmount.textContent = params.depthAmount.toFixed(2)
+          })
+        } else if (key === 'motionPreset') {
+          el.addEventListener('change', () => {
+            params.motionPreset = el.value
+            valueSpans.motionPreset.textContent = {
+              off: 'Off',
+              spiral: 'Spiral Bloom',
+              pulse: 'Pulse Horizon',
+              cascade: 'Cascade Sweep'
+            }[params.motionPreset]
+            activateMotionPreset(params.motionPreset)
+          })
+        } else {
+          el.addEventListener('input', () => {
+            params[key] = parseFloat(el.value)
+            if (key === 'd' && params.d >= params.r) {
+              params.d = params.r - 1
+              controls.d.value = params.d
+            }
+            valueSpans[key].textContent = Math.round(params[key])
+            needsRecalc = true
+            if (
+              !params.paramMorph &&
+              (key === 'R' || key === 'r' || key === 'd')
+            ) {
+              updateEffectiveParams({ R: params.R, r: params.r, d: params.d })
+            }
+          })
+        }
+      })
+
+      axisConfigs.forEach(cfg => {
+        const state = axisState[cfg.key]
+        cfg.progressInput.addEventListener('input', () => {
+          state.progress = parseFloat(cfg.progressInput.value)
+          cfg.readout.textContent = Math.round(state.progress * 100) + '%'
+          state.stepping = false
+          state.followCycle = false
+          cfg.followInput.checked = false
+          setActiveAxis(cfg.key)
+        })
+        cfg.enabledInput.addEventListener('change', () => {
+          state.enabled = cfg.enabledInput.checked
+          if (state.enabled) setActiveAxis(cfg.key)
+          if (state.enabled && state.progress <= 0) {
+            state.progress = 1
+            cfg.progressInput.value = state.progress
+            cfg.readout.textContent = '100%'
+          }
+        })
+        cfg.followInput.addEventListener('change', () => {
+          state.followCycle = cfg.followInput.checked
+          setActiveAxis(cfg.key)
+        })
+        cfg.outlineInput.addEventListener('change', () => {
+          state.showOutline = cfg.outlineInput.checked
+        })
+        if (cfg.autoInput) {
+          cfg.autoInput.addEventListener('change', () => {
+            state.auto = cfg.autoInput.checked
+            if (state.auto) {
+              state.followCycle = false
+              if (cfg.followInput) cfg.followInput.checked = false
+            }
+            setActiveAxis(cfg.key)
+            if (cfg.speedReadout)
+              cfg.speedReadout.textContent = formatSpeed(state.autoSpeed)
+          })
+        }
+        if (cfg.autoSpeedInput) {
+          cfg.autoSpeedInput.addEventListener('input', () => {
+            state.autoSpeed = parseFloat(cfg.autoSpeedInput.value)
+            if (cfg.speedReadout)
+              cfg.speedReadout.textContent = formatSpeed(state.autoSpeed)
+          })
+        }
+      })
+
+      axisBlocks.forEach(block => {
+        block.addEventListener('click', event => {
+          if (event.target && event.target.closest('.axis-steppers')) return
+          if (event.target && event.target.tagName === 'INPUT') return
+          setActiveAxis(block.dataset.axis)
+        })
+      })
+
+      controls.presetSelect.addEventListener('change', () => {
+        selectPreset(controls.presetSelect.value)
+      })
+
+      controls.presetSave.addEventListener('click', () => {
+        const name = controls.presetName.value.trim() || 'Preset'
+        presetRecords[currentPresetId] = {
+          name,
+          settings: collectSettings()
+        }
+        persistPresets()
+        refreshPresetSelect()
+      })
+
+      controls.presetRename.addEventListener('click', () => {
+        if (!presetRecords[currentPresetId]) return
+        const name = controls.presetName.value.trim()
+        if (!name) return
+        presetRecords[currentPresetId].name = name
+        persistPresets()
+        refreshPresetSelect()
+      })
+
+      controls.presetDelete.addEventListener('click', () => {
+        if (currentPresetId === 'default') return
+        delete presetRecords[currentPresetId]
+        currentPresetId = 'default'
+        persistPresets()
+        refreshPresetSelect()
+        selectPreset(currentPresetId)
+      })
+
+      controls.jsonSave.addEventListener('click', async () => {
+        const json = JSON.stringify(collectSettings(), null, 2)
+        try {
+          await navigator.clipboard.writeText(json)
+          alert('Settings copied to clipboard.')
+        } catch (err) {
+          window.prompt('Copy settings JSON', json)
+        }
+      })
+
+      controls.jsonLoad.addEventListener('click', () => {
+        const text = window.prompt('Paste settings JSON:')
+        if (!text) return
+        try {
+          const obj = JSON.parse(text)
+          applySettings(obj)
+        } catch (err) {
+          alert('Invalid JSON payload')
+        }
+      })
+
+      document
+        .querySelectorAll('.axis-toggle[data-set-active]')
+        .forEach(label => {
+          label.addEventListener('click', () => {
+            const key = label.getAttribute('data-set-active')
+            setActiveAxis(key)
+          })
+        })
+
+      stepperButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const axisKey = btn.dataset.axis
+          const action = btn.dataset.action
+          const cfg = axisConfigs.find(a => a.key === axisKey)
+          const state = axisState[axisKey]
+          if (!cfg || !state) return
+          const stepAmount = params.stepQuantum
+          setActiveAxis(axisKey)
+          if (action === 'start') state.progress = 0
+          else if (action === 'end') state.progress = 1
+          else if (action === 'step-back')
+            state.progress = Math.max(0, state.progress - stepAmount)
+          else if (action === 'step-forward')
+            state.progress = Math.min(1, state.progress + stepAmount)
+          else if (action === 'step-run') {
+            state.progress = 0
+            state.stepping = true
+            state.stepElapsed = 0
+            state.stepDuration = params.cycleDuration / 3
+          }
+          state.followCycle = false
+          cfg.followInput.checked = false
+          cfg.progressInput.value = state.progress
+          cfg.readout.textContent = Math.round(state.progress * 100) + '%'
+        })
+      })
+
+      toggleBtn.addEventListener('click', () => togglePanel())
+      document.addEventListener('keydown', event => {
+        if (event.key === 'e' || event.key === 'E') togglePanel()
+        else if (event.key === 'ArrowRight') cycleActiveAxis(1)
+        else if (event.key === 'ArrowLeft') cycleActiveAxis(-1)
+        else if (event.key === 'ArrowUp')
+          adjustActiveAxisProgress(params.stepQuantum)
+        else if (event.key === 'ArrowDown')
+          adjustActiveAxisProgress(-params.stepQuantum)
+      })
+
+      function togglePanel(force) {
+        const show =
+          force !== undefined ? force : panel.classList.contains('hidden')
+        panel.classList.toggle('hidden', !show)
+        toggleBtn.setAttribute('aria-expanded', show)
+      }
+
+      function cycleActiveAxis(direction) {
+        const currentIndex = axisOrder.indexOf(activeAxis)
+        const nextIndex =
+          (currentIndex + direction + axisOrder.length) % axisOrder.length
+        setActiveAxis(axisOrder[nextIndex])
+      }
+
+      function adjustActiveAxisProgress(delta) {
+        const state = axisState[activeAxis]
+        if (!state) return
+        state.progress = Math.min(1, Math.max(0, state.progress + delta))
+        const cfg = axisConfigs.find(c => c.key === activeAxis)
+        if (cfg) {
+          cfg.progressInput.value = state.progress
+          cfg.readout.textContent = Math.round(state.progress * 100) + '%'
+          cfg.followInput.checked = false
+        }
+        state.followCycle = false
+      }
+
+      window.addEventListener(
+        'wheel',
+        event => {
+          if (panel.contains(event.target)) return
+          if (Math.abs(event.deltaY) < Math.abs(event.deltaX)) return
+          event.preventDefault()
+          cycleActiveAxis(event.deltaY > 0 ? 1 : -1)
+        },
+        { passive: false }
+      )
+
+      // --- Animation ---
+      let cycleTime = 0
+      let lastStamp = 0
+
+      function step(ts) {
+        if (!lastStamp) lastStamp = ts
+        const dt = Math.min((ts - lastStamp) / 1000, 0.05)
+        lastStamp = ts
+        const easedSpeed = params.speed
+        cycleTime += dt * easedSpeed
+
+        applyMotion(dt)
+        if (needsRecalc) computePoints()
+
+        updateCycle(dt)
+        clearCanvas(false)
+        drawAxes()
+        requestAnimationFrame(step)
+      }
+
+      function updateCycle(dt) {
+        const cycleDuration = Math.max(2, params.cycleDuration)
+        const cycleProgress = params.autoCycle
+          ? (cycleTime / cycleDuration) % 1
+          : 0
+
+        axisConfigs.forEach((cfg, idx) => {
+          const state = axisState[cfg.key]
+          if (state.stepping) {
+            state.stepElapsed += dt
+            const stepProg = Math.min(1, state.stepElapsed / state.stepDuration)
+            state.progress = stepProg
+            if (stepProg >= 1) state.stepping = false
+            cfg.progressInput.value = state.progress
+            cfg.readout.textContent = Math.round(state.progress * 100) + '%'
+            return
+          }
+          if (state.auto) {
+            state.progress = wrap01(state.progress + dt * state.autoSpeed)
+            cfg.progressInput.value = state.progress
+            cfg.readout.textContent = Math.round(state.progress * 100) + '%'
+            return
+          }
+          if (params.autoCycle && state.followCycle) {
+            let p = cycleProgress
+            if (params.cycleMode === 'cascade') {
+              p = (cycleProgress + idx / axisConfigs.length) % 1
+            } else if (params.cycleMode === 'bounce') {
+              const phased = (cycleProgress + idx * 0.25) % 1
+              p = phased < 0.5 ? phased * 2 : 2 - phased * 2
+            } else if (params.cycleMode === 'sequence') {
+              const segment = 1 / axisConfigs.length
+              const local = (cycleProgress + idx * segment) % 1
+              const within = (local % segment) / segment
+              p = local < segment ? within : 0
+            }
+            state.progress = p
+            cfg.progressInput.value = state.progress
+            cfg.readout.textContent = Math.round(state.progress * 100) + '%'
+          }
+        })
+      }
+
+      function applyMotion(dt) {
+        motionTime += dt * params.speed
+        if (params.globalSpin) {
+          globalSpinAngle += dt * params.spinSpeed * Math.PI * 2
+          globalSpinAngle = wrapAngle(globalSpinAngle)
+        }
+        orbitPhase += dt * params.planeOrbitSpeed * Math.PI * 2
+        orbitPhase = wrapAngle(orbitPhase)
+
+        if (params.paramMorph) {
+          morphPhase += dt * params.morphSpeed * Math.PI * 2
+          const amt = params.morphAmount
+          const target = {
+            R: params.R * (1 + amt * Math.sin(morphPhase)),
+            r: params.r * (1 + amt * Math.cos(morphPhase * 1.2 + 0.6)),
+            d: params.d * (1 + amt * Math.sin(morphPhase * 0.85 + 1.1))
+          }
+          updateEffectiveParams(target)
+        } else {
+          morphPhase = 0
+          updateEffectiveParams({ R: params.R, r: params.r, d: params.d })
+        }
+
+        applyMotionPresetRuntime(dt)
+      }
+
+      function updateEffectiveParams(target) {
+        if (
+          Math.abs(target.R - effectiveParams.R) > 0.05 ||
+          Math.abs(target.r - effectiveParams.r) > 0.05 ||
+          Math.abs(target.d - effectiveParams.d) > 0.05
+        ) {
+          effectiveParams = { ...target }
+          needsRecalc = true
+        }
+      }
+
+      function applyMotionPresetRuntime(dt) {
+        presetTime += dt
+        axisConfigs.forEach((cfg, idx) => {
+          const state = axisState[cfg.key]
+          if (!state.auto) return
+          if (presetMode === 'spiral' && cfg.key === 'xy') {
+            state.autoSpeed = 0.75 + 0.18 * Math.sin(presetTime * 0.95)
+          } else if (presetMode === 'pulse' && cfg.key === 'yz') {
+            state.autoSpeed = 1.1 + 0.45 * Math.sin(presetTime * 1.8)
+          } else if (presetMode === 'cascade' && cfg.key === 'zx') {
+            const oscillation = Math.sin(presetTime * 0.9) * 0.5 + 0.75
+            state.autoSpeed = 0.55 * oscillation
+          }
+          if (cfg.autoSpeedInput) cfg.autoSpeedInput.value = state.autoSpeed
+          if (cfg.speedReadout)
+            cfg.speedReadout.textContent = formatSpeed(state.autoSpeed)
+        })
+      }
+
+      function getPlaneSettings() {
+        let fan = params.planeFan
+        let orbit = params.planeOrbitRadius
+        if (presetMode === 'pulse') {
+          fan += Math.sin(presetTime * 1.6) * 18
+        }
+        if (presetMode === 'spiral') {
+          orbit += Math.sin(presetTime * 0.6) * 40
+        } else if (presetMode === 'cascade') {
+          orbit += Math.sin(presetTime * 0.8) * 24
+        }
+        return {
+          fanRad: (fan * Math.PI) / 180,
+          orbitRadius: orbit
+        }
+      }
+
+      function activateMotionPreset(mode) {
+        presetMode = mode
+        presetTime = 0
+        if (mode === 'off') {
+          axisConfigs.forEach((cfg, idx) => {
+            const state = axisState[cfg.key]
+            const enable = cfg.key === 'xy'
+            state.enabled = enable
+            state.auto = false
+            state.autoSpeed = 0.5
+            state.followCycle = enable
+            state.progress = enable ? 1 : 0
+          })
+          params.autoCycle = true
+          params.cycleMode = 'sync'
+          params.globalSpin = true
+          params.spinSpeed = 0.4
+          params.planeFan = 28
+          params.planeOrbitRadius = 110
+          params.planeOrbitSpeed = 0.2
+          params.paramMorph = true
+          params.morphAmount = 0.25
+          params.morphSpeed = 0.35
+          params.colorCycle = true
+          params.colorSpeed = 0.3
+          params.depthParallax = true
+          params.depthAmount = 0.22
+        } else if (mode === 'spiral') {
+          axisConfigs.forEach((cfg, idx) => {
+            const state = axisState[cfg.key]
+            const active = idx === 0
+            state.enabled = active
+            state.auto = active
+            state.autoSpeed = active ? 0.8 : 0
+            state.followCycle = false
+            state.progress = active ? 0 : 0
+          })
+          params.autoCycle = false
+          params.globalSpin = true
+          params.spinSpeed = 0.55
+          params.planeFan = 36
+          params.planeOrbitRadius = 150
+          params.planeOrbitSpeed = 0.35
+          params.paramMorph = true
+          params.morphAmount = 0.32
+          params.morphSpeed = 0.45
+          params.colorCycle = true
+          params.colorSpeed = 0.65
+          params.depthParallax = true
+          params.depthAmount = 0.28
+        } else if (mode === 'pulse') {
+          axisConfigs.forEach((cfg, idx) => {
+            const state = axisState[cfg.key]
+            const active = idx === 1
+            state.enabled = active
+            state.auto = active
+            state.autoSpeed = active ? 1.2 : 0
+            state.followCycle = false
+            state.progress = active ? 0 : 0
+          })
+          params.autoCycle = false
+          params.globalSpin = false
+          params.spinSpeed = 0.15
+          params.planeFan = 24
+          params.planeOrbitRadius = 105
+          params.planeOrbitSpeed = 0.18
+          params.paramMorph = true
+          params.morphAmount = 0.42
+          params.morphSpeed = 0.55
+          params.colorCycle = true
+          params.colorSpeed = 1.2
+          params.depthParallax = true
+          params.depthAmount = 0.34
+        } else if (mode === 'cascade') {
+          axisConfigs.forEach((cfg, idx) => {
+            const state = axisState[cfg.key]
+            const active = idx === 2
+            state.enabled = active
+            state.auto = active
+            state.autoSpeed = active ? 0.5 : 0
+            state.followCycle = false
+            state.progress = active ? 0 : 0
+          })
+          params.autoCycle = false
+          params.globalSpin = true
+          params.spinSpeed = 0.35
+          params.planeFan = 32
+          params.planeOrbitRadius = 130
+          params.planeOrbitSpeed = 0.24
+          params.paramMorph = true
+          params.morphAmount = 0.26
+          params.morphSpeed = 0.38
+          params.colorCycle = true
+          params.colorSpeed = 0.5
+          params.depthParallax = true
+          params.depthAmount = 0.22
+        }
+        params.motionPreset = mode
+        setActiveAxis('xy')
+        needsRecalc = true
+        syncUI()
+      }
+
+      function collectSettings() {
+        const paramSnapshot = {
+          R: params.R,
+          r: params.r,
+          d: params.d,
+          speed: params.speed,
+          trail: params.trail,
+          style: params.style,
+          iterationCount: params.iterationCount,
+          iterationScale: params.iterationScale,
+          stepQuantum: params.stepQuantum,
+          drawTips: params.drawTips,
+          globalSpin: params.globalSpin,
+          spinSpeed: params.spinSpeed,
+          planeFan: params.planeFan,
+          planeOrbitRadius: params.planeOrbitRadius,
+          planeOrbitSpeed: params.planeOrbitSpeed,
+          paramMorph: params.paramMorph,
+          morphAmount: params.morphAmount,
+          morphSpeed: params.morphSpeed,
+          colorCycle: params.colorCycle,
+          colorSpeed: params.colorSpeed,
+          depthParallax: params.depthParallax,
+          depthAmount: params.depthAmount,
+          motionPreset: params.motionPreset,
+          autoCycle: params.autoCycle,
+          cycleMode: params.cycleMode,
+          cycleDuration: params.cycleDuration
+        }
+        const axisSnapshot = axisConfigs.reduce((acc, cfg) => {
+          const state = axisState[cfg.key]
+          acc[cfg.key] = {
+            enabled: state.enabled,
+            progress: state.progress,
+            followCycle: state.followCycle,
+            showOutline: state.showOutline,
+            auto: state.auto,
+            autoSpeed: state.autoSpeed
+          }
+          return acc
+        }, {})
+        return {
+          version: 1,
+          params: paramSnapshot,
+          axis: axisSnapshot,
+          timestamp: Date.now()
+        }
+      }
+
+      function applySettings(settings) {
+        if (!settings) return
+        const src = settings.params || settings
+        Object.keys(src).forEach(key => {
+          if (key in params) {
+            params[key] = src[key]
+          }
+        })
+
+        const targetPreset = src.motionPreset || params.motionPreset || 'off'
+        params.motionPreset = targetPreset
+        activateMotionPreset(targetPreset)
+
+        const axisData = settings.axis || {}
+        axisConfigs.forEach(cfg => {
+          const data = axisData[cfg.key]
+          if (!data) return
+          const state = axisState[cfg.key]
+          state.enabled = data.enabled ?? state.enabled
+          state.progress = clamp01(data.progress ?? state.progress)
+          state.followCycle = data.followCycle ?? state.followCycle
+          state.showOutline = data.showOutline ?? state.showOutline
+          state.auto = data.auto ?? state.auto
+          if (typeof data.autoSpeed === 'number') state.autoSpeed = data.autoSpeed
+        })
+
+        updateEffectiveParams({ R: params.R, r: params.r, d: params.d })
+        setActiveAxis('xy')
+        needsRecalc = true
+        syncUI()
+      }
+
+      function loadPresetStore() {
+        try {
+          const raw = localStorage.getItem(PRESET_STORAGE_KEY)
+          if (raw) {
+            const parsed = JSON.parse(raw)
+            if (parsed && typeof parsed === 'object') {
+              presetRecords = parsed
+            }
+          }
+        } catch (err) {
+          presetRecords = {}
+        }
+        if (!Object.keys(presetRecords).length) {
+          const base = collectSettings()
+          presetRecords = {
+            default: {
+              name: 'Default',
+              settings: base
+            },
+            bloom: {
+              name: 'Bloom Spiral',
+              settings: {
+                params: {
+                  ...base.params,
+                  iterationCount: 18,
+                  iterationScale: 0.78,
+                  morphAmount: 0.32,
+                  colorSpeed: 0.7,
+                  planeFan: 46,
+                  planeOrbitRadius: 150,
+                  motionPreset: 'spiral'
+                },
+                axis: base.axis
+              }
+            },
+            pulse: {
+              name: 'Pulse Horizon',
+              settings: {
+                params: {
+                  ...base.params,
+                  iterationCount: 9,
+                  iterationScale: 0.92,
+                  morphAmount: 0.4,
+                  colorSpeed: 1.1,
+                  depthAmount: 0.34,
+                  planeOrbitRadius: 95,
+                  motionPreset: 'pulse'
+                },
+                axis: base.axis
+              }
+            }
+          }
+        }
+      }
+
+      function persistPresets() {
+        try {
+          localStorage.setItem(
+            PRESET_STORAGE_KEY,
+            JSON.stringify(presetRecords)
+          )
+        } catch (err) {
+          // ignore storage errors
+        }
+      }
+
+      function refreshPresetSelect() {
+        const select = controls.presetSelect
+        select.innerHTML = ''
+        Object.entries(presetRecords).forEach(([id, record]) => {
+          const opt = document.createElement('option')
+          opt.value = id
+          opt.textContent = record.name || id
+          select.appendChild(opt)
+        })
+        if (!presetRecords[currentPresetId]) currentPresetId = 'default'
+        select.value = currentPresetId
+        const record = presetRecords[currentPresetId]
+        controls.presetName.value = record?.name || ''
+        if (valueSpans.presetSelect)
+          valueSpans.presetSelect.textContent = record?.name || currentPresetId
+      }
+
+      function selectPreset(id) {
+        if (!presetRecords[id]) return
+        currentPresetId = id
+        const record = presetRecords[id]
+        applySettings(record.settings)
+        controls.presetName.value = record.name || ''
+        if (valueSpans.presetSelect)
+          valueSpans.presetSelect.textContent = record.name || id
+        controls.presetSelect.value = id
+      }
+
+      function drawAxes() {
+        if (!points.length) return
+        const enabledAxes = axisConfigs.filter(
+          cfg => axisState[cfg.key].enabled
+        )
+        if (!enabledAxes.length) return
+
+        const { width, height } = canvas
+        const centerX = width / (2 * dpr)
+        const centerY = height / (2 * dpr)
+        const baseScale =
+          ((Math.min(width, height) / dpr) * 0.28) / boundingRadius
+        const totalIterations = Math.max(1, Math.round(params.iterationCount))
+        const shapeSize = params.shapeSize
+        const shapeType = params.shapeType
+        const settings = getPlaneSettings()
+        const depthAmount = params.depthParallax ? params.depthAmount : 0
+        const spinAngle = params.globalSpin ? globalSpinAngle : 0
+
+        enabledAxes.forEach((cfg, orderIdx) => {
+          const state = axisState[cfg.key]
+          const progress = Math.max(0, Math.min(1, state.progress))
+          const baseAlpha = cfg.key === activeAxis ? 1 : 0.55
+          const baseRotation =
+            cfg.key === 'xy' ? 0 : cfg.key === 'yz' ? Math.PI / 2 : -Math.PI / 2
+          const fanOffset =
+            (orderIdx - (enabledAxes.length - 1) / 2) * settings.fanRad
+          const rotation = spinAngle + fanOffset + baseRotation
+          const orbitAngle =
+            orbitPhase + orderIdx * ((Math.PI * 2) / enabledAxes.length)
+          const offsetX = Math.cos(orbitAngle) * settings.orbitRadius
+          const offsetY = Math.sin(orbitAngle) * settings.orbitRadius * 0.6
+          const depthPhase = Math.sin(orbitAngle + fanOffset)
+          const depthShift = depthAmount * depthPhase
+          const depthScale = 1 + depthShift * 0.4
+          const depthPixels = depthShift * 120
+
+          ctx.save()
+          ctx.translate(centerX + offsetX, centerY + offsetY + depthPixels)
+          ctx.rotate(rotation)
+          ctx.scale(baseScale * depthScale, baseScale * depthScale)
+          ctx.lineCap = 'round'
+          ctx.lineJoin = 'round'
+
+          if (state.showOutline) {
+            for (let iter = 0; iter < totalIterations; iter++) {
+              const iterScale = Math.pow(params.iterationScale, iter)
+              const alpha =
+                (progress < 1 ? 0.22 : 0.16) * baseAlpha * Math.pow(0.82, iter)
+              drawGhostCurve(cfg.key, iterScale, axisColor(cfg, iter), alpha)
+            }
+          }
+
+          const totalProgress = progress * totalIterations
+          const tips = []
+          for (let iter = 0; iter < totalIterations; iter++) {
+            const iterProgress = Math.min(1, Math.max(0, totalProgress - iter))
+            if (iterProgress <= 0) continue
+            const iterScale = Math.pow(params.iterationScale, iter)
+            const alpha = baseAlpha * Math.pow(0.82, iter)
+            const lineWidth = 2.6 * Math.pow(0.88, iter)
+            const tip = drawPartialCurve(
+              cfg.key,
+              iterScale,
+              iterProgress,
+              axisColor(cfg, iter),
+              alpha,
+              lineWidth
+            )
+            if (tip) tips.push({ ...tip, iter })
+          }
+
+          if (params.drawTips) {
+            tips.forEach(({ u, v, iter }) => {
+              const size = params.shapeSize * Math.pow(0.88, iter)
+              renderTip(
+                u,
+                v,
+                axisColor(cfg, iter),
+                size,
+                params.shapeType,
+                baseAlpha
+              )
+            })
+          }
+
+          ctx.restore()
+        })
+      }
+
+      function drawGhostCurve(axisKey, iterScale, color, alpha) {
+        if (alpha <= 0) return
+        ctx.save()
+        ctx.beginPath()
+        for (let i = 0; i < points.length; i++) {
+          const { u, v } = projectPoint(axisKey, points[i])
+          const su = u * iterScale
+          const sv = v * iterScale
+          if (i === 0) ctx.moveTo(su, sv)
+          else ctx.lineTo(su, sv)
+        }
+        ctx.strokeStyle = colorAlpha(color, alpha)
+        ctx.lineWidth = 1.05
+        ctx.shadowBlur = 0
+        ctx.globalCompositeOperation = 'source-over'
+        ctx.stroke()
+        ctx.restore()
+      }
+
+      function drawPartialCurve(
+        axisKey,
+        iterScale,
+        progress,
+        color,
+        alpha,
+        lineWidth
+      ) {
+        const totalSegments = points.length - 1
+        if (totalSegments <= 0 || progress <= 0) return null
+        const target = progress * totalSegments
+        const idx = Math.min(totalSegments, Math.floor(target))
+        const frac = Math.max(0, Math.min(1, target - idx))
+
+        ctx.save()
+        ctx.beginPath()
+        let lastU = 0
+        let lastV = 0
+        for (let i = 0; i <= idx; i++) {
+          const { u, v } = projectPoint(axisKey, points[i])
+          const su = u * iterScale
+          const sv = v * iterScale
+          if (i === 0) ctx.moveTo(su, sv)
+          else ctx.lineTo(su, sv)
+          lastU = su
+          lastV = sv
+        }
+        if (frac > 0 && idx + 1 < points.length) {
+          const current = projectPoint(axisKey, points[idx])
+          const next = projectPoint(axisKey, points[idx + 1])
+          const su = (current.u + (next.u - current.u) * frac) * iterScale
+          const sv = (current.v + (next.v - current.v) * frac) * iterScale
+          ctx.lineTo(su, sv)
+          lastU = su
+          lastV = sv
+        }
+        ctx.strokeStyle = colorAlpha(color, alpha)
+        ctx.lineWidth = lineWidth
+        ctx.shadowColor = colorAlpha(color, alpha * 0.9)
+        ctx.shadowBlur = 24
+        ctx.globalCompositeOperation = 'lighter'
+        ctx.stroke()
+        ctx.restore()
+        return { u: lastU, v: lastV }
+      }
+
+      function renderTip(u, v, color, size, shapeType, alpha) {
+        ctx.save()
+        ctx.translate(u, v)
+        ctx.fillStyle = colorAlpha(color, alpha)
+        ctx.strokeStyle = colorAlpha(color, alpha * 0.85)
+        ctx.lineWidth = 0.8
+        ctx.shadowColor = colorAlpha(color, alpha * 0.9)
+        ctx.shadowBlur = 18
+        const s = size
+        ctx.beginPath()
+        if (shapeType === 'square') {
+          ctx.rect(-s, -s, s * 2, s * 2)
+        } else if (shapeType === 'diamond') {
+          ctx.moveTo(0, -s * 1.4)
+          ctx.lineTo(s * 1.4, 0)
+          ctx.lineTo(0, s * 1.4)
+          ctx.lineTo(-s * 1.4, 0)
+          ctx.closePath()
+        } else if (shapeType === 'triangle') {
+          ctx.moveTo(0, -s * 1.6)
+          ctx.lineTo(s * 1.6, s * 1.2)
+          ctx.lineTo(-s * 1.6, s * 1.2)
+          ctx.closePath()
+        } else {
+          ctx.arc(0, 0, s * 1.2, 0, Math.PI * 2)
+        }
+        ctx.fill()
+        ctx.stroke()
+        ctx.restore()
+      }
+
+      function projectPoint(axisKey, point) {
+        if (axisKey === 'xy') return { u: point.x, v: point.y }
+        if (axisKey === 'yz') return { u: point.y, v: point.z }
+        return { u: point.z, v: point.x }
+      }
+
+      function wrap01(v) {
+        return ((v % 1) + 1) % 1
+      }
+
+      function clamp01(v) {
+        return Math.min(1, Math.max(0, v))
+      }
+
+      function wrapAngle(v) {
+        const tau = Math.PI * 2
+        return ((v % tau) + tau) % tau
+      }
+
+      function hexToRgba(hex, alpha) {
+        const v = hex.replace('#', '')
+        const bigint = parseInt(v, 16)
+        const r = (bigint >> 16) & 255
+        const g = (bigint >> 8) & 255
+        const b = bigint & 255
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`
+      }
+
+      function formatSpeed(v) {
+        const abs = Math.abs(v).toFixed(2)
+        return `${v < 0 ? '−' : ''}${abs}×`
+      }
+
+      function colorAlpha(color, alpha) {
+        if (typeof color === 'string') {
+          if (color.startsWith('#')) return hexToRgba(color, alpha)
+          if (color.startsWith('hsl')) {
+            const body = color.slice(
+              color.indexOf('(') + 1,
+              color.lastIndexOf(')')
+            )
+            return `hsla(${body}, ${alpha})`
+          }
+          return color
+        }
+        return `hsla(${color.h.toFixed(1)}, ${color.s}%, ${color.l}%, ${alpha})`
+      }
+
+      function axisColor(cfg, iteration) {
+        const baseHue = cfg.hue ?? 200
+        const hueShift = params.colorCycle
+          ? motionTime * params.colorSpeed * 360 + iteration * 18
+          : iteration * 12
+        const presetHueShift =
+          presetMode === 'pulse'
+            ? Math.sin(presetTime * 1.5 + iteration) * 25
+            : 0
+        const hue = (baseHue + hueShift + presetHueShift) % 360
+        const sat = 78 + Math.max(0, 6 - iteration * 3)
+        const light = Math.max(28, 58 - iteration * 4)
+        return { h: hue, s: sat, l: light }
+      }
+
+      // --- Init ---
+      window.addEventListener('resize', resize)
+      resize()
+      syncUI()
+      computePoints()
+      loadPresetStore()
+      refreshPresetSelect()
+      selectPreset(currentPresetId)
+      requestAnimationFrame(step)
+    </script>
+  </body>
+</html>
