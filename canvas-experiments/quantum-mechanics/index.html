@@ -115,6 +115,78 @@
       .mono {
         font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
       }
+      .info-btn {
+        position: fixed;
+        right: 16px;
+        top: 16px;
+        z-index: 7;
+        padding: 8px 12px;
+        border-radius: 999px;
+        border: 1px solid rgba(120, 160, 220, 0.35);
+        background: rgba(20, 28, 44, 0.7);
+        color: #d9e7ff;
+        font: 600 12px/1 system-ui;
+        cursor: pointer;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .info-btn:hover {
+        transform: translateY(-1px);
+      }
+      .info-btn:active {
+        transform: translateY(1px);
+      }
+      .info-panel {
+        position: fixed;
+        inset: 0;
+        z-index: 8;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        background: rgba(4, 8, 16, 0.78);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s ease;
+      }
+      .info-panel.open {
+        opacity: 1;
+        pointer-events: auto;
+      }
+      .info-card {
+        width: min(420px, 92vw);
+        background: rgba(18, 24, 38, 0.92);
+        border: 1px solid rgba(120, 160, 220, 0.35);
+        border-radius: 18px;
+        padding: 22px;
+        box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55);
+        color: #e2eeff;
+        outline: none;
+      }
+      .info-card h2 {
+        margin: 0 0 12px;
+        font: 700 18px/1.3 system-ui;
+        letter-spacing: 0.2px;
+      }
+      .info-card p {
+        margin: 0 0 10px;
+        font-size: 13px;
+        line-height: 1.5;
+        opacity: 0.9;
+      }
+      .info-close {
+        margin-top: 14px;
+        padding: 7px 12px;
+        border-radius: 12px;
+        border: 1px solid rgba(120, 160, 220, 0.35);
+        background: rgba(26, 36, 56, 0.85);
+        color: #d9e7ff;
+        font: 600 12px/1 system-ui;
+        cursor: pointer;
+      }
+      .info-close:active {
+        transform: translateY(1px);
+      }
       /* CRT scanlines + glow */
       .fx-scan:before {
         content: '';
@@ -147,6 +219,44 @@
   </head>
   <body>
     <canvas id="c"></canvas>
+    <button
+      id="infoToggle"
+      class="info-btn"
+      type="button"
+      aria-expanded="false"
+      aria-controls="infoPanel"
+    >
+      INFO
+    </button>
+
+    <div
+      id="infoPanel"
+      class="info-panel"
+      role="dialog"
+      aria-modal="true"
+      aria-hidden="true"
+    >
+      <div class="info-card" id="infoCard" tabindex="-1">
+        <h2>About the Qubit Playground</h2>
+        <p>
+          The canvas shows a Bloch sphere representation of a single qubit.
+          The glowing vector marks the qubit state |ψ⟩, which you can evolve by
+          letting it precess (frequency) or by applying gates.
+        </p>
+        <p>
+          Use the gate buttons (X, Y, Z, H, S, T, Rx/Ry/Rz) or keyboard
+          shortcuts to rotate the state. Frequency drives continuous rotation
+          around the Z axis, phase adds a control offset, and decoherence/noise
+          damp the state over time.
+        </p>
+        <p>
+          Switch views to compare the Bloch sphere, a double-slit interference
+          sketch, or raw probabilities |α|² and |β|². “Measure” collapses the
+          qubit to |0⟩ or |1⟩ using the current amplitudes.
+        </p>
+        <button id="infoClose" class="info-close" type="button">Close</button>
+      </div>
+    </div>
 
     <!-- FIX: remove stray "fx scan" classes (they didn’t map to any CSS); keep UI clean -->
     <div class="ui">
@@ -285,6 +395,10 @@
           noiseOut = $('noiseOut'),
           rotOut = $('rotOut')
         const stateLbl = $('stateLbl')
+        const infoToggle = $('infoToggle'),
+          infoPanel = $('infoPanel'),
+          infoClose = $('infoClose'),
+          infoCard = $('infoCard')
         const updateOuts = () => {
           freqOut.textContent = (+freq.value).toFixed(2)
           phiOut.textContent = (+phi.value).toFixed(3)
@@ -296,6 +410,31 @@
         ;[freq, phi, deco, noise, rotSlider].forEach(el =>
           el.addEventListener('input', updateOuts)
         )
+
+        const setInfo = open => {
+          if (!infoPanel || !infoToggle) return
+          infoPanel.classList.toggle('open', open)
+          infoPanel.setAttribute('aria-hidden', open ? 'false' : 'true')
+          infoToggle.setAttribute('aria-expanded', open ? 'true' : 'false')
+          if (open && infoCard) {
+            infoCard.focus()
+          } else if (!open) {
+            infoToggle.focus()
+          }
+        }
+        if (infoToggle) {
+          infoToggle.addEventListener('click', () =>
+            setInfo(!infoPanel.classList.contains('open'))
+          )
+        }
+        if (infoClose) {
+          infoClose.addEventListener('click', () => setInfo(false))
+        }
+        if (infoPanel) {
+          infoPanel.addEventListener('click', e => {
+            if (e.target === infoPanel) setInfo(false)
+          })
+        }
 
         // View modes
         let mode = 'bloch'
@@ -425,6 +564,17 @@
 
         // Keyboard
         addEventListener('keydown', e => {
+          if (
+            infoPanel &&
+            infoPanel.classList.contains('open') &&
+            e.key === 'Escape'
+          ) {
+            setInfo(false)
+            return
+          }
+          if (infoPanel && infoPanel.classList.contains('open')) {
+            return
+          }
           if (e.code === 'Space') {
             running = !running
           }
