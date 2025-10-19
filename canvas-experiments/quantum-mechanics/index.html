@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>RedefineIt — Qubit in Action (Bloch Sphere)</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --ui-bg: rgba(10, 15, 24, 0.55);
+        --ui-bd: rgba(120, 160, 220, 0.28);
+      }
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #06090f;
+        overflow: hidden;
+        font-family: system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      }
+      canvas {
+        display: block;
+        width: 100vw;
+        height: 100vh;
+      }
+      /* UI */
+      .ui {
+        position: fixed;
+        left: 12px;
+        top: 12px;
+        z-index: 5;
+        width: 310px;
+        max-height: min(92vh, 820px);
+        padding: 12px;
+        border-radius: 14px;
+        color: #d9e7ff;
+        background: var(--ui-bg);
+        border: 1px solid var(--ui-bd);
+        backdrop-filter: blur(8px);
+        overflow: auto;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+      }
+      .row {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 8px;
+        align-items: center;
+        margin: 8px 0;
+      }
+      .row > label {
+        font-size: 12px;
+        opacity: 0.9;
+      }
+      .row input[type='range'] {
+        grid-column: 1 / -1;
+        width: 100%;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 6px;
+        margin-top: 8px;
+      }
+      .grid button {
+        font: 600 12px/1.1 system-ui;
+        padding: 8px 6px;
+        border-radius: 10px;
+        border: 1px solid rgba(120, 160, 220, 0.3);
+        background: rgba(20, 28, 44, 0.55);
+        color: #d9e7ff;
+        cursor: pointer;
+        transition: transform 0.06s ease;
+      }
+      .grid button:hover {
+        transform: translateY(-1px);
+      }
+      .grid button:active {
+        transform: translateY(1px) scale(0.98);
+      }
+      .title {
+        font-weight: 700;
+        letter-spacing: 0.3px;
+        margin-bottom: 6px;
+      }
+      .sub {
+        font-size: 11px;
+        opacity: 0.8;
+        margin: 4px 0 10px;
+      }
+      .flex {
+        display: flex;
+        gap: 8px;
+        margin-top: 6px;
+      }
+      .pill {
+        padding: 6px 10px;
+        border-radius: 999px;
+        border: 1px solid rgba(120, 160, 220, 0.32);
+        background: rgba(20, 28, 44, 0.55);
+        color: #cfe2ff;
+        font: 600 12px/1 system-ui;
+        cursor: pointer;
+      }
+      .pill:active {
+        transform: translateY(1px) scale(0.98);
+      }
+      .badge {
+        font-weight: 700;
+        font-size: 12px;
+        padding: 4px 8px;
+        border-radius: 999px;
+        background: rgba(90, 140, 255, 0.18);
+        border: 1px solid rgba(120, 160, 220, 0.35);
+      }
+      .mono {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+      /* CRT scanlines + glow */
+      .fx-scan:before {
+        content: '';
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        z-index: 1;
+        background: repeating-linear-gradient(
+          to bottom,
+          rgba(255, 255, 255, 0.02),
+          rgba(255, 255, 255, 0.02) 1px,
+          transparent 2px,
+          transparent 3px
+        );
+        mix-blend-mode: overlay;
+      }
+      .fx-vignette:after {
+        content: '';
+        position: fixed;
+        inset: -10vmax;
+        pointer-events: none;
+        z-index: 2;
+        background: radial-gradient(
+          ellipse at center,
+          transparent 50%,
+          rgba(0, 0, 0, 0.7) 120%
+        );
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="c"></canvas>
+
+    <!-- FIX: remove stray "fx scan" classes (they didn’t map to any CSS); keep UI clean -->
+    <div class="ui">
+      <div class="title">
+        RedefineIt — Qubit in Action
+        <span class="badge mono" id="stateLbl">|ψ⟩</span>
+      </div>
+      <div class="sub">
+        Bloch sphere with neon raster-glow. Precession = free evolution; buttons
+        apply gates; “Measure” collapses.
+      </div>
+
+      <div class="row">
+        <label>Frequency (ω) <span class="mono" id="freqOut">1.2</span></label>
+        <input id="freq" type="range" min="0" max="8" step="0.01" value="1.2" />
+      </div>
+
+      <div class="row">
+        <label
+          >Phase φ (radians) <span class="mono" id="phiOut">0.00</span></label
+        >
+        <input
+          id="phi"
+          type="range"
+          min="0"
+          max="6.28318"
+          step="0.001"
+          value="0.0"
+        />
+      </div>
+
+      <div class="row">
+        <label
+          >Decoherence (T₂) <span class="mono" id="decoOut">0.00</span></label
+        >
+        <input
+          id="deco"
+          type="range"
+          min="0"
+          max="1"
+          step="0.001"
+          value="0.00"
+        />
+      </div>
+
+      <div class="row">
+        <label>Noise (σ) <span class="mono" id="noiseOut">0.00</span></label>
+        <input
+          id="noise"
+          type="range"
+          min="0"
+          max="0.15"
+          step="0.001"
+          value="0.00"
+        />
+      </div>
+
+      <div class="row">
+        <label
+          >Rotation angle θ (for Rx/Ry/Rz)
+          <span class="mono" id="rotOut">1.571</span></label
+        >
+        <input
+          id="rot"
+          type="range"
+          min="-6.28318"
+          max="6.28318"
+          step="0.001"
+          value="1.5708"
+        />
+      </div>
+
+      <div class="grid">
+        <button data-gate="X">X</button>
+        <button data-gate="Y">Y</button>
+        <button data-gate="Z">Z</button>
+        <button data-gate="H">H</button>
+        <button data-gate="S">S</button>
+        <button data-gate="T">T</button>
+        <button data-gate="Rx">Rx</button>
+        <button data-gate="Ry">Ry</button>
+        <button data-gate="Rz">Rz</button>
+        <button id="randomize">Random</button>
+        <button id="reset">Reset</button>
+        <button id="measure">Measure</button>
+      </div>
+
+      <div class="flex">
+        <span class="pill" id="viewBloch">Bloch</span>
+        <span class="pill" id="viewWave">Interference</span>
+        <span class="pill" id="viewProbs">Probabilities</span>
+      </div>
+
+      <div class="sub" style="margin-top: 10px">
+        Keys: <span class="mono">H,X,Y,Z,R(φ), M=measure, Space=pause</span>
+      </div>
+    </div>
+
+    <!-- FIX: this element actually hosts the scanlines/vignette pseudo-elements -->
+    <div class="fx-scan fx-vignette"></div>
+
+    <script>
+      ;(() => {
+        const canvas = document.getElementById('c')
+        const ctx = canvas.getContext('2d')
+        let W = innerWidth,
+          canvasH = innerHeight
+        const DPR = Math.max(1, Math.min(2, devicePixelRatio || 1))
+
+        function resize() {
+          W = innerWidth
+          canvasH = innerHeight
+          canvas.width = Math.floor(W * DPR)
+          canvas.height = Math.floor(canvasH * DPR)
+          canvas.style.width = W + 'px'
+          canvas.style.height = canvasH + 'px'
+          ctx.setTransform(DPR, 0, 0, DPR, 0, 0)
+          // FIX: establish consistent drawing defaults after transform
+          ctx.lineCap = 'round'
+          ctx.lineJoin = 'round'
+          ctx.font = '12px system-ui, -apple-system, Segoe UI, Roboto'
+        }
+        addEventListener('resize', resize, { passive: true })
+        resize()
+
+        // UI hooks
+        const $ = id => document.getElementById(id)
+        const freq = $('freq'),
+          phi = $('phi'),
+          deco = $('deco'),
+          noise = $('noise'),
+          rotSlider = $('rot')
+        const freqOut = $('freqOut'),
+          phiOut = $('phiOut'),
+          decoOut = $('decoOut'),
+          noiseOut = $('noiseOut'),
+          rotOut = $('rotOut')
+        const stateLbl = $('stateLbl')
+        const updateOuts = () => {
+          freqOut.textContent = (+freq.value).toFixed(2)
+          phiOut.textContent = (+phi.value).toFixed(3)
+          decoOut.textContent = (+deco.value).toFixed(2)
+          noiseOut.textContent = (+noise.value).toFixed(3)
+          rotOut.textContent = (+rotSlider.value).toFixed(3)
+        }
+        updateOuts()
+        ;[freq, phi, deco, noise, rotSlider].forEach(el =>
+          el.addEventListener('input', updateOuts)
+        )
+
+        // View modes
+        let mode = 'bloch'
+        $('viewBloch').onclick = () => (mode = 'bloch')
+        $('viewWave').onclick = () => (mode = 'wave')
+        $('viewProbs').onclick = () => (mode = 'probs')
+
+        // Utility: complex
+        const C = (re, im) => ({ re, im })
+        const cadd = (a, b) => C(a.re + b.re, a.im + b.im)
+        const cmul = (a, b) =>
+          C(a.re * b.re - a.im * b.im, a.re * b.im + a.im * b.re)
+        const cconj = a => C(a.re, -a.im)
+        const cscale = (a, s) => C(a.re * s, a.im * s)
+        const cnorm2 = a => a.re * a.re + a.im * a.im
+
+        // State |ψ> = α|0> + β|1>
+        let alpha = C(1, 0),
+          beta = C(0, 0) // start at |0>
+        let t = 0,
+          running = true,
+          collapseFlash = 0
+
+        function randomState() {
+          const u = Math.random(),
+            v = Math.random()
+          const theta = Math.acos(1 - 2 * u)
+          const ph = 2 * Math.PI * v
+          alpha = C(Math.cos(theta / 2), 0)
+          beta = C(
+            Math.cos(ph) * Math.sin(theta / 2),
+            Math.sin(ph) * Math.sin(theta / 2)
+          )
+          renorm()
+        }
+        function renorm() {
+          const n = Math.sqrt(cnorm2(alpha) + cnorm2(beta))
+          if (n > 0) {
+            alpha = cscale(alpha, 1 / n)
+            beta = cscale(beta, 1 / n)
+          }
+        }
+        function setBloch(theta, ph) {
+          alpha = C(Math.cos(theta / 2), 0)
+          beta = C(
+            Math.cos(ph) * Math.sin(theta / 2),
+            Math.sin(ph) * Math.sin(theta / 2)
+          )
+          renorm()
+        }
+
+        // Gates (unitaries)
+        function X() {
+          ;[alpha, beta] = [beta, alpha]
+        }
+        function Y() {
+          // [[0,-i],[i,0]]
+          const a = cmul(C(0, 1), alpha) // i*α
+          const b = cmul(C(0, -1), beta) // -i*β
+          ;[alpha, beta] = [b, C(-a.re, -a.im)]
+        }
+        function Z() {
+          beta = C(-beta.re, -beta.im)
+        }
+        function H() {
+          const s = 1 / Math.SQRT2
+          const a = cadd(alpha, beta),
+            b = cadd(alpha, C(-beta.re, -beta.im))
+          alpha = cscale(a, s)
+          beta = cscale(b, s)
+        }
+        function S() {
+          beta = cmul(beta, C(0, 1))
+        }
+        function T() {
+          const e = C(Math.cos(Math.PI / 4), Math.sin(Math.PI / 4))
+          beta = cmul(beta, e)
+        }
+
+        function Raxis(axis, angle) {
+          const c = Math.cos(angle / 2),
+            s = Math.sin(angle / 2)
+          if (axis === 'x') {
+            const A = cadd(cscale(alpha, c), cmul(C(0, -s), beta))
+            const B = cadd(cmul(C(0, -s), alpha), cscale(beta, c))
+            alpha = A
+            beta = B
+          } else if (axis === 'y') {
+            // FIX: real-valued Ry matrix [[c, -s],[s, c]] is correct for complex α,β
+            const A = cadd(cscale(alpha, c), cscale(beta, -s))
+            const B = cadd(cscale(alpha, s), cscale(beta, c))
+            alpha = A
+            beta = B
+          } else if (axis === 'z') {
+            const e1 = C(Math.cos(-angle / 2), Math.sin(-angle / 2))
+            const e2 = C(Math.cos(angle / 2), Math.sin(angle / 2))
+            alpha = cmul(alpha, e1)
+            beta = cmul(beta, e2)
+          }
+        }
+
+        // Buttons
+        document.querySelectorAll('.grid button[data-gate]').forEach(btn => {
+          btn.onclick = () => {
+            const g = btn.dataset.gate
+            if (g === 'X') X()
+            else if (g === 'Y') Y()
+            else if (g === 'Z') Z()
+            else if (g === 'H') H()
+            else if (g === 'S') S()
+            else if (g === 'T') T()
+            else if (g === 'Rx') Raxis('x', +rotSlider.value)
+            else if (g === 'Ry') Raxis('y', +rotSlider.value)
+            else if (g === 'Rz') Raxis('z', +rotSlider.value)
+            renorm()
+          }
+        })
+        $('reset').onclick = () => {
+          alpha = C(1, 0)
+          beta = C(0, 0)
+          collapseFlash = 0
+        }
+        $('randomize').onclick = () => {
+          randomState()
+        }
+        $('measure').onclick = () => measure()
+
+        // Keyboard
+        addEventListener('keydown', e => {
+          if (e.code === 'Space') {
+            running = !running
+          }
+          if (e.key === 'm' || e.key === 'M') measure()
+          if (e.key === 'h' || e.key === 'H') H()
+          if (e.key === 'x' || e.key === 'X') X()
+          if (e.key === 'y' || e.key === 'Y') Y()
+          if (e.key === 'z' || e.key === 'Z') Z()
+          if (e.key === 'r' || e.key === 'R') Raxis('z', +phi.value)
+        })
+
+        // Measurement
+        function measure() {
+          const p0 = Math.min(1, Math.max(0, cnorm2(alpha)))
+          if (Math.random() < p0) {
+            alpha = C(1, 0)
+            beta = C(0, 0)
+          } else {
+            alpha = C(0, 0)
+            beta = C(1, 0)
+          }
+          collapseFlash = 1.0
+        }
+
+        // Bloch vector from α,β
+        function bloch() {
+          const a = alpha,
+            b = beta
+          const x = 2 * (a.re * b.re + a.im * b.im)
+          const y = 2 * (a.re * b.im - a.im * b.re)
+          const z = cnorm2(a) - cnorm2(b)
+          return { x, y, z }
+        }
+
+        // Evolution each frame
+        function evolve(dt) {
+          const w = +freq.value
+          const dphi = (running ? w * dt : 0) + +phi.value * 1e-3
+          if (dphi !== 0) {
+            Raxis('z', dphi)
+          }
+
+          const lam = +deco.value
+          if (lam > 0 && running) {
+            const s = Math.max(0, 1 - lam * dt)
+            beta = cscale(beta, s)
+            renorm()
+          }
+          const sig = +noise.value
+          if (sig > 0 && running) {
+            const jitter = (Math.random() * 2 - 1) * sig
+            Raxis('z', jitter)
+          }
+        }
+
+        // Neon helpers
+        function glowStroke(w = 2, alpha = 0.9) {
+          ctx.lineWidth = w
+          ctx.shadowBlur = 18
+          ctx.shadowColor = `rgba(120,180,255,${alpha})`
+          ctx.strokeStyle = `rgba(160,200,255,${alpha})`
+        }
+        function thinStroke(w = 1, alpha = 0.55) {
+          ctx.lineWidth = w
+          ctx.shadowBlur = 0 // FIX: ensure no lingering glow on grid lines
+          ctx.strokeStyle = `rgba(120,160,220,${alpha})`
+        }
+
+        // Background raster bars
+        function drawRaster() {
+          const rows = 160
+          ctx.globalCompositeOperation = 'source-over'
+          for (let i = 0; i < rows; i++) {
+            const y = i * (canvasH / rows)
+            const a = 0.045 + 0.035 * Math.sin(t * 0.8 + i * 0.33)
+            ctx.fillStyle = `rgba(255,255,255,${a})`
+            ctx.fillRect(0, y, W, 1)
+          }
+        }
+
+        // Interference strip
+        function drawInterference() {
+          const margin = 70,
+            h = Math.min(260, canvasH * 0.35),
+            y0 = canvasH * 0.62
+          ctx.fillStyle = 'rgba(12,18,28,.65)'
+          ctx.fillRect(margin, y0 - h, W - 2 * margin, h)
+          thinStroke(1, 0.35)
+          ctx.strokeRect(margin + 0.5, y0 - h + 0.5, W - 2 * margin - 1, h - 1)
+
+          const a = alpha,
+            b = beta
+          ctx.beginPath()
+          for (let x = margin; x <= W - margin; x++) {
+            const u = (x - margin) / (W - 2 * margin)
+            const k = 8 * Math.PI * u + t * 1.3
+            const e = C(Math.cos(k), Math.sin(k))
+            const psi = cadd(a, cmul(b, e))
+            const amp = Math.sqrt(cnorm2(psi))
+            const y = y0 - (amp / Math.SQRT2) * (h * 0.8)
+            if (x === margin) ctx.moveTo(x, y)
+            else ctx.lineTo(x, y)
+          }
+          glowStroke(2, 0.9)
+          ctx.stroke()
+          ctx.shadowBlur = 0
+
+          ctx.fillStyle = 'rgba(210,230,255,.85)'
+          ctx.fillText(
+            'Interference (illustrative superposition)',
+            margin + 6,
+            y0 - h + 16
+          )
+          thinStroke()
+          ctx.beginPath()
+          ctx.moveTo(margin, y0)
+          ctx.lineTo(W - margin, y0)
+          ctx.stroke()
+        }
+
+        // Probability bars
+        function drawProbs() {
+          const p0 = cnorm2(alpha),
+            p1 = cnorm2(beta)
+          const x = 26,
+            y = canvasH - 140,
+            w = 18,
+            gap = 20,
+            h = 100
+          ctx.fillStyle = 'rgba(12,18,28,.65)'
+          ctx.fillRect(16, canvasH - 170, 160, 140)
+          thinStroke(1, 0.35)
+          ctx.strokeRect(16.5, canvasH - 169.5, 159, 139)
+          ctx.fillStyle = 'rgba(100,220,180,.9)'
+          ctx.fillRect(x, y - h * p0, w, h * p0)
+          ctx.fillStyle = 'rgba(255,120,140,.9)'
+          ctx.fillRect(x + gap, y - h * p1, w, h * p1)
+          ctx.fillStyle = 'rgba(210,230,255,.9)'
+          ctx.fillText('|0⟩', x - 2, y + 14)
+          ctx.fillText('|1⟩', x + gap - 2, y + 14)
+          ctx.fillText('P(|0⟩)=' + p0.toFixed(3), 16 + 70, canvasH - 170 + 24)
+          ctx.fillText('P(|1⟩)=' + p1.toFixed(3), 16 + 70, canvasH - 170 + 44)
+        }
+
+        // Bloch sphere
+        function drawBloch() {
+          const s = Math.min(W, canvasH) * 0.36
+          const cx = W * 0.62,
+            cy = canvasH * 0.48
+
+          // FIX: stronger sphere base for contrast
+          const grd = ctx.createRadialGradient(
+            cx - s * 0.25,
+            cy - s * 0.25,
+            s * 0.2,
+            cx,
+            cy,
+            s
+          )
+          grd.addColorStop(0, 'rgba(40,70,120,.45)')
+          grd.addColorStop(1, 'rgba(10,16,30,.12)')
+          ctx.fillStyle = grd
+          ctx.beginPath()
+          ctx.arc(cx, cy, s, 0, Math.PI * 2)
+          ctx.fill()
+
+          // grid lines
+          thinStroke(1, 0.4)
+          for (let lat = -4; lat <= 4; lat++) {
+            const th = ((lat / 4) * Math.PI) / 2
+            ring(cx, cy, s, th, 0)
+          }
+          for (let lon = 0; lon < 12; lon++) {
+            const ph = (lon / 12) * 2 * Math.PI + t * 0.05
+            meridian(cx, cy, s, ph)
+          }
+
+          // z-axis + labels
+          thinStroke(2, 0.7)
+          line3D(cx, cy, s, { x: 0, y: 0, z: -1 }, { x: 0, y: 0, z: 1 })
+          ctx.fillStyle = 'rgba(210,230,255,.95)'
+          text3D('|0⟩', cx, cy, s, { x: 0, y: 0, z: 1 }, -10, -6)
+          text3D('|1⟩', cx, cy, s, { x: 0, y: 0, z: -1 }, -10, -6)
+
+          // state vector
+          const v = bloch()
+          glowStroke(3.25, 0.97)
+          line3D(cx, cy, s, { x: 0, y: 0, z: 0 }, v)
+          ctx.shadowBlur = 0
+
+          // equator projection of phase
+          const eq = { x: v.x, y: v.y, z: 0 }
+          glowStroke(1.75, 0.65)
+          line3D(cx, cy, s, { x: 0, y: 0, z: 0 }, eq)
+          ctx.shadowBlur = 0
+
+          // tip glow
+          const p = proj(cx, cy, s, v)
+          ctx.beginPath()
+          ctx.arc(p.x, p.y, 6, 0, 2 * Math.PI)
+          ctx.fillStyle = 'rgba(180,220,255,.95)'
+          ctx.shadowBlur = 20
+          ctx.shadowColor = 'rgba(120,180,255,.95)'
+          ctx.fill()
+          ctx.shadowBlur = 0
+
+          // collapse flash overlay
+          if (collapseFlash > 0) {
+            ctx.beginPath()
+            ctx.arc(cx, cy, s, 0, Math.PI * 2)
+            ctx.fillStyle = `rgba(255,255,255,${collapseFlash * 0.12})`
+            ctx.fill()
+            collapseFlash = Math.max(0, collapseFlash - 0.02)
+          }
+        }
+
+        // 3D helpers (orthographic with tilt for depth cue)
+        const tilt = { ax: Math.PI * 0.22, ay: -Math.PI * 0.28 }
+        function rot(v) {
+          let { x, y, z } = v
+          let y1 = y * Math.cos(tilt.ax) - z * Math.sin(tilt.ax)
+          let z1 = y * Math.sin(tilt.ax) + z * Math.cos(tilt.ax)
+          let x2 = x * Math.cos(tilt.ay) + z1 * Math.sin(tilt.ay)
+          let z2 = -x * Math.sin(tilt.ay) + z1 * Math.cos(tilt.ay)
+          return { x: x2, y: y1, z: z2 }
+        }
+        function proj(cx, cy, s, v) {
+          const r = rot(v)
+          return { x: cx + r.x * s, y: cy - r.y * s, z: r.z }
+        }
+        function line3D(cx, cy, s, a, b) {
+          const p1 = proj(cx, cy, s, a),
+            p2 = proj(cx, cy, s, b)
+          ctx.beginPath()
+          ctx.moveTo(p1.x, p1.y)
+          ctx.lineTo(p2.x, p2.y)
+          ctx.stroke()
+        }
+        function ring(cx, cy, s, theta, phi0) {
+          const steps = 180
+          ctx.beginPath()
+          for (let i = 0; i <= steps; i++) {
+            const ph = phi0 + (i / steps) * 2 * Math.PI
+            const v = {
+              x: Math.sin(theta) * Math.cos(ph),
+              y: Math.sin(theta) * Math.sin(ph),
+              z: Math.cos(theta)
+            }
+            const p = proj(cx, cy, s, v)
+            if (i === 0) ctx.moveTo(p.x, p.y)
+            else ctx.lineTo(p.x, p.y)
+          }
+          ctx.stroke()
+        }
+        function meridian(cx, cy, s, phi) {
+          const steps = 180
+          ctx.beginPath()
+          for (let i = 0; i <= steps; i++) {
+            const th = -Math.PI / 2 + (i / steps) * Math.PI
+            const v = {
+              x: Math.cos(th) * Math.cos(phi),
+              y: Math.cos(th) * Math.sin(phi),
+              z: Math.sin(th)
+            }
+            const p = proj(cx, cy, s, v)
+            if (i === 0) ctx.moveTo(p.x, p.y)
+            else ctx.lineTo(p.x, p.y)
+          }
+          ctx.stroke()
+        }
+        function text3D(txt, cx, cy, s, v, dx = 0, dy = 0) {
+          const p = proj(cx, cy, s, v)
+          ctx.fillText(txt, p.x + dx, p.y + dy)
+        }
+
+        // HUD
+        function drawHUD() {
+          ctx.fillStyle = 'rgba(200,220,255,.92)'
+          const p0 = cnorm2(alpha),
+            p1 = cnorm2(beta)
+          const phRel = Math.atan2(beta.im, beta.re)
+          const s = `|α|²=${p0.toFixed(3)}  |β|²=${p1.toFixed(
+            3
+          )}  Δφ≈${phRel.toFixed(2)} rad`
+          ctx.fillText(s, 20, 28)
+          const label =
+            mode === 'bloch'
+              ? 'BLOCH'
+              : mode === 'wave'
+              ? 'INTERFERENCE'
+              : 'PROBABILITIES'
+          ctx.fillText('Mode: ' + label, 20, 46)
+        }
+
+        // Main loop
+        let last = performance.now()
+        function frame(now) {
+          const dt = Math.min(0.05, (now - last) / 1000)
+          last = now
+          t += dt
+
+          evolve(dt)
+
+          // draw
+          ctx.clearRect(0, 0, W, canvasH)
+          drawRaster()
+
+          // subtle center glow
+          const cg = ctx.createRadialGradient(
+            W * 0.62,
+            canvasH * 0.48,
+            0,
+            W * 0.62,
+            canvasH * 0.48,
+            Math.min(W, canvasH) * 0.55
+          )
+          cg.addColorStop(0, 'rgba(40,70,120,.22)')
+          cg.addColorStop(1, 'rgba(0,0,0,0)')
+          ctx.fillStyle = cg
+          ctx.fillRect(0, 0, W, canvasH)
+
+          ctx.save()
+          if (mode === 'bloch') drawBloch()
+          if (mode === 'wave') drawInterference()
+          if (mode === 'probs') drawProbs()
+          ctx.restore()
+
+          drawHUD()
+
+          // UI state tag
+          const v = bloch()
+          stateLbl.textContent = `|ψ⟩ ⟂ (${v.x.toFixed(2)}, ${v.y.toFixed(
+            2
+          )}, ${v.z.toFixed(2)})`
+
+          requestAnimationFrame(frame)
+        }
+        requestAnimationFrame(frame)
+
+        // Start in a visible superposition on equator
+        setBloch(Math.PI / 2, Math.PI / 2)
+      })()
+    </script>
+  </body>
+</html>
