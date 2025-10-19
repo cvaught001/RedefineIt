@@ -3,6 +3,10 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E"
+    />
     <title>RedefineIt — Vector Fields + Magnetic Attractor</title>
     <style>
       :root {
@@ -406,6 +410,9 @@
           }
         }
 
+        let needRemesh = true
+        let grid = [] // array of points {x,y}
+
         function applyPreset(name) {
           if (!presets[name]) return
           const p = presets[name]
@@ -466,9 +473,6 @@
         resize()
 
         // Grid mesh
-        let needRemesh = true
-        let grid = [] // array of points {x,y}
-
         function remesh() {
           grid = []
           const n = Math.max(6, Math.floor(state.gridN))
