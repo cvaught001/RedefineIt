@@ -1,0 +1,1227 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Meta Infinity — Immersive Canvas Experience</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg0: #06090f;
+        --bg1: #0b0f13;
+        --ui: rgba(10, 15, 24, 0.55);
+        --bd: rgba(120, 160, 220, 0.28);
+        --fg: #d9e7ff;
+        --accent: #89aaff;
+        --glow: rgba(80, 140, 255, 0.55);
+      }
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        background: radial-gradient(
+          1200px 800px at 50% 40%,
+          #0d1320 0%,
+          var(--bg1) 40%,
+          var(--bg0) 100%
+        );
+        overflow: hidden;
+        font-family: system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      }
+      canvas {
+        display: block;
+        width: 100vw;
+        height: 100vh;
+      }
+      /* UI Panel */
+      .ui {
+        position: fixed;
+        left: 14px;
+        top: 14px;
+        z-index: 10;
+        width: 320px;
+        max-height: min(92vh, 860px);
+        padding: 12px;
+        border-radius: 16px;
+        color: var(--fg);
+        background: var(--ui);
+        border: 1px solid var(--bd);
+        backdrop-filter: blur(8px);
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
+        overflow-y: auto;
+      }
+      .ui h1 {
+        margin: 0 0 8px;
+        font: 600 16px/1.2 system-ui, sans-serif;
+        letter-spacing: 0.4px;
+      }
+      .ui .sub {
+        opacity: 0.8;
+        font-size: 12px;
+        margin-bottom: 10px;
+      }
+      .row {
+        display: grid;
+        grid-template-columns: 1fr 72px;
+        align-items: center;
+        gap: 10px;
+        padding: 6px 0;
+      }
+      .row input[type='range'] {
+        width: 100%;
+      }
+      .row label {
+        font-size: 13px;
+        opacity: 0.9;
+      }
+      .btn {
+        display: inline-block;
+        margin: 4px 4px 0 0;
+        padding: 8px 10px;
+        border-radius: 12px;
+        border: 1px solid var(--bd);
+        background: rgba(15, 22, 32, 0.55);
+        color: var(--fg);
+        cursor: pointer;
+        user-select: none;
+      }
+      .btn:active {
+        transform: translateY(1px);
+      }
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 10px;
+        border-radius: 999px;
+        border: 1px solid var(--bd);
+        background: rgba(15, 22, 32, 0.55);
+      }
+      .tiny {
+        font-size: 12px;
+        opacity: 0.8;
+      }
+      .stat {
+        font-variant-numeric: tabular-nums;
+      }
+      .mono {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+      .eye {
+        position: fixed;
+        right: 14px;
+        top: 14px;
+        z-index: 11;
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        border: 1px solid var(--bd);
+        background: rgba(15, 22, 32, 0.55);
+        color: var(--fg);
+        display: grid;
+        place-items: center;
+        cursor: pointer;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
+      }
+      .eye svg {
+        width: 22px;
+        height: 22px;
+        opacity: 0.9;
+      }
+      .help {
+        position: fixed;
+        right: 14px;
+        bottom: 14px;
+        z-index: 11;
+      }
+      .vr-button {
+        position: fixed;
+        right: 14px;
+        top: 68px;
+        z-index: 12;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 9px 14px;
+        border-radius: 12px;
+        border: 1px solid var(--bd);
+        background: rgba(15, 22, 32, 0.55);
+        color: var(--fg);
+        font: 600 13px/1.2 system-ui, sans-serif;
+        cursor: pointer;
+        user-select: none;
+        backdrop-filter: blur(8px);
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
+      }
+      .vr-button:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 3px;
+      }
+      .vr-button[disabled] {
+        opacity: 0.55;
+        cursor: default;
+      }
+      .toast {
+        max-width: 520px;
+        color: var(--fg);
+        border: 1px solid var(--bd);
+        background: rgba(15, 22, 32, 0.55);
+        backdrop-filter: blur(8px);
+        border-radius: 14px;
+        padding: 10px 12px;
+        font-size: 13px;
+      }
+      .crt::after {
+        /* subtle scanlines */
+        content: '';
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        background: repeating-linear-gradient(
+          0deg,
+          rgba(255, 255, 255, 0.02) 0,
+          rgba(255, 255, 255, 0.02) 1px,
+          transparent 2px,
+          transparent 4px
+        );
+      }
+    </style>
+  </head>
+  <body class="crt">
+    <canvas id="stage"></canvas>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+          "three/examples/jsm/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+        }
+      }
+    </script>
+    <button
+      class="eye"
+      id="toggleUI"
+      title="Show/Hide Controls"
+      aria-label="Show/Hide Controls"
+    >
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z" />
+        <circle cx="12" cy="12" r="3" />
+      </svg>
+    </button>
+    <section class="ui" id="panel" role="region" aria-label="Controls">
+      <h1>Meta Infinity — Immersive Canvas</h1>
+      <div class="sub">
+        Move your mouse or tilt your phone. Click to orbit. Optional: enable mic
+        reactivity. Everything runs in a single HTML file.
+      </div>
+
+      <div class="row">
+        <label
+          >Particles
+          <span class="tiny"
+            >(<span id="labCount" class="stat"></span>)</span
+          ></label
+        >
+        <input
+          id="particles"
+          type="range"
+          min="200"
+          max="6000"
+          step="100"
+          value="1800"
+        />
+      </div>
+      <div class="row">
+        <label>Speed</label
+        ><input
+          id="speed"
+          type="range"
+          min="0"
+          max="2"
+          step="0.01"
+          value="0.65"
+        />
+      </div>
+      <div class="row">
+        <label>Trail</label
+        ><input
+          id="trail"
+          type="range"
+          min="0"
+          max="0.15"
+          step="0.001"
+          value="0.055"
+        />
+      </div>
+      <div class="row">
+        <label>Glow</label
+        ><input
+          id="glow"
+          type="range"
+          min="0"
+          max="1"
+          step="0.01"
+          value="0.55"
+        />
+      </div>
+      <div class="row">
+        <label>Hue</label
+        ><input id="hue" type="range" min="0" max="360" step="1" value="210" />
+      </div>
+      <div class="row">
+        <label>Depth</label
+        ><input
+          id="depth"
+          type="range"
+          min="200"
+          max="2200"
+          step="10"
+          value="1200"
+        />
+      </div>
+      <div class="row">
+        <label>Spread</label
+        ><input
+          id="spread"
+          type="range"
+          min="0.2"
+          max="2.5"
+          step="0.01"
+          value="1.2"
+        />
+      </div>
+      <div class="row">
+        <label>Twist</label
+        ><input
+          id="twist"
+          type="range"
+          min="0"
+          max="4"
+          step="0.01"
+          value="1.1"
+        />
+      </div>
+      <div class="row">
+        <label>Stars</label
+        ><input
+          id="stars"
+          type="range"
+          min="0"
+          max="1"
+          step="0.01"
+          value="0.7"
+        />
+      </div>
+
+      <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px">
+        <button class="btn" id="micBtn">🎤 Mic Reactive</button>
+        <button class="btn" id="randomize">🔀 Randomize</button>
+        <button class="btn" id="center">◯ Re-center</button>
+        <span class="pill tiny"
+          >FPS: <span class="stat mono" id="fps">–</span></span
+        >
+      </div>
+
+      <details style="margin-top: 10px">
+        <summary style="cursor: pointer">About</summary>
+        <div class="tiny" style="opacity: 0.85; margin-top: 6px">
+          This immersive demo renders a pseudo‑3D infinity‑loop particle field
+          with parallax, device tilt, optional microphone reactivity, and full
+          WebXR support. It now runs on WebGL via three.js so it can light up in
+          VR headsets like Meta Quest while still feeling silky on flat screens.
+        </div>
+      </details>
+    </section>
+
+      <div class="help">
+        <div class="toast">
+          💡 <b>Tips</b> — Drag to orbit • Scroll to zoom • Press
+          <span class="mono">H</span> to toggle UI • Press
+          <span class="mono">R</span> to randomize • Press
+          <span class="mono">M</span> for mic<br />
+          <span class="mono">VR</span> — Thumbstick tilts speed/spread • Trigger
+          injects pulses • Grip widens the field
+        </div>
+      </div>
+    <script type="module">
+      import * as THREE from 'three'
+      import { VRButton } from 'three/examples/jsm/webxr/VRButton.js'
+      import { XRControllerModelFactory } from 'three/examples/jsm/webxr/XRControllerModelFactory.js'
+
+      ;(() => {
+        const PX_TO_WORLD = 1 / 600
+        const getDPR = () =>
+          Math.max(1, Math.min(2, window.devicePixelRatio || 1))
+
+        const canvas = document.getElementById('stage')
+        const renderer = new THREE.WebGLRenderer({
+          canvas,
+          antialias: true,
+          alpha: false
+        })
+        renderer.setPixelRatio(getDPR())
+        renderer.setSize(window.innerWidth, window.innerHeight, false)
+        renderer.setClearColor(0x06090f, 1)
+        renderer.autoClear = false
+        renderer.xr.enabled = true
+        renderer.xr.setReferenceSpaceType('local-floor')
+
+        const xrButton = VRButton.createButton(renderer, {
+          requiredFeatures: ['local-floor']
+        })
+        xrButton.classList.add('vr-button')
+        xrButton.style.position = 'fixed'
+        xrButton.style.right = '14px'
+        xrButton.style.top = '68px'
+        xrButton.style.left = ''
+        xrButton.style.bottom = ''
+        document.body.appendChild(xrButton)
+
+        const scene = new THREE.Scene()
+        const camera3D = new THREE.PerspectiveCamera(
+          55,
+          window.innerWidth / window.innerHeight,
+          0.05,
+          120
+        )
+        camera3D.position.set(0, 0, 0)
+
+        const controllerModelFactory = new XRControllerModelFactory()
+        const controllerDatas = []
+        const controllerInfluences = []
+        const tempVecA = new THREE.Vector3()
+        const tempVecB = new THREE.Vector3()
+        const tempVecC = new THREE.Vector3()
+        const Y_AXIS = new THREE.Vector3(0, 1, 0)
+        let xrActive = false
+        const XR_WORLD_SCALE = 1 / 320
+
+        let W = Math.round(window.innerWidth)
+        let H = Math.round(window.innerHeight)
+
+        /*** UI Elements ***/
+        const ui = {
+          particles: qs('#particles'),
+          speed: qs('#speed'),
+          trail: qs('#trail'),
+          glow: qs('#glow'),
+          hue: qs('#hue'),
+          depth: qs('#depth'),
+          spread: qs('#spread'),
+          twist: qs('#twist'),
+          stars: qs('#stars'),
+          labCount: qs('#labCount'),
+          fps: qs('#fps')
+        }
+        const panel = qs('#panel')
+        const toggleBtn = qs('#toggleUI')
+        const micBtn = qs('#micBtn')
+        const randomizeBtn = qs('#randomize')
+        const centerBtn = qs('#center')
+
+        function qs(sel, target = document) {
+          return target.querySelector(sel)
+        }
+        const clamp = (v, min, max) => Math.min(max, Math.max(min, v))
+
+        /**** Camera & Controls ****/
+        const camState = {
+          z: 900,
+          fov: 700,
+          rotX: 0,
+          rotY: 0,
+          targetRX: 0,
+          targetRY: 0
+        }
+        const world = { twist: 1.1, spread: 1.2 }
+        const state = {
+          speed: 0.65,
+          trail: 0.055,
+          glow: 0.55,
+          hue: 210,
+          depth: 1200,
+          stars: 0.7,
+          count: 1800
+        }
+
+        // Mouse / pointer drag to orbit
+        let dragging = false
+        let px = 0
+        let py = 0
+        window.addEventListener('pointerdown', e => {
+          dragging = true
+          px = e.clientX
+          py = e.clientY
+        })
+        window.addEventListener('pointerup', () => {
+          dragging = false
+        })
+        window.addEventListener('pointermove', e => {
+          if (!dragging) return
+          const dx = e.clientX - px
+          const dy = e.clientY - py
+          px = e.clientX
+          py = e.clientY
+          camState.targetRY += dx * 0.003
+          camState.targetRX += dy * 0.003
+        })
+        window.addEventListener('wheel', e => {
+          camState.z = Math.max(
+            220,
+            Math.min(2200, camState.z + e.deltaY * 0.35)
+          )
+        })
+
+        function setupController(index) {
+          const controller = renderer.xr.getController(index)
+          const rayGeometry = new THREE.BufferGeometry().setFromPoints([
+            new THREE.Vector3(0, 0, 0),
+            new THREE.Vector3(0, 0, -1)
+          ])
+          const rayMaterial = new THREE.LineBasicMaterial({
+            color: 0x89aaff,
+            transparent: true,
+            opacity: 0
+          })
+          const ray = new THREE.Line(rayGeometry, rayMaterial)
+          ray.scale.z = 1.6
+          ray.visible = false
+          controller.add(ray)
+
+          const data = {
+            index,
+            controller,
+            ray,
+            grip: renderer.xr.getControllerGrip(index),
+            pulse: 0,
+            squeezing: false,
+            worldPos: new THREE.Vector3(),
+            lastAxes: [0, 0]
+          }
+
+          controller.addEventListener('selectstart', () => {
+            data.pulse = Math.min(2.2, data.pulse + 1.2)
+            rayMaterial.opacity = 0.7
+          })
+          controller.addEventListener('selectend', () => {
+            rayMaterial.opacity = 0.25
+          })
+          controller.addEventListener('squeezestart', () => {
+            data.squeezing = true
+          })
+          controller.addEventListener('squeezeend', () => {
+            data.squeezing = false
+          })
+
+          controllerDatas.push(data)
+          scene.add(controller)
+
+          const grip = data.grip
+          grip.add(controllerModelFactory.createControllerModel(grip))
+          scene.add(grip)
+        }
+        setupController(0)
+        setupController(1)
+
+        renderer.xr.addEventListener('sessionstart', () => {
+          xrActive = true
+          controllerDatas.forEach(data => {
+            data.pulse = 0.8
+            data.ray.visible = true
+          })
+        })
+        renderer.xr.addEventListener('sessionend', () => {
+          xrActive = false
+          controllerDatas.forEach(data => {
+            data.pulse = 0
+            data.squeezing = false
+            data.ray.visible = false
+          })
+        })
+
+        // Device tilt for subtle parallax
+        window.addEventListener('deviceorientation', e => {
+          if (typeof e.beta === 'number' && typeof e.gamma === 'number') {
+            camState.targetRY = (e.gamma || 0) * 0.01
+            camState.targetRX = (e.beta || 0) * -0.01
+          }
+        })
+
+        // Hotkeys
+        window.addEventListener('keydown', e => {
+          if (e.key === 'h' || e.key === 'H') {
+            togglePanel()
+          } else if (e.key === 'r' || e.key === 'R') {
+            randomize()
+          } else if (e.key === 'm' || e.key === 'M') {
+            toggleMic()
+          }
+        })
+
+        toggleBtn.addEventListener('click', togglePanel)
+        function togglePanel() {
+          panel.style.display =
+            panel.style.display === 'none' ? 'block' : 'none'
+        }
+
+        // Bind sliders
+        function bindRange(el, onChange) {
+          el.addEventListener('input', () => onChange(parseFloat(el.value)))
+          onChange(parseFloat(el.value))
+        }
+        function initRangeBindings() {
+          bindRange(ui.particles, v => {
+            state.count = v | 0
+            ui.labCount.textContent = v
+            rebuild()
+          })
+          bindRange(ui.speed, v => {
+            state.speed = v
+          })
+          bindRange(ui.trail, v => {
+            state.trail = v
+          })
+          bindRange(ui.glow, v => {
+            state.glow = v
+          })
+          bindRange(ui.hue, v => {
+            state.hue = v
+          })
+          bindRange(ui.depth, v => {
+            state.depth = v
+          })
+          bindRange(ui.spread, v => {
+            world.spread = v
+          })
+          bindRange(ui.twist, v => {
+            world.twist = v
+          })
+          bindRange(ui.stars, v => {
+            state.stars = v
+          })
+        }
+
+        randomizeBtn.addEventListener('click', randomize)
+        function randomize() {
+          function rv(a, b, s) {
+            const v = a + Math.random() * (b - a)
+            return typeof s === 'number' ? parseFloat(v.toFixed(s)) : v
+          }
+          ui.speed.value = rv(0.2, 1.2, 2)
+          ui.speed.dispatchEvent(new Event('input'))
+          ui.trail.value = rv(0.02, 0.11, 3)
+          ui.trail.dispatchEvent(new Event('input'))
+          ui.glow.value = rv(0.3, 0.9, 2)
+          ui.glow.dispatchEvent(new Event('input'))
+          ui.hue.value = rv(160, 260, 0)
+          ui.hue.dispatchEvent(new Event('input'))
+          ui.depth.value = rv(800, 1800, 0)
+          ui.depth.dispatchEvent(new Event('input'))
+          ui.spread.value = rv(0.7, 2.2, 2)
+          ui.spread.dispatchEvent(new Event('input'))
+          ui.twist.value = rv(0.2, 3.2, 2)
+          ui.twist.dispatchEvent(new Event('input'))
+        }
+        centerBtn.addEventListener('click', () => {
+          camState.targetRX = 0
+          camState.targetRY = 0
+        })
+
+        /**** Audio (optional mic) ****/
+        const audio = {
+          active: false,
+          level: 0,
+          ctx: null,
+          analyser: null,
+          data: null
+        }
+        micBtn.addEventListener('click', toggleMic)
+        async function toggleMic() {
+          if (audio.active) {
+            audio.active = false
+            micBtn.textContent = '🎤 Mic Reactive'
+            return
+          }
+          try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+              audio: true
+            })
+            audio.ctx = new (window.AudioContext || window.webkitAudioContext)()
+            await audio.ctx.resume()
+            const src = audio.ctx.createMediaStreamSource(stream)
+            audio.analyser = audio.ctx.createAnalyser()
+            audio.analyser.fftSize = 1024
+            audio.data = new Uint8Array(audio.analyser.frequencyBinCount)
+            src.connect(audio.analyser)
+            audio.active = true
+            micBtn.textContent = '🔊 Mic On'
+          } catch (err) {
+            alert('Microphone access was blocked.')
+          }
+        }
+
+        const pointVertexShader = `
+          attribute float size;
+          attribute vec3 color;
+          attribute float alpha;
+          uniform float pixelRatio;
+          varying vec3 vColor;
+          varying float vAlpha;
+          void main() {
+            vColor = color;
+            vAlpha = alpha;
+            vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+            float dist = max(0.3, -mvPosition.z);
+            gl_PointSize = clamp(size * pixelRatio / dist, 1.0, 240.0);
+            gl_Position = projectionMatrix * mvPosition;
+          }
+        `
+        const pointFragmentShader = `
+          precision mediump float;
+          varying vec3 vColor;
+          varying float vAlpha;
+          void main() {
+            vec2 cxy = gl_PointCoord - vec2(0.5);
+            float d = length(cxy);
+            float falloff = smoothstep(0.5, 0.0, d);
+            gl_FragColor = vec4(vColor, vAlpha * falloff);
+          }
+        `
+
+        const particleGeometry = new THREE.BufferGeometry()
+        let particleCapacity = 0
+        let particlePositions = new Float32Array(0)
+        let particleColors = new Float32Array(0)
+        let particleAlphas = new Float32Array(0)
+        let particleSizes = new Float32Array(0)
+
+        const particleMaterial = new THREE.ShaderMaterial({
+          uniforms: {
+            pixelRatio: { value: renderer.getPixelRatio() }
+          },
+          vertexShader: pointVertexShader,
+          fragmentShader: pointFragmentShader,
+          transparent: true,
+          depthWrite: false,
+          depthTest: false,
+          blending: THREE.AdditiveBlending
+        })
+        const particlesMesh = new THREE.Points(
+          particleGeometry,
+          particleMaterial
+        )
+        particlesMesh.renderOrder = 1
+        particlesMesh.frustumCulled = false
+        scene.add(particlesMesh)
+
+        const starSeed = new Float32Array(2000 * 3)
+        const STAR_COUNT = starSeed.length / 3
+        const starPositions = new Float32Array(STAR_COUNT * 3)
+        const starColors = new Float32Array(STAR_COUNT * 3)
+        const starAlphas = new Float32Array(STAR_COUNT)
+        const starSizes = new Float32Array(STAR_COUNT)
+        const starGeometry = new THREE.BufferGeometry()
+        starGeometry.setAttribute(
+          'position',
+          new THREE.BufferAttribute(starPositions, 3)
+        )
+        starGeometry.setAttribute(
+          'color',
+          new THREE.BufferAttribute(starColors, 3)
+        )
+        starGeometry.setAttribute(
+          'alpha',
+          new THREE.BufferAttribute(starAlphas, 1)
+        )
+        starGeometry.setAttribute(
+          'size',
+          new THREE.BufferAttribute(starSizes, 1)
+        )
+        const starMaterial = new THREE.ShaderMaterial({
+          uniforms: {
+            pixelRatio: { value: renderer.getPixelRatio() }
+          },
+          vertexShader: pointVertexShader,
+          fragmentShader: pointFragmentShader,
+          transparent: true,
+          depthWrite: false,
+          depthTest: false,
+          blending: THREE.AdditiveBlending
+        })
+        const starsMesh = new THREE.Points(starGeometry, starMaterial)
+        starsMesh.renderOrder = 0
+        starsMesh.frustumCulled = false
+        scene.add(starsMesh)
+
+        const fadeScene = new THREE.Scene()
+        const fadeCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1)
+        const fadeMaterial = new THREE.MeshBasicMaterial({
+          color: 0x06090f,
+          transparent: true,
+          opacity: 0.4,
+          depthWrite: false,
+          depthTest: false
+        })
+        const fadeQuad = new THREE.Mesh(
+          new THREE.PlaneGeometry(2, 2),
+          fadeMaterial
+        )
+        fadeQuad.frustumCulled = false
+        fadeScene.add(fadeQuad)
+
+        // Particle pool must be ready before UI bindings trigger rebuild()
+        const parts = []
+        function rebuild() {
+          parts.length = 0
+          for (let i = 0; i < state.count; i++) {
+            const t = Math.random() * Math.PI * 2
+            parts.push({
+              t,
+              r: Math.random() * 0.002 + 0.001,
+              life: Math.random(),
+              x: 0,
+              y: 0,
+              z: 0
+            })
+          }
+          ensureParticleCapacity(parts.length)
+          particleGeometry.setDrawRange(0, parts.length)
+        }
+        rebuild()
+        initRangeBindings()
+
+        function ensureParticleCapacity(count) {
+          if (count === particleCapacity) return
+          particleCapacity = count
+          particlePositions = new Float32Array(count * 3)
+          particleColors = new Float32Array(count * 3)
+          particleAlphas = new Float32Array(count)
+          particleSizes = new Float32Array(count)
+          particleGeometry.setAttribute(
+            'position',
+            new THREE.BufferAttribute(particlePositions, 3)
+          )
+          particleGeometry.setAttribute(
+            'color',
+            new THREE.BufferAttribute(particleColors, 3)
+          )
+          particleGeometry.setAttribute(
+            'alpha',
+            new THREE.BufferAttribute(particleAlphas, 1)
+          )
+          particleGeometry.setAttribute(
+            'size',
+            new THREE.BufferAttribute(particleSizes, 1)
+          )
+        }
+
+        /**** Geometry helpers ****/
+        function lemniscate3D(t, a, twist) {
+          const s = Math.sin(t)
+          const c = Math.cos(t)
+          const denom = 1 + s * s
+          let x = (a * c) / denom
+          let y = (a * s * c) / denom
+          let z = a * 0.35 * s
+          const ang = t * twist
+          const rx = x * Math.cos(ang) - z * Math.sin(ang)
+          const rz = x * Math.sin(ang) + z * Math.cos(ang)
+          x = rx
+          z = rz
+          return { x, y, z }
+        }
+
+        function rotX(p, a) {
+          const s = Math.sin(a)
+          const c = Math.cos(a)
+          return { x: p.x, y: p.y * c - p.z * s, z: p.y * s + p.z * c }
+        }
+        function rotY(p, a) {
+          const s = Math.sin(a)
+          const c = Math.cos(a)
+          return { x: p.x * c + p.z * s, y: p.y, z: -p.x * s + p.z * c }
+        }
+
+        // Background stars seed
+        function buildStars() {
+          for (let i = 0; i < STAR_COUNT; i++) {
+            let x = Math.random() * 2 - 1
+            let y = Math.random() * 2 - 1
+            let z = Math.random()
+            const m = 1.0 + Math.random() * 2.5
+            starSeed[i * 3 + 0] = x * m
+            starSeed[i * 3 + 1] = y * m
+            starSeed[i * 3 + 2] = z
+          }
+        }
+        buildStars()
+
+        function hslaToRgba(h, s, l, a) {
+          h = ((h % 360) + 360) % 360
+          s /= 100
+          l /= 100
+          const c = (1 - Math.abs(2 * l - 1)) * s
+          const hp = h / 60
+          const x = c * (1 - Math.abs((hp % 2) - 1))
+          let r = 0,
+            g = 0,
+            b = 0
+          if (hp >= 0 && hp < 1) {
+            r = c
+            g = x
+          } else if (hp >= 1 && hp < 2) {
+            r = x
+            g = c
+          } else if (hp >= 2 && hp < 3) {
+            g = c
+            b = x
+          } else if (hp >= 3 && hp < 4) {
+            g = x
+            b = c
+          } else if (hp >= 4 && hp < 5) {
+            r = x
+            b = c
+          } else if (hp >= 5 && hp < 6) {
+            r = c
+            b = x
+          }
+          const m = l - c / 2
+          return [r + m, g + m, b + m, a]
+        }
+
+        function updateParticles(level, now) {
+          const count = parts.length
+          if (!count) {
+            particleGeometry.setDrawRange(0, 0)
+            return
+          }
+          const isXR = xrActive || renderer.xr.isPresenting
+          const hue = state.hue
+          const glow = state.glow
+          const spread = world.spread
+          const twist = world.twist
+          const baseScale = isXR
+            ? clamp(2.4 * spread, 0.8, 6.4)
+            : Math.min(W, H) * 0.45 * spread
+          const speed = state.speed * (1 + level * 0.8)
+          const g1 = hslaToRgba((hue + 0) % 360, 90, 65, 0.35 + glow * 0.4)
+          const g2 = hslaToRgba((hue + 60) % 360, 90, 70, 0.25 + glow * 0.35)
+          const g3 = hslaToRgba((hue + 200) % 360, 90, 75, 0.15 + glow * 0.3)
+
+          let influenceCount = 0
+          let controllerAdjusted = false
+          if (isXR) {
+            controllerDatas.forEach(data => {
+              data.controller.getWorldPosition(data.worldPos)
+              data.ray.visible = true
+              const strength = data.pulse + (data.squeezing ? 0.9 : 0)
+              data.ray.scale.z = 1.6 + strength * 0.6
+              data.ray.material.opacity = 0.18 + Math.min(0.6, strength * 0.5)
+              if (strength > 0.02) {
+                let entry = controllerInfluences[influenceCount]
+                if (!entry) {
+                  entry = {
+                    pos: new THREE.Vector3(),
+                    strength
+                  }
+                }
+                entry.pos.copy(data.worldPos)
+                entry.strength = strength
+                controllerInfluences[influenceCount] = entry
+                influenceCount++
+              }
+              data.pulse *= data.squeezing ? 0.95 : 0.9
+              const gp = data.controller.gamepad
+              if (gp && gp.axes && gp.axes.length >= 2) {
+                const axX = gp.axes[0]
+                const axY = gp.axes[1]
+                if (Math.abs(axY) > 0.18) {
+                  state.speed = clamp(
+                    state.speed + -axY * 0.025,
+                    0.05,
+                    2.6
+                  )
+                  controllerAdjusted = true
+                }
+                if (Math.abs(axX) > 0.18) {
+                  world.spread = clamp(
+                    world.spread + axX * 0.02,
+                    0.2,
+                    3.0
+                  )
+                  controllerAdjusted = true
+                }
+              }
+            })
+          } else {
+            controllerDatas.forEach(data => {
+              data.ray.visible = false
+              data.pulse *= 0.82
+              data.squeezing = false
+            })
+          }
+
+          controllerInfluences.length = influenceCount
+
+          if (controllerAdjusted) {
+            ui.speed.value = state.speed.toFixed(2)
+            ui.spread.value = world.spread.toFixed(2)
+          }
+
+          const swirlScale = isXR ? 0.18 + glow * 0.08 : 1
+          const worldScale = isXR ? XR_WORLD_SCALE : PX_TO_WORLD
+          const depthOffset = isXR ? 0 : state.depth + camState.z
+          const camRotX = camState.rotX
+          const camRotY = camState.rotY
+          const camFov = camState.fov
+          const spin = isXR ? now * 0.00012 : 0
+
+          for (let i = 0; i < count; i++) {
+            const p = parts[i]
+            p.t += speed * (0.001 + p.r * 4.0)
+            const base = lemniscate3D(p.t, baseScale, twist)
+            p.life = (p.life + 0.002 + level * 0.01) % 1
+            const sinTerm = Math.sin(p.t * 1.7 + p.life * 6.283)
+            const cosTerm = Math.cos(p.t * 1.3 + i * 0.001)
+            const swirlX = (sinTerm * 8 + cosTerm * 4) * swirlScale
+            const swirlY =
+              (Math.sin(p.t * 1.7 + p.life * 6.283 + 0.9) * 6.5 +
+                Math.cos(p.t * 1.3 + i * 0.001 + 0.4) * 3.2) *
+              swirlScale
+            const swirlZ =
+              (Math.sin(p.t * 1.7 + p.life * 6.283 + 1.7) * 6 +
+                Math.cos(p.t * 1.3 + i * 0.001 + 0.8) * 3) *
+              swirlScale
+
+            if (isXR) {
+              tempVecA.set(
+                base.x + swirlX,
+                (base.y + swirlY) * 0.72,
+                base.z + swirlZ
+              )
+              tempVecA.applyAxisAngle(Y_AXIS, spin)
+              tempVecA.multiplyScalar(
+                worldScale * (0.9 + spread * 0.6 + glow * 0.3)
+              )
+
+              if (controllerInfluences.length) {
+                controllerInfluences.forEach(ctrl => {
+                  tempVecB.copy(tempVecA).sub(ctrl.pos)
+                  const dist = tempVecB.length() + 0.18
+                  const push =
+                    ctrl.strength *
+                    (0.55 + glow * 0.2 + level * 0.3) *
+                    Math.exp(-dist * 0.65)
+                  tempVecA.addScaledVector(tempVecB.normalize(), push)
+                })
+              }
+
+              const radius = tempVecA.length()
+              const mix = Math.min(1, Math.max(0, (radius - 0.35) / 3.4))
+              const col = mix < 0.33 ? g3 : mix < 0.66 ? g2 : g1
+              const size =
+                18 + mix * 26 * (1 + glow * 0.5 + level * 0.8)
+              const idx3 = i * 3
+              particlePositions[idx3 + 0] = tempVecA.x
+              particlePositions[idx3 + 1] = tempVecA.y
+              particlePositions[idx3 + 2] = tempVecA.z
+              particleColors[idx3 + 0] = col[0]
+              particleColors[idx3 + 1] = col[1]
+              particleColors[idx3 + 2] = col[2]
+              particleAlphas[i] = Math.min(
+                1,
+                (0.45 + mix * 0.5) * (1 + glow * 0.65 + level * 0.4)
+              )
+              particleSizes[i] = size
+            } else {
+              tempVecC.set(
+                base.x + swirlX,
+                base.y + swirlY,
+                base.z + swirlZ
+              )
+              const rotated = rotY(rotX(tempVecC, camRotX), camRotY)
+              const z = rotated.z + depthOffset
+              const s = camFov / (z <= 10 ? 10 : z)
+              const size = Math.max(0.5, 1.2 * s * (1 + glow)) * 8.0
+              const mix = Math.min(1, Math.max(0, 1 - z / 2600))
+              const col = mix < 0.33 ? g3 : mix < 0.66 ? g2 : g1
+              const idx3 = i * 3
+              particlePositions[idx3 + 0] = rotated.x * worldScale
+              particlePositions[idx3 + 1] = rotated.y * worldScale
+              particlePositions[idx3 + 2] = -z * worldScale
+              particleColors[idx3 + 0] = col[0]
+              particleColors[idx3 + 1] = col[1]
+              particleColors[idx3 + 2] = col[2]
+              particleAlphas[i] = Math.min(
+                1.0,
+                col[3] * (0.45 + mix * 0.75) * (1 + glow * 0.6)
+              )
+              particleSizes[i] = size
+            }
+          }
+
+          particleGeometry.attributes.position.needsUpdate = true
+          particleGeometry.attributes.color.needsUpdate = true
+          particleGeometry.attributes.alpha.needsUpdate = true
+          particleGeometry.attributes.size.needsUpdate = true
+          particleGeometry.setDrawRange(0, count)
+        }
+
+        function updateStars(now) {
+          if (state.stars <= 0) {
+            starsMesh.visible = false
+            starGeometry.setDrawRange(0, 0)
+            return
+          }
+          const isXR = xrActive || renderer.xr.isPresenting
+          starsMesh.visible = true
+          const baseAlpha = 0.12 * state.stars
+
+          if (isXR) {
+            const spin = now * 0.00005
+            const radius = 14 + state.depth * 0.003
+            for (let i = 0; i < STAR_COUNT; i++) {
+              const sx = starSeed[i * 3 + 0]
+              const sy = starSeed[i * 3 + 1]
+              const sz = starSeed[i * 3 + 2] * 2 - 1
+              tempVecA.set(sx, sy, sz).normalize()
+              tempVecA.applyAxisAngle(Y_AXIS, spin + i * 0.0006)
+              const jitter = 0.85 + (sz * 0.5 + 0.5) * 0.6
+              tempVecA.multiplyScalar(radius * jitter)
+              const idx3 = i * 3
+              starPositions[idx3 + 0] = tempVecA.x
+              starPositions[idx3 + 1] = tempVecA.y
+              starPositions[idx3 + 2] = tempVecA.z
+              starColors[idx3 + 0] = 1
+              starColors[idx3 + 1] = 1
+              starColors[idx3 + 2] = 1
+              const twinkle =
+                0.7 + Math.sin(now * 0.001 + sx * 4.2 + i * 0.13) * 0.3
+              starAlphas[i] = Math.min(1, baseAlpha * 1.35 * twinkle)
+              starSizes[i] =
+                14 + state.stars * 18 + Math.cos(now * 0.0012 + i) * 2
+            }
+          } else {
+            for (let i = 0; i < STAR_COUNT; i++) {
+              let x = starSeed[i * 3 + 0] * W * 0.5
+              let y = starSeed[i * 3 + 1] * H * 0.5
+              let z = starSeed[i * 3 + 2] * 2200 + 400
+              const p = rotY(
+                rotX({ x, y, z }, camState.rotX * 0.4),
+                camState.rotY * 0.4
+              )
+              const depth = p.z + camState.z
+              const scale = camState.fov / (depth <= 10 ? 10 : depth)
+              const idx3 = i * 3
+              starPositions[idx3 + 0] = p.x * PX_TO_WORLD
+              starPositions[idx3 + 1] = p.y * PX_TO_WORLD
+              starPositions[idx3 + 2] = -depth * PX_TO_WORLD
+              starColors[idx3 + 0] = 1
+              starColors[idx3 + 1] = 1
+              starColors[idx3 + 2] = 1
+              starAlphas[i] = Math.min(1, baseAlpha * 1.4)
+              starSizes[i] = Math.max(0.4, 1.6 * scale) * 10.0
+            }
+          }
+
+          starGeometry.attributes.position.needsUpdate = true
+          starGeometry.attributes.color.needsUpdate = true
+          starGeometry.attributes.alpha.needsUpdate = true
+          starGeometry.attributes.size.needsUpdate = true
+          starGeometry.setDrawRange(0, STAR_COUNT)
+        }
+
+        // FPS meter
+        let fpsValue = 0
+        setInterval(() => {
+          ui.fps.textContent = fpsValue.toFixed(0)
+        }, 500)
+
+        function updatePixelRatio() {
+          const ratio = renderer.getPixelRatio()
+          particleMaterial.uniforms.pixelRatio.value = ratio
+          starMaterial.uniforms.pixelRatio.value = ratio
+        }
+
+        function resize() {
+          W = Math.round(window.innerWidth)
+          H = Math.round(window.innerHeight)
+          renderer.setPixelRatio(getDPR())
+          renderer.setSize(W, H, false)
+          camera3D.aspect = W / H
+          camera3D.updateProjectionMatrix()
+          updatePixelRatio()
+        }
+        window.addEventListener('resize', resize)
+
+        renderer.xr.addEventListener('sessionstart', updatePixelRatio)
+        renderer.xr.addEventListener('sessionend', updatePixelRatio)
+
+        let lastFrame = performance.now()
+        let fpsAccum = 0
+        let fpsFrames = 0
+        let firstFrame = true
+
+        renderer.setAnimationLoop(time => {
+          const now = typeof time === 'number' ? time : performance.now()
+          const dt = now - lastFrame
+          lastFrame = now
+          fpsAccum += dt
+          fpsFrames += 1
+          if (fpsAccum >= 500) {
+            fpsValue = (fpsFrames * 1000) / fpsAccum
+            fpsFrames = 0
+            fpsAccum = 0
+          }
+
+          const isXR = xrActive || renderer.xr.isPresenting
+          if (isXR) {
+            camState.targetRX *= 0.92
+            camState.targetRY *= 0.92
+          }
+          camState.rotX += (camState.targetRX - camState.rotX) * 0.08
+          camState.rotY += (camState.targetRY - camState.rotY) * 0.08
+
+          let level = 0
+          if (audio.active && audio.analyser && audio.data) {
+            audio.analyser.getByteFrequencyData(audio.data)
+            let sum = 0
+            for (let i = 0; i < audio.data.length; i++) {
+              sum += audio.data[i]
+            }
+            level = sum / audio.data.length / 255
+          }
+          audio.level = level
+
+          updateParticles(level, now)
+          updateStars(now)
+
+          const fadeStrength = Math.max(0.01, 1.0 - state.trail * 8)
+          fadeMaterial.opacity = isXR
+            ? Math.max(0.02, 1.0 - state.trail * 5)
+            : fadeStrength
+
+          if (firstFrame) {
+            renderer.clear(true, true, true)
+            firstFrame = false
+          } else {
+            renderer.clear(false, false, true)
+          }
+
+          renderer.render(fadeScene, fadeCamera)
+          renderer.render(scene, camera3D)
+        })
+
+        resize()
+      })()
+    </script>
+  </body>
+</html>
