@@ -488,35 +488,37 @@
           el.addEventListener('input', () => onChange(parseFloat(el.value)))
           onChange(parseFloat(el.value))
         }
-        bindRange(ui.particles, v => {
-          state.count = v | 0
-          ui.labCount.textContent = v
-          rebuild()
-        })
-        bindRange(ui.speed, v => {
-          state.speed = v
-        })
-        bindRange(ui.trail, v => {
-          state.trail = v
-        })
-        bindRange(ui.glow, v => {
-          state.glow = v
-        })
-        bindRange(ui.hue, v => {
-          state.hue = v
-        })
-        bindRange(ui.depth, v => {
-          state.depth = v
-        })
-        bindRange(ui.spread, v => {
-          world.spread = v
-        })
-        bindRange(ui.twist, v => {
-          world.twist = v
-        })
-        bindRange(ui.stars, v => {
-          state.stars = v
-        })
+        function initRangeBindings() {
+          bindRange(ui.particles, v => {
+            state.count = v | 0
+            ui.labCount.textContent = v
+            rebuild()
+          })
+          bindRange(ui.speed, v => {
+            state.speed = v
+          })
+          bindRange(ui.trail, v => {
+            state.trail = v
+          })
+          bindRange(ui.glow, v => {
+            state.glow = v
+          })
+          bindRange(ui.hue, v => {
+            state.hue = v
+          })
+          bindRange(ui.depth, v => {
+            state.depth = v
+          })
+          bindRange(ui.spread, v => {
+            world.spread = v
+          })
+          bindRange(ui.twist, v => {
+            world.twist = v
+          })
+          bindRange(ui.stars, v => {
+            state.stars = v
+          })
+        }
 
         randomizeBtn.addEventListener('click', randomize)
         function randomize() {
@@ -588,8 +590,9 @@
             vColor = color;
             vAlpha = alpha;
             vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+            float dist = max(0.3, -mvPosition.z);
+            gl_PointSize = clamp(size * pixelRatio / dist, 1.0, 240.0);
             gl_Position = projectionMatrix * mvPosition;
-            gl_PointSize = clamp(size * pixelRatio, 1.0, 200.0);
           }
         `
         const pointFragmentShader = `
@@ -704,6 +707,7 @@
           particleGeometry.setDrawRange(0, parts.length)
         }
         rebuild()
+        initRangeBindings()
 
         function ensureParticleCapacity(count) {
           if (count === particleCapacity) return
@@ -838,7 +842,7 @@
             pos = rotY(rotX(pos, camState.rotX), camState.rotY)
             const z = pos.z + depth + camState.z
             const s = camState.fov / (z <= 10 ? 10 : z)
-            const size = Math.max(0.5, 1.2 * s * (1 + glow))
+            const size = Math.max(0.5, 1.2 * s * (1 + glow)) * 8.0
             const mix = Math.min(1, Math.max(0, 1 - z / 2600))
             const col = mix < 0.33 ? g3 : mix < 0.66 ? g2 : g1
             const idx3 = i * 3
@@ -848,7 +852,10 @@
             particleColors[idx3 + 0] = col[0]
             particleColors[idx3 + 1] = col[1]
             particleColors[idx3 + 2] = col[2]
-            particleAlphas[i] = col[3] * (0.35 + mix * 0.65)
+            particleAlphas[i] = Math.min(
+              1.0,
+              col[3] * (0.45 + mix * 0.75) * (1 + glow * 0.6)
+            )
             particleSizes[i] = size
           }
 
@@ -884,8 +891,8 @@
             starColors[idx3 + 0] = 1
             starColors[idx3 + 1] = 1
             starColors[idx3 + 2] = 1
-            starAlphas[i] = baseAlpha
-            starSizes[i] = Math.max(0.4, 1.6 * scale)
+            starAlphas[i] = Math.min(1, baseAlpha * 1.4)
+            starSizes[i] = Math.max(0.4, 1.6 * scale) * 10.0
           }
           starGeometry.attributes.position.needsUpdate = true
           starGeometry.attributes.color.needsUpdate = true
