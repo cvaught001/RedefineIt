@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Meta Infinity — Immersive Canvas Experience</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg0: #06090f;
+        --bg1: #0b0f13;
+        --ui: rgba(10, 15, 24, 0.55);
+        --bd: rgba(120, 160, 220, 0.28);
+        --fg: #d9e7ff;
+        --accent: #89aaff;
+        --glow: rgba(80, 140, 255, 0.55);
+      }
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        background: radial-gradient(
+          1200px 800px at 50% 40%,
+          #0d1320 0%,
+          var(--bg1) 40%,
+          var(--bg0) 100%
+        );
+        overflow: hidden;
+        font-family: system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      }
+      canvas {
+        display: block;
+        width: 100vw;
+        height: 100vh;
+      }
+      /* UI Panel */
+      .ui {
+        position: fixed;
+        left: 14px;
+        top: 14px;
+        z-index: 10;
+        width: 320px;
+        max-height: min(92vh, 860px);
+        padding: 12px;
+        border-radius: 16px;
+        color: var(--fg);
+        background: var(--ui);
+        border: 1px solid var(--bd);
+        backdrop-filter: blur(8px);
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
+        overflow-y: auto;
+      }
+      .ui h1 {
+        margin: 0 0 8px;
+        font: 600 16px/1.2 system-ui, sans-serif;
+        letter-spacing: 0.4px;
+      }
+      .ui .sub {
+        opacity: 0.8;
+        font-size: 12px;
+        margin-bottom: 10px;
+      }
+      .row {
+        display: grid;
+        grid-template-columns: 1fr 72px;
+        align-items: center;
+        gap: 10px;
+        padding: 6px 0;
+      }
+      .row input[type='range'] {
+        width: 100%;
+      }
+      .row label {
+        font-size: 13px;
+        opacity: 0.9;
+      }
+      .btn {
+        display: inline-block;
+        margin: 4px 4px 0 0;
+        padding: 8px 10px;
+        border-radius: 12px;
+        border: 1px solid var(--bd);
+        background: rgba(15, 22, 32, 0.55);
+        color: var(--fg);
+        cursor: pointer;
+        user-select: none;
+      }
+      .btn:active {
+        transform: translateY(1px);
+      }
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 10px;
+        border-radius: 999px;
+        border: 1px solid var(--bd);
+        background: rgba(15, 22, 32, 0.55);
+      }
+      .tiny {
+        font-size: 12px;
+        opacity: 0.8;
+      }
+      .stat {
+        font-variant-numeric: tabular-nums;
+      }
+      .mono {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+      .eye {
+        position: fixed;
+        right: 14px;
+        top: 14px;
+        z-index: 11;
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        border: 1px solid var(--bd);
+        background: rgba(15, 22, 32, 0.55);
+        color: var(--fg);
+        display: grid;
+        place-items: center;
+        cursor: pointer;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
+      }
+      .eye svg {
+        width: 22px;
+        height: 22px;
+        opacity: 0.9;
+      }
+      .help {
+        position: fixed;
+        right: 14px;
+        bottom: 14px;
+        z-index: 11;
+      }
+      .toast {
+        max-width: 520px;
+        color: var(--fg);
+        border: 1px solid var(--bd);
+        background: rgba(15, 22, 32, 0.55);
+        backdrop-filter: blur(8px);
+        border-radius: 14px;
+        padding: 10px 12px;
+        font-size: 13px;
+      }
+      .crt::after {
+        /* subtle scanlines */
+        content: '';
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        background: repeating-linear-gradient(
+          0deg,
+          rgba(255, 255, 255, 0.02) 0,
+          rgba(255, 255, 255, 0.02) 1px,
+          transparent 2px,
+          transparent 4px
+        );
+      }
+    </style>
+  </head>
+  <body class="crt">
+    <canvas id="stage"></canvas>
+    <button
+      class="eye"
+      id="toggleUI"
+      title="Show/Hide Controls"
+      aria-label="Show/Hide Controls"
+    >
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z" />
+        <circle cx="12" cy="12" r="3" />
+      </svg>
+    </button>
+    <section class="ui" id="panel" role="region" aria-label="Controls">
+      <h1>Meta Infinity — Immersive Canvas</h1>
+      <div class="sub">
+        Move your mouse or tilt your phone. Click to orbit. Optional: enable mic
+        reactivity. Everything runs in a single HTML file.
+      </div>
+
+      <div class="row">
+        <label
+          >Particles
+          <span class="tiny"
+            >(<span id="labCount" class="stat"></span>)</span
+          ></label
+        >
+        <input
+          id="particles"
+          type="range"
+          min="200"
+          max="6000"
+          step="100"
+          value="1800"
+        />
+      </div>
+      <div class="row">
+        <label>Speed</label
+        ><input
+          id="speed"
+          type="range"
+          min="0"
+          max="2"
+          step="0.01"
+          value="0.65"
+        />
+      </div>
+      <div class="row">
+        <label>Trail</label
+        ><input
+          id="trail"
+          type="range"
+          min="0"
+          max="0.15"
+          step="0.001"
+          value="0.055"
+        />
+      </div>
+      <div class="row">
+        <label>Glow</label
+        ><input
+          id="glow"
+          type="range"
+          min="0"
+          max="1"
+          step="0.01"
+          value="0.55"
+        />
+      </div>
+      <div class="row">
+        <label>Hue</label
+        ><input id="hue" type="range" min="0" max="360" step="1" value="210" />
+      </div>
+      <div class="row">
+        <label>Depth</label
+        ><input
+          id="depth"
+          type="range"
+          min="200"
+          max="2200"
+          step="10"
+          value="1200"
+        />
+      </div>
+      <div class="row">
+        <label>Spread</label
+        ><input
+          id="spread"
+          type="range"
+          min="0.2"
+          max="2.5"
+          step="0.01"
+          value="1.2"
+        />
+      </div>
+      <div class="row">
+        <label>Twist</label
+        ><input
+          id="twist"
+          type="range"
+          min="0"
+          max="4"
+          step="0.01"
+          value="1.1"
+        />
+      </div>
+      <div class="row">
+        <label>Stars</label
+        ><input
+          id="stars"
+          type="range"
+          min="0"
+          max="1"
+          step="0.01"
+          value="0.7"
+        />
+      </div>
+
+      <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px">
+        <button class="btn" id="micBtn">🎤 Mic Reactive</button>
+        <button class="btn" id="randomize">🔀 Randomize</button>
+        <button class="btn" id="center">◯ Re-center</button>
+        <span class="pill tiny"
+          >FPS: <span class="stat mono" id="fps">–</span></span
+        >
+      </div>
+
+      <details style="margin-top: 10px">
+        <summary style="cursor: pointer">About</summary>
+        <div class="tiny" style="opacity: 0.85; margin-top: 6px">
+          This immersive demo renders a pseudo‑3D infinity‑loop particle field
+          with parallax, device tilt, and optional microphone reactivity — a
+          tasteful nod to the idea of a connected metaverse, built purely with
+          HTML5 Canvas + JavaScript. No frameworks, no dependencies.
+        </div>
+      </details>
+    </section>
+
+    <div class="help">
+      <div class="toast">
+        💡 <b>Tips</b> — Drag to orbit • Scroll to zoom • Press
+        <span class="mono">H</span> to toggle UI • Press
+        <span class="mono">R</span> to randomize • Press
+        <span class="mono">M</span> for mic
+      </div>
+    </div>
+
+    <script>
+      ;(function () {
+        const DPR = Math.max(1, Math.min(2, window.devicePixelRatio || 1))
+        const canvas = document.getElementById('stage')
+        const ctx = canvas.getContext('2d')
+        let W = 0,
+          H = 0,
+          CX = 0,
+          CY = 0
+        resize()
+        let running = true
+
+        /*** UI Elements ***/
+        const ui = {
+          particles: qs('#particles'),
+          speed: qs('#speed'),
+          trail: qs('#trail'),
+          glow: qs('#glow'),
+          hue: qs('#hue'),
+          depth: qs('#depth'),
+          spread: qs('#spread'),
+          twist: qs('#twist'),
+          stars: qs('#stars'),
+          labCount: qs('#labCount'),
+          fps: qs('#fps')
+        }
+        const panel = qs('#panel')
+        const toggleBtn = qs('#toggleUI')
+        const micBtn = qs('#micBtn')
+        const randomizeBtn = qs('#randomize')
+        const centerBtn = qs('#center')
+
+        function qs(s, t = document) {
+          return t.querySelector(s)
+        }
+
+        /**** Camera & Controls ****/
+        const camera = {
+          z: 900,
+          fov: 700,
+          rotX: 0,
+          rotY: 0,
+          targetRX: 0,
+          targetRY: 0
+        }
+        const world = { twist: 1.1, spread: 1.2 }
+        const state = {
+          speed: 0.65,
+          trail: 0.055,
+          glow: 0.55,
+          hue: 210,
+          depth: 1200,
+          stars: 0.7,
+          count: 1800
+        }
+
+        // Particle pool must be ready before UI bindings trigger rebuild()
+        const parts = []
+        function rebuild() {
+          parts.length = 0
+          for (let i = 0; i < state.count; i++) {
+            const t = Math.random() * Math.PI * 2 // param
+            parts.push({
+              t,
+              r: Math.random() * 0.002 + 0.001,
+              life: Math.random() * 1,
+              x: 0,
+              y: 0,
+              z: 0
+            })
+          }
+        }
+        rebuild()
+
+        // Mouse / pointer drag to orbit
+        let dragging = false,
+          px = 0,
+          py = 0
+        window.addEventListener('pointerdown', e => {
+          dragging = true
+          px = e.clientX
+          py = e.clientY
+        })
+        window.addEventListener('pointerup', () => (dragging = false))
+        window.addEventListener('pointermove', e => {
+          if (dragging) {
+            const dx = e.clientX - px,
+              dy = e.clientY - py
+            px = e.clientX
+            py = e.clientY
+            camera.targetRY += dx * 0.003
+            camera.targetRX += dy * 0.003
+          }
+        })
+        window.addEventListener('wheel', e => {
+          camera.z = Math.max(220, Math.min(2200, camera.z + e.deltaY * 0.35))
+        })
+
+        // Device tilt for subtle parallax
+        window.addEventListener('deviceorientation', e => {
+          if (typeof e.beta === 'number' && typeof e.gamma === 'number') {
+            camera.targetRY = (e.gamma || 0) * 0.01
+            camera.targetRX = (e.beta || 0) * -0.01
+          }
+        })
+
+        // Hotkeys
+        window.addEventListener('keydown', e => {
+          if (e.key === 'h' || e.key === 'H') {
+            togglePanel()
+          } else if (e.key === 'r' || e.key === 'R') {
+            randomize()
+          } else if (e.key === 'm' || e.key === 'M') {
+            toggleMic()
+          }
+        })
+
+        toggleBtn.addEventListener('click', togglePanel)
+        function togglePanel() {
+          panel.style.display =
+            panel.style.display === 'none' ? 'block' : 'none'
+        }
+
+        // Bind sliders
+        function bindRange(el, on) {
+          el.addEventListener('input', () => on(parseFloat(el.value)))
+          on(parseFloat(el.value))
+        }
+        bindRange(ui.particles, v => {
+          state.count = v | 0
+          ui.labCount.textContent = v
+          rebuild()
+        })
+        bindRange(ui.speed, v => (state.speed = v))
+        bindRange(ui.trail, v => (state.trail = v))
+        bindRange(ui.glow, v => (state.glow = v))
+        bindRange(ui.hue, v => (state.hue = v))
+        bindRange(ui.depth, v => (state.depth = v))
+        bindRange(ui.spread, v => (world.spread = v))
+        bindRange(ui.twist, v => (world.twist = v))
+        bindRange(ui.stars, v => (state.stars = v))
+
+        randomizeBtn.addEventListener('click', randomize)
+        function randomize() {
+          function rv(a, b, s) {
+            const v = a + Math.random() * (b - a)
+            return typeof s === 'number' ? parseFloat(v.toFixed(s)) : v
+          }
+          ui.speed.value = rv(0.2, 1.2, 2)
+          ui.speed.dispatchEvent(new Event('input'))
+          ui.trail.value = rv(0.02, 0.11, 3)
+          ui.trail.dispatchEvent(new Event('input'))
+          ui.glow.value = rv(0.3, 0.9, 2)
+          ui.glow.dispatchEvent(new Event('input'))
+          ui.hue.value = rv(160, 260, 0)
+          ui.hue.dispatchEvent(new Event('input'))
+          ui.depth.value = rv(800, 1800, 0)
+          ui.depth.dispatchEvent(new Event('input'))
+          ui.spread.value = rv(0.7, 2.2, 2)
+          ui.spread.dispatchEvent(new Event('input'))
+          ui.twist.value = rv(0.2, 3.2, 2)
+          ui.twist.dispatchEvent(new Event('input'))
+        }
+        centerBtn.addEventListener('click', () => {
+          camera.targetRX = 0
+          camera.targetRY = 0
+        })
+
+        /**** Audio (optional mic) ****/
+        let audio = {
+          active: false,
+          level: 0,
+          ctx: null,
+          analyser: null,
+          data: null
+        }
+        micBtn.addEventListener('click', toggleMic)
+        async function toggleMic() {
+          if (audio.active) {
+            audio.active = false
+            micBtn.textContent = '🎤 Mic Reactive'
+            return
+          }
+          try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+              audio: true
+            })
+            audio.ctx = new (window.AudioContext || window.webkitAudioContext)()
+            const src = audio.ctx.createMediaStreamSource(stream)
+            audio.analyser = audio.ctx.createAnalyser()
+            audio.analyser.fftSize = 1024
+            audio.data = new Uint8Array(audio.analyser.frequencyBinCount)
+            src.connect(audio.analyser)
+            audio.active = true
+            micBtn.textContent = '🔊 Mic On'
+          } catch (err) {
+            alert('Microphone access was blocked.')
+          }
+        }
+
+        /**** Geometry: Lemniscate (∞) in 3D with twist ****/
+        // We spawn particles along a 3D lemniscate of Bernoulli, then swirl with a gentle curl and rotate with camera.
+        // Parametric base (2D): x = (a * cos t) / (1 + sin^2 t), y = (a * sin t * cos t) / (1 + sin^2 t)
+        // We lift into 3D via z component and a twist factor around the curve tangent.
+
+        function lemniscate3D(t, a, twist) {
+          const s = Math.sin(t),
+            c = Math.cos(t)
+          const denom = 1 + s * s
+          let x = (a * c) / denom
+          let y = (a * s * c) / denom
+          let z = a * 0.35 * s // lift
+          // apply a helix-like twist around the path
+          const ang = t * twist
+          const rx = x * Math.cos(ang) - z * Math.sin(ang)
+          const rz = x * Math.sin(ang) + z * Math.cos(ang)
+          x = rx
+          z = rz
+          return { x, y, z }
+        }
+
+        // Cheap 3D rotate
+        function rotX(p, a) {
+          const s = Math.sin(a),
+            c = Math.cos(a)
+          return { x: p.x, y: p.y * c - p.z * s, z: p.y * s + p.z * c }
+        }
+        function rotY(p, a) {
+          const s = Math.sin(a),
+            c = Math.cos(a)
+          return { x: p.x * c + p.z * s, y: p.y, z: -p.x * s + p.z * c }
+        }
+
+        // Background stars
+        const stars = new Float32Array(2000 * 3)
+        function buildStars() {
+          const n = stars.length / 3
+          for (let i = 0; i < n; i++) {
+            let x = Math.random() * 2 - 1,
+              y = Math.random() * 2 - 1,
+              z = Math.random()
+            const m = 1.0 + Math.random() * 2.5 // spread
+            stars[i * 3 + 0] = x * m
+            stars[i * 3 + 1] = y * m
+            stars[i * 3 + 2] = z
+          }
+        }
+        buildStars()
+
+        // FPS meter
+        let lastT = performance.now(),
+          frames = 0,
+          fps = 0
+        setInterval(() => {
+          ui.fps.textContent = fps.toFixed(0)
+        }, 500)
+
+        // Render loop
+        function tick(now) {
+          if (!running) return
+          requestAnimationFrame(tick)
+
+          const dt = Math.min(33, now - lastT)
+          lastT = now
+          frames++
+          if (frames >= 12) {
+            fps = 1000 / dt
+            frames = 0
+          }
+
+          // smooth camera
+          camera.rotX += (camera.targetRX - camera.rotX) * 0.08
+          camera.rotY += (camera.targetRY - camera.rotY) * 0.08
+
+          // Audio level
+          let level = 0
+          if (audio.active && audio.analyser) {
+            audio.analyser.getByteFrequencyData(audio.data)
+            let sum = 0
+            for (let i = 0; i < audio.data.length; i++) sum += audio.data[i]
+            level = sum / audio.data.length / 255
+          }
+          audio.level = level
+
+          // Fade trail
+          ctx.setTransform(1, 0, 0, 1, 0, 0)
+          ctx.globalCompositeOperation = 'source-over'
+          ctx.globalAlpha = Math.max(0.01, 1.0 - state.trail * 8)
+          ctx.fillStyle = '#06090f'
+          ctx.fillRect(0, 0, W, H)
+
+          // Additive glow pass
+          ctx.globalCompositeOperation = 'lighter'
+
+          const hue = state.hue
+          const glow = state.glow
+          const depth = state.depth
+          const sp = world.spread
+          const tw = world.twist
+          const a = Math.min(W, H) * 0.45 * sp // lemniscate scale
+          const speed = state.speed * (1 + level * 0.8)
+
+          // Update + draw particles
+          const g1 = `hsla(${(hue + 0) % 360} 90% 65% / ${0.35 + glow * 0.4})`
+          const g2 = `hsla(${(hue + 60) % 360} 90% 70% / ${0.25 + glow * 0.35})`
+          const g3 = `hsla(${(hue + 200) % 360} 90% 75% / ${0.15 + glow * 0.3})`
+
+          for (let i = 0; i < parts.length; i++) {
+            const p = parts[i]
+            p.t += speed * (0.001 + p.r * 4.0)
+            const base = lemniscate3D(p.t, a, tw)
+            // slight curl noise via sin/cos modulated by life
+            p.life = (p.life + 0.002 + level * 0.01) % 1
+            const curl = u =>
+              u +
+              Math.sin(p.t * 1.7 + p.life * 6.28) * 8 +
+              Math.cos(p.t * 1.3 + i * 0.001) * 4
+            let pos = {
+              x: base.x + curl(0),
+              y: base.y + curl(0.5),
+              z: base.z + curl(1.0)
+            }
+
+            // rotate by camera and project
+            pos = rotY(rotX(pos, camera.rotX), camera.rotY)
+            const z = pos.z + depth + camera.z
+            const s = camera.fov / (z <= 10 ? 10 : z)
+            const x2 = CX + pos.x * s
+            const y2 = CY + pos.y * s
+
+            // size & color shift with depth
+            const size = Math.max(0.5, 1.2 * s * (1 + glow))
+            const mix = Math.min(1, Math.max(0, 1 - z / 2600))
+            ctx.fillStyle = mix < 0.33 ? g3 : mix < 0.66 ? g2 : g1
+            ctx.globalAlpha = 0.35 + mix * 0.65
+            ctx.beginPath()
+            ctx.arc(x2, y2, size, 0, 6.283)
+            ctx.fill()
+          }
+
+          // Stars (background parallax)
+          if (state.stars > 0) {
+            const n = stars.length / 3
+            ctx.globalAlpha = 0.12 * state.stars
+            ctx.fillStyle = 'white'
+            for (let i = 0; i < n; i++) {
+              let x = stars[i * 3 + 0] * W * 0.5,
+                y = stars[i * 3 + 1] * H * 0.5,
+                z = stars[i * 3 + 2] * 2200 + 400
+              const p = rotY(
+                rotX({ x, y, z }, camera.rotX * 0.4),
+                camera.rotY * 0.4
+              )
+              const s = camera.fov / (p.z + camera.z)
+              const xx = CX + p.x * s
+              const yy = CY + p.y * s
+              const r = Math.max(0.4, 1.6 * s)
+              ctx.beginPath()
+              ctx.arc(xx, yy, r, 0, 6.283)
+              ctx.fill()
+            }
+          }
+        }
+        requestAnimationFrame(tick)
+
+        // Handle resize with DPR-aware canvas
+        function resize() {
+          W = Math.round(window.innerWidth)
+          H = Math.round(window.innerHeight)
+          CX = W / 2
+          CY = H / 2
+          canvas.width = Math.round(W * DPR)
+          canvas.height = Math.round(H * DPR)
+          ctx.setTransform(DPR, 0, 0, DPR, 0, 0)
+        }
+        window.addEventListener('resize', resize)
+      })()
+    </script>
+  </body>
+</html>
